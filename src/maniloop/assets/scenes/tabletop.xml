@@ -1,0 +1,25 @@
+<mujoco model="ARX_X5_LLM_tabletop">
+  <compiler angle="radian" inertiafromgeom="auto" autolimits="true" />
+  <option timestep="0.002" integrator="implicitfast" gravity="0 0 -9.81" cone="elliptic" iterations="80" />
+  <visual>
+    <global offwidth="640" offheight="480" />
+    <quality shadowsize="2048" />
+    <map znear="0.01" zfar="5" />
+    <headlight ambient=".45 .45 .45" diffuse=".5 .5 .5" specular=".2 .2 .2" />
+  </visual>
+  <default>
+    <geom friction="0.9 0.01 0.001" condim="4" solref="0.006 1" solimp="0.95 0.99 0.001" />
+  </default>
+  <asset>
+    <texture name="sky" type="skybox" builtin="gradient" rgb1="0.25 0.32 0.42" rgb2="0.08 0.11 0.16" width="512" height="3072" />
+  </asset>
+  <worldbody>
+    <light name="key" pos="0.2 -0.4 1.3" dir="0 0 -1" diffuse="0.9 0.9 0.9" />
+    <light name="fill" pos="-0.4 0.5 0.8" dir="0 0 -1" diffuse="0.5 0.55 0.65" />
+    <geom name="floor" type="plane" size="2 2 .1" pos="0 0 -0.055" rgba=".1 .13 .18 1" />
+    <geom name="table" type="box" size=".62 .48 .025" pos=".17 0 -.025" rgba=".79 .79 .75 1" />
+    <geom name="target_region" type="box" size=".045 .045 .0002" pos=".31 .10 .00025" rgba=".12 .65 .3 1" contype="0" conaffinity="0" />
+    <site name="target_center" pos=".31 .10 .001" size=".001" rgba="0 0 0 0" />
+    <camera name="external" pos="0.8 -0.7 0.72" xyaxes="0.7754358600819244 0.6314263432095671 -0.0 -0.3535307318654363 0.43416054790492176 0.8285654109782687" fovy="48" />
+  </worldbody>
+</mujoco>

@@ -1,0 +1,152 @@
+{
+  "model": "ARX X5 standard (2023-style single-rail gripper geometry)",
+  "scene": "scene.xml",
+  "joint_names": [
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "joint6"
+  ],
+  "actuator_names": [
+    "arm1",
+    "arm2",
+    "arm3",
+    "arm4",
+    "arm5",
+    "arm6"
+  ],
+  "joint_limits_rad": [
+    [
+      -3.14,
+      2.618
+    ],
+    [
+      -0.05,
+      3.5
+    ],
+    [
+      -0.1,
+      3.2
+    ],
+    [
+      -1.6,
+      1.55
+    ],
+    [
+      -1.57,
+      1.57
+    ],
+    [
+      -2.0,
+      2.0
+    ]
+  ],
+  "home_arm_qpos_rad": [
+    -0.2006700700675003,
+    1.721692813780521,
+    1.6980804870907955,
+    -1.547183999934323,
+    1.1043414499822087e-06,
+    -0.20065546072908386
+  ],
+  "gripper_joint_names": [
+    "left_finger_joint",
+    "right_finger_joint"
+  ],
+  "gripper_actuator_names": [
+    "left_gripper",
+    "right_gripper"
+  ],
+  "gripper_width_range_m": [
+    0,
+    0.088
+  ],
+  "gripper_width_mapping": "each symmetric finger target = width_m / 2",
+  "tcp_site": "tcp",
+  "tcp_in_link6_m": [
+    0.1375,
+    0,
+    0
+  ],
+  "tcp_axes": "+X from wrist toward fingertips; +Y gripper opening direction; +Z completes right-handed frame. Home +X points world -Z, +Y world +Y.",
+  "home_tcp_rotation_world": [
+    [
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      -1.0,
+      0.0,
+      0.0
+    ]
+  ],
+  "cameras": [
+    "external",
+    "wrist"
+  ],
+  "image_size": [
+    640,
+    480
+  ],
+  "cube_body": "red_cube",
+  "cube_geom": "red_cube_geom",
+  "cube_size_m": 0.03,
+  "cube_initial_center_world_m": [
+    0.3,
+    -0.06,
+    0.015
+  ],
+  "target_center_world_m": [
+    0.31,
+    0.1,
+    0
+  ],
+  "target_half_extent_m": [
+    0.045,
+    0.045
+  ],
+  "table_top_z_m": 0,
+  "nominal_timestep_s": 0.002,
+  "upstream_revision": "a8890c9bae94464abd1cb7c5e4da7c4a62104a3a",
+  "gripper_ctrl_ranges": [
+    [
+      0,
+      0.044
+    ],
+    [
+      0,
+      0.044
+    ]
+  ],
+  "object_joint": "cube_free",
+  "object_body": "red_cube",
+  "target_center": [
+    0.31,
+    0.1,
+    0
+  ],
+  "target_half_size": [
+    0.045,
+    0.045
+  ],
+  "base_body": "base_link",
+  "workspace_min": [
+    0.12,
+    -0.3,
+    0.012
+  ],
+  "workspace_max": [
+    0.52,
+    0.3,
+    0.48
+  ],
+  "robot_description": "ARX X5 standard 6-axis arm with an approximate parallel gripper. TCP is midway between fingertip pads. TCP local +X points toward fingertips; local +Y is gripper opening direction. At home +X points downward (base -Z), +Y along base +Y. Base and world coincide; SI metres/radians. Fixed camera is RGB-D; wrist camera is RGB only. Gripper opening 0 closed / 1 open, maximum nominal width 0.088 m. delta_rotation is a base-frame rotation vector left-multiplied onto the observed rotation. Each image is 640x480 pixels."
+}

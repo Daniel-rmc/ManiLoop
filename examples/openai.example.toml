@@ -1,0 +1,9 @@
+# Select "Import config.toml + API Key" in the web UI, then choose this file.
+# Enter your API key separately in the password field. No key belongs here.
+# Change the model to one enabled for your API account.
+model = "gpt-6-astra"
+model_provider = "openai"
+
+[model_providers.openai]
+base_url = "https://api.openai.com/v1"
+wire_api = "responses"

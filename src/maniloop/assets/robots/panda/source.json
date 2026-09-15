@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+  "revision": "8161bba264d7fa7c99ca301e91e7fb44737676ad",
+  "path": "franka_emika_panda",
+  "license": "Apache-2.0",
+  "adaptations": "Runtime composition adds TCP/wrist camera, gravity compensation and tabletop scene; original MJCF retained unchanged."
+}

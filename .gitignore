@@ -1,0 +1,43 @@
+# Python environments and generated files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+.DS_Store
+MUJOCO_LOG.TXT
+
+# Private API credentials / local provider configs
+.env
+.env.*
+!.env.example
+config.toml
+auth.json
+*.local.toml
+*.local.json
+*.db
+*.sqlite
+*.sqlite3
+.cc-switch/
+.codex/
+
+# Locally generated experiment data
+arx5_demo/runs/
+arx5_demo/artifacts/
+
+# ManiLoop runtime outputs
+runs/
+artifacts/
+
+# Optional upstream benchmark and isolated simulation runtime
+.external/
+.venv-libero/
+.runtime/
+
+# Optional local learned-policy runtime and model snapshots
+.venv-vla/

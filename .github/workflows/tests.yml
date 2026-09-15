@@ -1,0 +1,35 @@
+name: Offline tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+  render:
+    runs-on: ubuntu-latest
+    env:
+      MUJOCO_GL: osmesa
+      OPENAI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: sudo apt-get update && sudo apt-get install -y libosmesa6
+      - run: python -m pip install -r requirements.txt
+      - run: python -m maniloop smoke --robot arx5
+      - run: python -m maniloop smoke --robot panda

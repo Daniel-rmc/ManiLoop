@@ -1,0 +1,15 @@
+# Offline adapter check on a real official task; no model capability claim.
+[experiment]
+backend = "libero"
+robot = "panda"
+libero_suite = "libero_spatial"
+libero_task_id = 0
+agent = "mock_vla"
+timing = "controlled"
+max_calls = 3
+max_sim_seconds = 10
+max_wall_seconds = 120
+
+[matrix]
+init_state_id = [0, 1]
+seed = [0]

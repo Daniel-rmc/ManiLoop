@@ -1,0 +1,16 @@
+# Real learned policies. Install all three with scripts/setup_vla.py first.
+[experiment]
+backend = "libero"
+libero_suite = "libero_spatial"
+libero_task_id = 0
+agent = "lerobot"
+timing = "controlled"
+device = "auto"
+max_calls = 500
+max_sim_seconds = 25.0
+max_wall_seconds = 1800.0
+
+[matrix]
+local_model = ["smolvla-libero", "act-libero", "diffusion-libero"]
+init_state_id = [0]
+seed = [0]

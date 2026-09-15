@@ -1,0 +1,13 @@
+# Eight offline adapter checks. This does not evaluate a trained VLA.
+[experiment]
+agent = "mock_vla"
+timing = "controlled"
+max_calls = 3
+max_sim_seconds = 15.0
+max_wall_seconds = 60.0
+
+[matrix]
+robot = ["arx5", "panda"]
+scene = ["tabletop_a", "tabletop_b"]
+task = ["pick_place", "push"]
+seed = [0]

@@ -1,0 +1,29 @@
+name: Optional LIBERO integration
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  official-task:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MUJOCO_GL: osmesa
+      MANILOOP_TEST_LIBERO: "1"
+      OPENAI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y libosmesa6
+      - run: python -m pip install -r requirements-dev.txt uv
+      - run: python scripts/setup_libero.py
+      - run: python -m pytest tests/test_libero_integration.py -q
+      - run: python -m maniloop benchmark --suite examples/libero-offline-suite.toml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: libero-results
+          path: runs/
+          if-no-files-found: ignore

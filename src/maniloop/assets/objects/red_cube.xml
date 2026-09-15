@@ -1,0 +1,4 @@
+<body name="red_cube" pos=".3 -.06 .015">
+  <freejoint name="cube_free" />
+  <geom name="red_cube_geom" type="box" size=".015 .015 .015" mass=".04" rgba=".87 .055 .065 1" friction="1 .015 .001" condim="6" />
+</body>

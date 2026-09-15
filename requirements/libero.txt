@@ -1,0 +1,18 @@
+# Isolated Python 3.10 simulation runtime; not the upstream training environment.
+numpy==1.23.5
+mujoco==2.3.7
+robosuite==1.4.0
+bddl==1.0.1
+easydict==1.9
+torch==2.2.2
+Pillow==10.4.0
+PyYAML==6.0.2
+scipy==1.10.1
+numba==0.57.1
+gym==0.25.2
+h5py==3.11.0
+opencv-python==4.6.0.66
+matplotlib==3.7.5
+cloudpickle==2.1.0
+termcolor==2.4.0
+future==0.18.2

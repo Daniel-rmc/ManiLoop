@@ -1,0 +1,96 @@
+"""Public provenance only. Credential values and private config paths are never recorded."""
+
+import hashlib
+import importlib.metadata
+import json
+import os
+from pathlib import Path
+from maniloop import __version__
+
+
+def source_digest():
+    root = Path(__file__).resolve().parents[1]
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*")):
+        if path.is_file() and path.suffix in {".py", ".xml", ".json", ".html"}:
+            digest.update(str(path.relative_to(root)).encode())
+            digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def describe_run(runner):
+    sim = runner.sim
+    implementation = source_digest()
+    policy = {
+        "implementation_sha256": implementation,
+        "kind": runner.policy_kind,
+        "model": runner.model,
+        "representation": (
+            "libero_rgb_proprio_v1"
+            if sim.backend == "libero"
+            else runner.representation.name
+        ),
+        "controller": sim.describe()["controller"],
+        "backend_protocol": sim.describe()["protocol"],
+        "action_interface": (
+            ("libero_osc_chunk_v1" if sim.backend == "libero" else "joint_chunk_v1")
+            if runner.policy_kind in ("mock_vla", "lerobot")
+            else (
+                "libero_tcp_to_osc_v1"
+                if sim.backend == "libero"
+                else "tcp_step_depth_v1"
+            )
+        ),
+        "timing": runner.timing,
+        "memory": "reset_per_episode",
+        "observation_max_age": runner.max_age if runner.timing == "realtime" else None,
+        "endpoint": (
+            runner.credentials["base_url"]
+            if runner.policy_kind == "llm_cloud"
+            else None
+        ),
+        "cameras_rendered": sim.render_enabled,
+        "max_decisions": runner.max_steps,
+        "max_sim_seconds": runner.sim_budget,
+        "max_wall_seconds": runner.wall_budget,
+    }
+    if sim.backend == "libero":
+        info = sim.describe()
+        policy["backend_revision"] = info["upstream_revision"]
+        policy["controller_config"] = info["controller_config"]
+        policy["runtime_dependencies"] = info["runtime_dependencies"]
+        policy["camera_preprocessing"] = info["camera_preprocessing"]
+    if runner.policy_kind == "lerobot":
+        policy["learned_policy"] = runner.policy.metadata
+        policy["action_interface"] = "lerobot_select_action_osc_20hz_v1"
+    if runner.policy_kind == "llm_cloud":
+        policy["request_options"] = {
+            name: os.environ.get(name, default)
+            for name, default in (
+                ("OPENAI_TIMEOUT_SECONDS", "45"),
+                ("OPENAI_MAX_OUTPUT_TOKENS", "4096"),
+                ("OPENAI_REASONING_EFFORT", ""),
+            )
+        }
+    # Robot/task/seed remain separate axes in the results. Different policy assistance or
+    # timing/budget settings produce different comparison groups.
+    group = hashlib.sha256(json.dumps(policy, sort_keys=True).encode()).hexdigest()[:16]
+    return {
+        "schema_version": 1,
+        "version": __version__,
+        "source_sha256": implementation,
+        "mode": "fixed_policy_evaluation" if runner.benchmark else "interactive_debug",
+        "robot": sim.robot_name,
+        "scene": sim.scene_name,
+        "task": sim.task_name,
+        "seed": runner.seed,
+        "instruction": runner.task,
+        "policy": policy,
+        "comparison_group": group,
+        "is_mock": runner.policy_kind == "mock_vla",
+        **sim.describe(),
+        "dependencies": {
+            name: importlib.metadata.version(name)
+            for name in ("mujoco", "numpy", "Pillow", "openai")
+        },
+    }
