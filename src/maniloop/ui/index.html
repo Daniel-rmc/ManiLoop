@@ -21,6 +21,7 @@
     @media(max-width:850px){.workspace{grid-template-columns:1fr}.left-column{gap:14px}.right-column{display:grid;grid-template-columns:1.15fr 1fr;align-items:start;gap:14px}.viewport{aspect-ratio:1.55;min-height:0}.metric-value.coords{font-size:13px}.topmeta .pill{display:none}.diagnostics{margin-top:15px;gap:14px}.task-panel .panel-header,.manual-panel .panel-header{padding-left:16px}.manual-controls{gap:6px}.gripper-actions{gap:6px}.gripper-actions .button{padding:8px}.task-actions{grid-template-columns:1fr 75px}}
     @media(max-width:620px){.shell{padding:19px 14px}.topbar{margin-bottom:24px}.brandname{font-size:17px}.brandname span{font-size:13px;margin-left:6px}.brandmark{width:33px;height:33px}.eyebrow{font-size:8px}.topmeta{font-size:10px}.intro h1{font-size:23px}.intro p{font-size:11px;line-height:1.7}.right-column{display:flex}.metrics{padding:16px 0;grid-template-columns:1.5fr 1fr .65fr .8fr}.metric{padding:0 9px}.metric-value.coords{font-size:10px}.metric-value{font-size:15px}.metric-label{font-size:9px}.metric-sub{font-size:8px}.metric-value small{font-size:8px}.panel-header{padding:0 14px;height:47px}.view-footer{font-size:9px;padding:10px 13px}.legend{gap:10px}.wrist-view{bottom:12px;right:12px;min-width:105px}.axes-label{left:11px;bottom:12px;font-size:8px;gap:6px;padding:4px 6px}.camera-label{top:11px;left:11px;font-size:8px}.diagnostics{grid-template-columns:1fr}.log-panel{grid-column:auto}.log-row{grid-template-columns:58px 61px 1fr;gap:7px;font-size:10px}.log-time{font-size:9px}.log-type{font-size:8px}.log-container{padding-left:13px;padding-right:13px}.footer{flex-direction:column;gap:3px}.footer .mono{font-size:8px}.configuration{grid-template-columns:1fr 90px}}
     @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+    @media(min-width:1060px) and (min-height:700px){.left-column{position:sticky;top:18px}}
   </style>
 </head>
 <body>
@@ -122,6 +123,21 @@
             </div>
             <div id="custom-model-fields" class="custom-model" hidden><label class="field-label" for="model-input">自定义模型名称</label><input id="model-input" class="input model-input" type="text" placeholder="输入服务商支持的完整模型 ID" maxlength="120" spellcheck="false" autocapitalize="none"></div>
             <div class="model-tools"><p class="key-hint">刷新会请求当前服务商的模型列表。列出的模型仍需支持图像与结构化输出。</p><button id="refresh-models-button" type="button" class="button subtle">刷新模型列表</button></div>
+            <div id="cloud-controls" style="margin-top:14px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div><label class="field-label" for="request-timeout">请求超时（秒）</label><input id="request-timeout" class="input" type="number" min="1" max="600" value="120"></div>
+                <div><label class="field-label" for="reasoning-effort">推理强度</label><select id="reasoning-effort" class="input"><option value="auto">模型默认</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="xhigh">xhigh</option></select></div>
+                <div><label class="field-label" for="llm-control">LIBERO 动作执行</label><select id="llm-control" class="input"><option value="tcp_target_servo_v2">目标跟踪（推荐）</option><option value="osc_step">原生单步（基线）</option></select></div>
+                <div><label class="field-label" for="llm-resolution">LIBERO 相机</label><select id="llm-resolution" class="input"><option value="llm_rgb512">512 × 512（LLM）</option><option value="debug_rgb128">128 × 128（基线）</option></select></div>
+                <div><label class="field-label" for="wall-budget">实验总时限（秒）</label><input id="wall-budget" class="input" type="number" min="1" value="600"></div>
+                <div><label class="field-label" for="sim-budget">仿真时限（秒）</label><input id="sim-budget" class="input" type="number" min="1" value="120"></div>
+              </div>
+              <label class="key-hint" style="display:block;margin-top:10px"><input id="reset-before-start" type="checkbox" checked> 开始新实验时重置场景</label>
+              <p class="key-hint">目标跟踪在本地持续执行，最长 1 秒后重新观察；反馈报告实际误差。更换相机配置会重置场景。相机与动作设置在「应用并重置场景」或开始实验时生效；VLA 使用各自训练配置。</p>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px"><button id="diagnose-text" type="button" class="button subtle">1 · 文本诊断</button><button id="diagnose-vision" type="button" class="button subtle">2 · 图像诊断</button><button id="diagnose-action" type="button" class="button subtle">3 · 动作格式诊断</button></div>
+              <p class="key-hint">每次诊断调用一次所选模型，可能计费；使用当前场景，不执行机器人动作。可依次定位连接、图像和结构化输出问题。</p>
+              <pre id="diagnostic-result" class="config-preview" style="white-space:pre-wrap" aria-live="polite">尚未诊断</pre>
+            </div>
             <div class="task-actions"><button id="start-button" type="submit" class="button primary" disabled><svg viewBox="0 0 16 16" fill="currentColor"><path d="m5 3 8 5-8 5z"/></svg><span>开始执行</span></button><button id="stop-button" type="button" class="button stop" disabled><svg viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="4" width="8" height="8" rx="1"/></svg>停止</button></div>
             <div id="session-notice" class="session-notice">无需密钥即可预览场景和手动调试。选择配置并开始后，才会发送任务与相机观测。</div>
             <div id="action-error" class="inline-error" role="alert" hidden></div>
@@ -220,6 +236,12 @@
         if (!response.ok || data.ok === false) throw new Error(text(data.error || data.detail || data.message) || '请求失败（HTTP ' + response.status + '）。');
         return data;
       } finally { clearTimeout(timer); }
+    }
+    function requestSettings() {
+      return {timeout_seconds: Number($('request-timeout').value), reasoning_effort: $('reasoning-effort').value};
+    }
+    function environmentSettings() {
+      return {llm_control: $('llm-control').value, observation_profile: $('llm-resolution').value};
     }
     function selectedModel() { return ui.modelSelect.value === '__custom__' ? ui.model.value.trim() : ui.modelSelect.value; }
     function selectedCredentials() {
@@ -381,6 +403,8 @@
       const configLocked = pending || configBusy || running || inFlight;
       ['backend-select','libero-suite','libero-task','libero-init','robot-select','layout-select','task-select','timing-select','apply-environment','agent-select','local-model'].forEach(id => { $(id).disabled = configLocked || !ready; });
       ui.start.disabled = pending || configBusy || !ready || running || inFlight || moving;
+      ['request-timeout','reasoning-effort','llm-control','llm-resolution','wall-budget','sim-budget','reset-before-start'].forEach(id => { $(id).disabled = configLocked; });
+      ['text','vision','action'].forEach(stage => { $('diagnose-' + stage).disabled = pending || configBusy || !ready || running || inFlight || moving; });
       ui.stop.disabled = pending || !connected || !running;
       ui.reset.disabled = pending || !connected || running;
       ui.manual.forEach(button => { button.disabled = pending || !ready || running || inFlight || moving; });
@@ -423,7 +447,7 @@
       state = data;
       const running = !!data.running;
       $('simulation-dot').className = 'dot ' + (data.error ? 'error' : running ? 'busy' : data.ready ? 'ok' : '');
-      $('simulation-status').textContent = data.error ? '需要检查反馈' : ({thinking:'模型正在观察与决策',executing:'动作执行中',completed:'模型已声明结束',stopped:'任务已停止'}[data.phase] || (running ? '闭环执行中' : data.ready ? '环境就绪' : '环境初始化中'));
+      $('simulation-status').textContent = data.error ? '需要检查反馈' : ({thinking:'模型正在观察与决策',executing:'动作执行中',completed:data.diagnostic_stage ? '诊断已完成' : '模型已声明结束',stopped:'任务已停止'}[data.phase] || (running ? '闭环执行中' : data.ready ? '环境就绪' : '环境初始化中'));
       updateCredentialStatus();
       const xyz = Array.isArray(data.tcp_position) ? data.tcp_position : data.tcp_position && [data.tcp_position.x, data.tcp_position.y, data.tcp_position.z];
       $('tcp-position').textContent = xyz && xyz.length >= 3 ? xyz.slice(0, 3).map(value => number(value, 3)).join(' / ') : '— / — / —';
@@ -445,6 +469,8 @@
       }
       $('observation-content').textContent = data.observation && Object.keys(data.observation).length ? text(data.observation) : '等待第一份观测…';
       $('action-content').textContent = data.last_action ? text(data.last_action) : '尚未发出动作。';
+      if (data.diagnostic_result) $('diagnostic-result').textContent = text(data.diagnostic_result);
+      else if (data.diagnostic_stage) $('diagnostic-result').textContent = data.error || '正在等待诊断响应；不会执行动作…';
       renderFeedback(data);
       renderEvents(Array.isArray(data.events) ? data.events : []);
       updateControls();
@@ -544,7 +570,7 @@
       if (pending) return;
       pending = true; clearError(); updateControls();
       try {
-        const result = await request(path, body, path === "/api/start" && body.agent === "lerobot" ? 360000 : path === "/api/configure" ? 240000 : 30000);
+        const result = await request(path, body, path === "/api/start" && body.agent === "lerobot" ? 360000 : path === "/api/configure" || path === "/api/start" ? 240000 : 30000);
         if (result.state) renderState(result.state);
         await refreshState();
         if (successMessage) showToast(successMessage);
@@ -639,7 +665,7 @@
         init_state_id: Number($('libero-init').value),
         robot: $('robot-select').value, scene: $('layout-select').value,
         task_id: $('task-select').value, timing: $('timing-select').value,
-        seed: Number($('scene-seed').value)
+        seed: Number($('scene-seed').value), ...environmentSettings()
       }, '实验环境已重置。');
       await refreshState();
       if (result && result.task_instruction) ui.task.value = result.task_instruction;
@@ -647,12 +673,20 @@
     $('agent-select').addEventListener('change', () => {
       const local = $('agent-select').value === 'lerobot';
       $('local-policy-fields').hidden = !local;
+      $('cloud-controls').hidden = $('agent-select').value !== 'llm_cloud';
       ui.modelSelect.parentElement.hidden = $('agent-select').value !== 'llm_cloud';
       document.querySelector('.model-tools').hidden = $('agent-select').value !== 'llm_cloud';
       if ($('agent-select').value !== 'llm_cloud') $('custom-model-fields').hidden = true;
       document.querySelector('.credentials-section').hidden = $('agent-select').value !== 'llm_cloud';
       ui.maxSteps.max = local ? '1000' : '100';
       ui.maxSteps.value = local ? '500' : '40';
+    });
+    for (const stage of ['text','vision','action']) $('diagnose-' + stage).addEventListener('click', async () => {
+      const body = {...selectedCredentials(), model: selectedModel(), request_options: requestSettings(), stage};
+      if (!validateConfigSelection(body)) return;
+      $('diagnostic-result').textContent = '正在提交诊断…';
+      await perform('/api/diagnose', body, '已提交一次诊断请求，不执行机器人动作。');
+      delete body.api_key; delete body.config_toml;
     });
     $('task-form').addEventListener('submit', async event => {
       event.preventDefault();
@@ -665,7 +699,10 @@
       if (!Number.isInteger(maxSteps) || maxSteps < 1 || maxSteps > Number(ui.maxSteps.max)) { showError(new Error('决策次数超出当前策略允许范围。')); return; }
       const agent = $('agent-select').value;
       const body = {task, max_steps: maxSteps, agent};
-      if (agent === 'llm_cloud') Object.assign(body, selectedCredentials(), {model});
+      if (agent === 'llm_cloud') Object.assign(body, selectedCredentials(), environmentSettings(), {
+        model, request_options: requestSettings(), reset_on_start: $('reset-before-start').checked,
+        max_wall_seconds: Number($('wall-budget').value), max_sim_seconds: Number($('sim-budget').value)
+      });
       if (agent === 'lerobot') Object.assign(body, {local_model: $('local-model').value, device: 'auto'});
       if (agent === 'llm_cloud' && !validateConfigSelection(body)) return;
       if (agent === 'llm_cloud' && body.credential_source === 'manual' && !body.api_key && !(state && state.manual_key_configured)) { showError(new Error('请填写 API 密钥，或选择本地配置文件。')); ui.key.focus(); return; }

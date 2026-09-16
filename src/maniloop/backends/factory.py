@@ -47,5 +47,6 @@ def options_from_args(args):
         "libero_suite",
         "libero_task_id",
         "init_state_id",
+        "observation_profile",
     )
     return {key: getattr(args, key) for key in keys if hasattr(args, key)}

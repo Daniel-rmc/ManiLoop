@@ -39,6 +39,11 @@ def main(argv=None):
         )
         p.add_argument("--model", default=None)
     demo.add_argument("--port", type=int, default=8765)
+    for p in (demo, batch):
+        p.add_argument("--llm-control", choices=["tcp_target_servo_v2", "osc_step"], default="tcp_target_servo_v2")
+        p.add_argument("--observation-profile", choices=["llm_rgb512", "debug_rgb128"], default="llm_rgb512")
+    batch.add_argument("--request-timeout-seconds", type=float, default=120)
+    batch.add_argument("--reasoning-effort", choices=["auto", "low", "medium", "high", "xhigh"], default="auto")
     batch.add_argument(
         "--suite", type=Path, help="Experiment matrix TOML (contains no credentials)"
     )
@@ -130,6 +135,8 @@ def main(argv=None):
                     local_model=args.local_model,
                     device=args.device,
                     timing=args.timing,
+                    llm_control=args.llm_control, observation_profile=args.observation_profile,
+                    request_timeout_seconds=args.request_timeout_seconds, reasoning_effort=args.reasoning_effort,
                     seed=args.seed,
                     max_calls=args.max_calls,
                     max_sim_seconds=args.max_sim_seconds,

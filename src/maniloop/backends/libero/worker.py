@@ -76,9 +76,9 @@ class Runtime:
             raise ValueError("LIBERO initialization ID out of range")
         self.render = options["render"]
         profile = options.get("observation_profile", "debug_rgb128")
-        if profile not in ("debug_rgb128", "lerobot_rgb256"):
+        if profile not in ("debug_rgb128", "lerobot_rgb256", "llm_rgb512"):
             raise ValueError("Unknown observation profile")
-        self.size = 256 if profile == "lerobot_rgb256" else 128
+        self.size = {"debug_rgb128": 128, "lerobot_rgb256": 256, "llm_rgb512": 512}[profile]
         self.image_format = "PNG" if self.size == 256 else "JPEG"
         bddl = self.suite.get_task_bddl_file_path(self.task_id)
         cls = OffScreenRenderEnv if self.render else ControlEnv
@@ -116,9 +116,9 @@ class Runtime:
             "initial_states_sha256": hashlib.sha256(init_file.read_bytes()).hexdigest(),
             "controller": "libero_robosuite_OSC_POSE",
             "controller_config": config,
-            "protocol": "maniloop_libero_lerobot_v1"
-            if self.size == 256
-            else "maniloop_libero_rgb_proprio_v1",
+            "protocol": {"debug_rgb128": "maniloop_libero_rgb_proprio_v1",
+                         "lerobot_rgb256": "maniloop_libero_lerobot_v1",
+                         "llm_rgb512": "maniloop_libero_llm_rgb512_v2"}[profile],
             "observation_profile": profile,
             "evaluator": "libero_check_success",
             "physics_timestep": float(self.env.sim.model.opt.timestep),
@@ -131,7 +131,7 @@ class Runtime:
                 for name in ("robosuite", "mujoco", "numpy", "torch", "bddl")
             },
             "camera_preprocessing": f"{self.size}x{self.size}; vertical flip to top-left origin; {self.image_format}"
-            + (" quality 90" if self.size == 128 else " lossless"),
+            + (" quality 90" if self.image_format == "JPEG" else " lossless"),
             "native_action": "7 normalized OSC_POSE values, world frame; -1 opens gripper, +1 closes",
             "llm_action_adapter": "one OSC step per move; 10 steps per gripper; 1 zero-arm step per wait",
             "paper_comparable": False,

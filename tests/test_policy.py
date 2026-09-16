@@ -283,5 +283,41 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(self.policy.last_response_id, "opaque-provider-id")
 
 
+    def test_explicit_request_settings_and_timeout_classification(self):
+        self.policy = GPTPolicy(request_options={"timeout_seconds": 120, "reasoning_effort": "low"})
+        assert self.policy.request_options == {"timeout_seconds": 120.0, "reasoning_effort": "low", "max_output_tokens": 4096, "max_retries": 0}
+        self.client.responses.create.side_effect = APITimeoutError(request=SimpleNamespace(method="POST", url="https://example.test"))
+        with self.assertRaises(PolicyError) as caught:
+            self.decide()
+        assert caught.exception.category == "timeout"
+        assert "120" in str(caught.exception)
+        assert self.policy.last_latency >= 0 and self.policy.last_usage == {}
+        assert self.client.responses.create.call_count == 1
+
+    def test_three_diagnostic_stages_and_payload_boundaries(self):
+        text_response = response()
+        text_response.output[0].content[0].text = "READY"
+        self.client.responses.create.return_value = text_response
+        for stage, image_count in (("text", 0), ("vision", 1)):
+            result = self.policy.diagnose(stage, "unused task", self.observation, self.images)
+            assert result["output"] == "READY" and result["executed"] is False
+            request = self.client.responses.create.call_args.kwargs
+            assert sum(p["type"] == "input_image" for p in request["input"][0]["content"]) == image_count
+            assert "text" not in request  # schema support is tested separately
+        self.client.responses.create.return_value = response()
+        result = self.policy.diagnose("action", "unused task", self.observation, self.images)
+        assert result["action"] == action() and result["executed"] is False
+        assert self.client.responses.create.call_args.kwargs["text"]["format"]["strict"]
+        assert self.client.responses.create.call_count == 3
+
+    def test_bad_request_options_fail_before_client_creation(self):
+        for options in ({"timeout_seconds": 0}, {"timeout_seconds": 601},
+                        {"timeout_seconds": True}, {"timeout_seconds": None},
+                        {"unexpected": "value"}, {"reasoning_effort": "none"}):
+            with self.subTest(options=options), self.assertRaises(PolicyError):
+                GPTPolicy(request_options=options)
+        assert self.factory.call_count == 1
+
+
 if __name__ == "__main__":
     unittest.main()

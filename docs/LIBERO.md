@@ -63,11 +63,13 @@ Key 与模型服务要求沿用主 README。此命令会调用付费 API；离�
 
 固定上游版本：[`8f1084e3132a39270c3a13ebe37270a43ece2a01`](https://github.com/Lifelong-Robot-Learning/LIBERO/tree/8f1084e3132a39270c3a13ebe37270a43ece2a01)。保留官方 BDDL、资产、初始化状态、Panda、robosuite `OSC_POSE` 配置和 `check_success()`。初始化遵循官方示例的 10 个零动作预热步骤，之后开始计量 episode 时间。
 
-ManiLoop 适配协议为 `maniloop_libero_rgb_proprio_v1`：
+ManiLoop 保留 `maniloop_libero_rgb_proprio_v1` 作为基线，并增加 LLM 观测配置 `maniloop_libero_llm_rgb512_v2`：
 
-- 默认调试观测是外部 / 腕部 128×128 RGB、相机标定、关节编码器、机器人运动学 TCP、夹爪开度。图像垂直翻转为左上角原点，并编码为 JPEG。**不提供物体状态、物体相对位姿、分割、接触列表、奖励或成功状态给策略，也不提供深度查询。**
+- 底层环境和离线模拟基线观测是外部 / 腕部 128×128 RGB、相机标定、关节编码器、机器人运动学 TCP、夹爪开度。图像垂直翻转为左上角原点，并编码为 JPEG。**不提供物体状态、物体相对位姿、分割、接触列表、奖励或成功状态给策略，也不提供深度查询。**
 - 原生 VLA 接口是 `Action(kind="osc_pose", values=(七个归一化值), frame="world")`。前六维为世界坐标系 TCP 平移 / 旋转增量，最后一维 -1 张开、+1 闭合。每维范围 [-1,1]，采样间隔必须为 0.05 秒（20 Hz）。动作由官方控制器执行；已接入真实 SmolVLA / ACT / Diffusion 学习策略，使用独立推理环境；见 [本地策略说明](VLA.md)。
-- LLM 使用单步米 / 弧度动作；适配器显式转换为原生 OSC 输入。平移范数最多 0.05 m，旋转范数最多 0.5 rad，每次 move 执行一个控制步。并不保证末端立即到达目标，模型须重新观察。夹爪只接受 0 / 1，执行 10 个控制步；wait 为一个零机械臂增量控制步。
+- 原生单步基线 `osc_step` 使用米 / 弧度动作；适配器显式转换为原生 OSC 输入。平移范数最多 0.05 m，旋转范数最多 0.5 rad，每次 move 执行一个控制步。并不保证末端立即到达目标，模型须重新观察。夹爪只接受 0 / 1，执行 10 个控制步；wait 为一个零机械臂增量控制步。
+- 网页与云端批量实验默认使用 `llm_rgb512` 的 512×512 JPEG 和 `tcp_target_servo_v2`。米／弧度增量转换为固定目标位姿，本地以 20 Hz 原生 OSC 反馈追踪，最多 20 步；位置容差 2 mm、姿态容差 0.02 rad，低于速度门槛并稳定两步才报告 reached。夹爪命令保持 TCP 目标至少 10 步，并等待位姿与开度变化速度稳定；张开时还要求开度达到 90%。completed 表示夹爪稳定，不代表抓到物体；超过 20 步仍未满足条件则报告 timed_out。位姿和夹爪均只使用本体反馈。
+- `--llm-control osc_step --observation-profile debug_rgb128` 可复现原始基线；批量实验支持 `--request-timeout-seconds 120 --reasoning-effort low`，套件相应字段为 `llm_control`、`observation_profile`、`request_timeout_seconds`、`reasoning_effort`。模式、图像、控制器容差与实际请求参数分别进入 manifest 和比较组。
 - 保留官方控制器意味着不会套用自建任务的 IK、碰撞预检或运动规划。两类环境的动作能力不同，分别形成比较组。
 - 模型推理时默认冻结物理；实时模式单独比较。网页闲置时不会消耗 LIBERO 控制步预算。成功或预算终止后不再推进；没有自建任务的额外 1.2 秒静置窗口。
 - 官方 horizon 为 1000，其中包含 10 步预热，正式 episode 最多执行 990 步，另受 CLI 仿真 / 墙钟 / 决策预算约束。这个时间协议需要与目标论文的评测协议逐项核对。

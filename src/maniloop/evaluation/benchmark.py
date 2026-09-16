@@ -28,6 +28,10 @@ class Experiment:
     local_model: str = "smolvla-libero"
     device: str = "auto"
     timing: str = "controlled"
+    llm_control: str = "tcp_target_servo_v2"
+    observation_profile: str = "llm_rgb512"
+    request_timeout_seconds: float = 120.0
+    reasoning_effort: str = "auto"
     seed: int = 0
     max_calls: int = 30
     max_sim_seconds: float = 120.0
@@ -71,6 +75,12 @@ class Experiment:
                 raise ValueError(
                     "Local checkpoints require LIBERO and a supported model/device"
                 )
+        if self.llm_control not in ("osc_step", "tcp_target_servo_v2") or self.observation_profile not in ("llm_rgb512", "debug_rgb128"):
+            raise ValueError("Unknown LLM control / observation profile")
+        if type(self.request_timeout_seconds) not in (int, float) or not 0 < self.request_timeout_seconds <= 600:
+            raise ValueError("Request timeout must be 0–600 seconds")
+        if self.reasoning_effort not in ("auto", "low", "medium", "high", "xhigh"):
+            raise ValueError("Unknown reasoning effort")
         if self.timing not in ("controlled", "realtime"):
             raise ValueError("Unknown timing mode")
         if (
@@ -108,6 +118,8 @@ def load_suite(path: Path) -> list[Experiment]:
         "local_model",
         "device",
         "timing",
+        "llm_control",
+        "observation_profile",
     }:
         raise ValueError(
             "Matrix needs supported robot/scene/task/seed/agent/timing axes"
@@ -147,7 +159,7 @@ def run_episode(
         init_state_id=case.init_state_id,
         observation_profile="lerobot_rgb256"
         if case.agent == "lerobot"
-        else "debug_rgb128",
+        else case.observation_profile if case.agent == "llm_cloud" else "debug_rgb128",
     )
     runner = None
     try:
@@ -165,6 +177,10 @@ def run_episode(
                 "device": case.device,
                 "task": sim.instruction,
                 "max_steps": case.max_calls,
+                "llm_control": case.llm_control,
+                "observation_profile": case.observation_profile,
+                "request_options": {"timeout_seconds": case.request_timeout_seconds,
+                                    "reasoning_effort": case.reasoning_effort},
             },
         )
         directory = runner.log_file.parent
@@ -190,9 +206,15 @@ def run_episode(
             )
             sim.step(int(remaining / sim.timestep))
         usage = {}
-        for line in runner.log_file.read_text(encoding="utf-8").splitlines():
-            for key, value in json.loads(line).get("usage", {}).items():
-                if isinstance(value, (int, float)):
+        usage_by_request = {}
+        for index, line in enumerate(runner.log_file.read_text(encoding="utf-8").splitlines()):
+            event = json.loads(line)
+            report = event.get("usage")
+            if isinstance(report, dict) and report:
+                usage_by_request[event.get("request_index", f"event-{index}")] = report
+        for report in usage_by_request.values():
+            for key, value in report.items():
+                if type(value) in (int, float):
                     usage[key] = usage.get(key, 0) + value
         result = {
             "schema_version": 1,
@@ -205,7 +227,8 @@ def run_episode(
             "environment": sim.describe(),
             "decisions": runner.api_calls,
             "actions": runner.step_count,
-            "usage": usage,
+            "usage": (usage or None) if case.agent == "llm_cloud" else usage,
+            "usage_complete": len(usage_by_request) == runner.api_calls if case.agent == "llm_cloud" else None,
             "simulation_seconds": float(sim.simulation_time - runner.started_sim),
             "wall_seconds": time.monotonic() - runner.started_wall,
             "run_directory": str(directory),

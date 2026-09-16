@@ -255,3 +255,26 @@ def test_benchmark_provider_switch_aborts_before_new_request(tmp_path, monkeypat
         assert "synthetic-" not in runner.log_file.read_text(encoding="utf-8")
     finally:
         runner.close()
+
+
+def test_cloud_failure_summary_preserves_unknown_usage(tmp_path, monkeypatch):
+    import maniloop.evaluation.benchmark as batch
+    import maniloop.runtime.runner as runtime
+    from maniloop.providers.responses import PolicyError
+
+    class TimeoutPolicy:
+        last_latency = 4.0
+        last_usage = {}
+        request_options = {"timeout_seconds":120, "reasoning_effort":"low"}
+        def __init__(self, **kwargs):
+            pass
+        def decide(self, *args):
+            raise PolicyError("timed out", category="timeout")
+
+    monkeypatch.setattr(runtime, "GPTPolicy", TimeoutPolicy)
+    monkeypatch.setattr(batch, "create_environment", lambda **kwargs: RobotSim(render=False))
+    result = run_episode(Experiment(agent="llm_cloud", max_calls=1), tmp_path,
+                         connection={"credential_source":"manual", "api_key":"offline-fixture"})
+    assert result["phase"] == "error" and result["decisions"] == 1
+    assert result["usage"] is None and result["usage_complete"] is False
+    assert result["actions"] == 0

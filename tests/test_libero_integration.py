@@ -71,3 +71,55 @@ def test_learned_policy_observation_profile():
         assert not {"object-state", "success", "contacts"}.intersection(packet)
     finally:
         with_profile.close()
+
+
+@pytest.mark.parametrize("delta,rotation", [([0,0,.01],[0,0,0]),([.01,0,0],[0,0,0]),
+    ([0,-.01,0],[0,0,0]),([0,0,0],[0,0,.1])])
+def test_real_target_pose_execution(official, delta, rotation):
+    from maniloop.controllers.geometry import rotation_matrix, rotation_vector
+    official.reset(0)
+    official.set_llm_control("tcp_target_servo_v2")
+    before, _ = official.observe()
+    start = np.array(before['tcp_position'])
+    target_rotation = rotation_matrix(rotation) @ np.array(before['tcp_rotation_matrix'])
+    assert official.execute(dict(kind='move', frame='world', delta_position=delta, delta_rotation=rotation))['status'] == 'accepted'
+    while official.busy:
+        official.step()
+    after, _ = official.observe()
+    assert official.feedback['status'] == 'reached', official.feedback
+    assert np.linalg.norm(np.array(after['tcp_position']) - start - delta) < .002
+    assert np.linalg.norm(rotation_vector(target_rotation @ np.array(after['tcp_rotation_matrix']).T)) < .02
+    assert official.feedback['control_steps'] <= 20
+    official.set_llm_control("osc_step")
+
+
+def test_llm_rgb512_profile():
+    env = LiberoEnvironment(observation_profile='llm_rgb512')
+    try:
+        packet, images = env.observe()
+        assert env.describe()['protocol'] == 'maniloop_libero_llm_rgb512_v2'
+        assert packet['cameras']['external']['width'] == 512
+        assert all(Image.open(io.BytesIO(data)).size == (512,512) for data in images.values())
+        assert 'success' not in packet and 'object-state' not in packet
+    finally:
+        env.close()
+
+
+def test_target_gripper_hold_close_and_open(official):
+    official.set_llm_control("tcp_target_servo_v2")
+    official.reset(0)
+    packet, _ = official.observe()
+    opening = official.gripper_opening
+    official.execute(dict(kind="move", delta_position=[0,0,.01]))
+    while official.busy:
+        official.step()
+    assert abs(official.gripper_opening - opening) < .02
+    position = official.tcp_position.copy()
+    for target in (0,1):
+        official.execute(dict(kind="gripper", gripper_opening=target))
+        while official.busy:
+            official.step()
+        assert official.feedback["status"] == "completed", official.feedback
+        assert np.linalg.norm(official.tcp_position - position) < .002
+        assert (official.gripper_opening < .1 if target == 0 else official.gripper_opening > .9)
+    official.set_llm_control("osc_step")

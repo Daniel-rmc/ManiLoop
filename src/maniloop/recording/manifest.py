@@ -26,7 +26,7 @@ def describe_run(runner):
         "kind": runner.policy_kind,
         "model": runner.model,
         "representation": (
-            "libero_rgb_proprio_v1"
+            ("libero_rgb512_proprio_v2" if sim.describe().get("observation_profile") == "llm_rgb512" else "libero_rgb_proprio_v1")
             if sim.backend == "libero"
             else runner.representation.name
         ),
@@ -64,14 +64,12 @@ def describe_run(runner):
         policy["learned_policy"] = runner.policy.metadata
         policy["action_interface"] = "lerobot_select_action_osc_20hz_v1"
     if runner.policy_kind == "llm_cloud":
-        policy["request_options"] = {
-            name: os.environ.get(name, default)
-            for name, default in (
-                ("OPENAI_TIMEOUT_SECONDS", "45"),
-                ("OPENAI_MAX_OUTPUT_TOKENS", "4096"),
-                ("OPENAI_REASONING_EFFORT", ""),
-            )
-        }
+        effective = getattr(runner.policy, "request_options", None)
+        policy["request_options"] = effective if isinstance(effective, dict) else {"source": "unavailable_adapter"}
+        if sim.backend == "libero" and sim.describe().get("llm_control") == "tcp_target_servo_v2":
+            policy["action_interface"] = "tcp_target_servo_v2"
+            policy["target_controller"] = sim.describe()["target_controller"]
+    policy["diagnostic_stage"] = runner.diagnostic_stage
     # Robot/task/seed remain separate axes in the results. Different policy assistance or
     # timing/budget settings produce different comparison groups.
     group = hashlib.sha256(json.dumps(policy, sort_keys=True).encode()).hexdigest()[:16]
@@ -79,7 +77,7 @@ def describe_run(runner):
         "schema_version": 1,
         "version": __version__,
         "source_sha256": implementation,
-        "mode": "fixed_policy_evaluation" if runner.benchmark else "interactive_debug",
+        "mode": "connection_diagnostic" if runner.diagnostic_stage else "fixed_policy_evaluation" if runner.benchmark else "interactive_debug",
         "robot": sim.robot_name,
         "scene": sim.scene_name,
         "task": sim.task_name,

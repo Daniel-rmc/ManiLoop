@@ -108,6 +108,10 @@ class EpisodeRunner:
         self.pending_observation, self.request_images = sim.observe()
         self.api_latency = None
         self.policy = None
+        self.request_options = {}
+        self.diagnostic_stage = None
+        self.diagnostic_result = None
+        self.awaiting_execution = False
         self.token = 0
         self.future_token = -1
         self.log_file = None
@@ -131,6 +135,7 @@ class EpisodeRunner:
     def stop(self, message="任务已停止", reason="user_stop"):
         self.running = False
         self.chunk = None
+        self.awaiting_execution = False
         self.phase = "stopped"
         self.termination_reason = reason
         self.token += 1
@@ -179,7 +184,8 @@ class EpisodeRunner:
 
     def activate_connection(self, config, model, source):
         policy = GPTPolicy(
-            model=model, api_key=config.api_key, base_url=config.base_url
+            model=model, api_key=config.api_key, base_url=config.base_url,
+            **({"request_options": self.request_options} if self.request_options else {}),
         )
         self.close_policy()
         self.policy = policy
@@ -249,6 +255,7 @@ class EpisodeRunner:
                 libero_suite=payload.get("libero_suite", "libero_spatial"),
                 libero_task_id=int(payload.get("libero_task_id", 0)),
                 init_state_id=int(payload.get("init_state_id", 0)),
+                observation_profile=payload.get("observation_profile", "debug_rgb128"),
             )
             timing = payload.get("timing", self.timing)
             if timing not in ("controlled", "realtime"):
@@ -257,6 +264,8 @@ class EpisodeRunner:
             self.sim.close()
             self.sim = replacement
             self.timing = timing
+            if self.sim.backend == "libero":
+                self.sim.set_llm_control(payload.get("llm_control", "osc_step"))
             self.chunk = None
             self._physics_remainder = 0.0
             self.command("reset", {"seed": payload.get("seed", 0)})
@@ -265,6 +274,8 @@ class EpisodeRunner:
             self.seed = int(payload.get("seed", 0))
             self.sim.reset(self.seed)
             self.phase = "ready"
+            self.diagnostic_stage = None
+            self.diagnostic_result = None
             self.error = ""
             self.step_count = 0
             self.api_calls = 0
@@ -273,12 +284,19 @@ class EpisodeRunner:
             self.geometry = []
             self.pending_observation, self.request_images = self.sim.observe()
             self.event("info", "场景已重置")
-        elif name == "start":
-            task = str(payload.get("task", "")).strip()
+        elif name in ("start", "diagnose"):
+            diagnostic = payload.get("stage") if name == "diagnose" else None
+            if name == "diagnose" and diagnostic not in ("text", "vision", "action"):
+                raise ValueError("诊断阶段必须为 text / vision / action")
+            task = "Connection diagnostic; never execute actions" if diagnostic else str(payload.get("task", "")).strip()
             if not task or len(task) > 4000:
                 raise ValueError("请输入1至4000字的任务")
             if self.running or self.future is not None or self.sim.busy:
                 raise ValueError("已有任务或API请求尚未结束，请停止并等待请求返回")
+            self.diagnostic_stage = diagnostic
+            self.diagnostic_result = None
+            if diagnostic and payload.get("agent", "llm_cloud") != "llm_cloud":
+                raise ValueError("连接诊断仅适用于云端 LLM")
             if payload.get("agent") == "lerobot":
                 from maniloop.agents.lerobot import LeRobotAgent
 
@@ -301,6 +319,7 @@ class EpisodeRunner:
                     self.event(
                         "info", "本地策略已从所选官方初始化重新开始，使用 256 像素相机"
                     )
+                self.sim.set_llm_control("osc_step")
                 self.sim.reset(self.seed)
                 self.pending_observation, self.request_images = self.sim.observe()
                 self._physics_remainder = 0.0
@@ -315,6 +334,8 @@ class EpisodeRunner:
                 self.begin_episode(task, max_steps)
                 return
             if payload.get("agent") == "mock_vla":
+                if self.sim.backend == "libero":
+                    self.sim.set_llm_control("osc_step")
                 self.close_policy()
                 self.policy = MockVLAAgent()
                 self.policy_kind = "mock_vla"
@@ -334,10 +355,39 @@ class EpisodeRunner:
                 raise ValueError("模型名称无效")
             override = override.strip() if override else None
             model = override or config.model or DEFAULT_MODEL
-            max_steps = int(payload.get("max_steps", 30))
+            max_steps = 1 if diagnostic else int(payload.get("max_steps", 30))
             if not 1 <= max_steps <= 100:
                 raise ValueError("API调用上限必须在1至100之间")
+            options = payload.get("request_options", {})
+            if type(options) is not dict:
+                raise ValueError("请求设置必须是对象")
+            self.request_options = dict(options)
             self.activate_connection(config, model, source)
+            if not diagnostic and self.sim.backend == "libero":
+                profile = payload.get("observation_profile", self.sim.describe().get("observation_profile", "debug_rgb128"))
+                mode = payload.get("llm_control", self.sim.llm_control)
+                if mode not in ("osc_step", "tcp_target_servo_v2"):
+                    raise ValueError("未知 LLM 控制模式")
+                if profile != self.sim.describe().get("observation_profile", "debug_rgb128"):
+                    info = self.sim.describe()
+                    replacement = create_environment(backend="libero", render=self.sim.render_enabled,
+                        libero_suite=info["suite"], libero_task_id=info["task_id"],
+                        init_state_id=info["init_state_id"], observation_profile=profile)
+                    self.sim.close()
+                    self.sim = replacement
+                    self.sim.reset(self.seed)
+                    self.event("info", "相机配置已切换，场景从所选初始化重新开始")
+                self.sim.set_llm_control(mode)
+            if not diagnostic and payload.get("reset_on_start", False):
+                self.sim.reset(self.seed)
+                self._physics_remainder = 0.0
+            if not diagnostic:
+                for key, attr in (("max_wall_seconds", "wall_budget"), ("max_sim_seconds", "sim_budget")):
+                    if key in payload:
+                        value = payload[key]
+                        if type(value) not in (int, float) or not np.isfinite(value) or value <= 0:
+                            raise ValueError("实验时间预算必须是正数")
+                        setattr(self, attr, float(value))
             self.max_steps = max_steps
             self.credential_source = source
             self.config_path = config.path if source == "file" else None
@@ -355,7 +405,8 @@ class EpisodeRunner:
         elif name == "manual":
             if self.running or self.future is not None:
                 raise ValueError("请先停止GPT任务并等待在途请求结束，再手动点动")
-            result = self.sim.execute(payload)
+            self.diagnostic_stage = None
+            result = self.sim.execute({"kind": "move", **payload})
             self.event("manual", result["message"], action=payload, feedback=result)
         else:
             raise ValueError("未知操作")
@@ -364,9 +415,15 @@ class EpisodeRunner:
         limit = 1000 if self.policy_kind == "lerobot" else 100
         if not 1 <= max_steps <= limit:
             raise ValueError(f"调用上限必须在1至{limit}之间")
+        if self.sim.terminated and not self.diagnostic_stage:
+            self.sim.reset(self.seed)
+            self._physics_remainder = 0.0
+            self.event("info", "已结束场景已重置，随后才会请求模型")
         if hasattr(self.policy, "reset"):
             self.policy.reset(self.seed)
         self.max_steps = max_steps
+        self.api_latency = None
+        self.awaiting_execution = False
         self.termination_reason = None
         self.task = task
         self.step_count = 0
@@ -401,19 +458,23 @@ class EpisodeRunner:
         elapsed = min(0.2, now - self._last_wall)
         self._last_wall = now
         if self.running and self.started_wall is not None:
+            diagnostic_timeout = getattr(self.policy, "request_options", {}).get("timeout_seconds", 120) if self.diagnostic_stage else 0
+            wall_budget = diagnostic_timeout + 15 if self.diagnostic_stage else self.wall_budget
             if (
-                now - self.started_wall >= self.wall_budget
+                now - self.started_wall >= wall_budget
                 or self.sim.simulation_time - self.started_sim >= self.sim_budget
             ):
                 reason = (
                     "wall_budget"
-                    if now - self.started_wall >= self.wall_budget
+                    if now - self.started_wall >= wall_budget
                     else "simulation_budget"
                 )
                 self.stop("达到实验时间预算", reason=reason)
-        if self.running and self.sim.terminated:
+        if self.running and self.sim.terminated and not self.diagnostic_stage:
             self.stop("环境已结束", reason="environment_terminated")
         self.tick()
+        if self.diagnostic_stage:
+            return  # Diagnostics never advance physics, including realtime mode.
         if (
             self.timing == "controlled"
             and self.running
@@ -499,6 +560,12 @@ class EpisodeRunner:
                 message = str(exc)
                 self.event("error", message)
                 done.put({"ok": False, "error": message})
+        if self.awaiting_execution and not self.sim.busy:
+            self.awaiting_execution = False
+            feedback = dict(self.sim.feedback)
+            self.history.append({"action": self.last_action, "feedback": feedback})
+            self.history = self.history[-8:]
+            self.event("execution", feedback["message"], feedback=feedback)
         # Never schedule a second request until the first has returned, even after stop/reset.
         if self.future is not None and self.future.done():
             future = self.future
@@ -513,8 +580,26 @@ class EpisodeRunner:
                     self.event("info", "配置已切换，已丢弃旧供应商响应并重新观察")
                     self.phase = "observing"
                     return
+                latency = self.policy.last_latency
+                self.api_latency = latency if type(latency) in (int, float) and np.isfinite(latency) else None
                 action = future.result()
-                self.api_latency = self.policy.last_latency
+                if self.diagnostic_stage:
+                    def redact(value):
+                        if isinstance(value, str):
+                            return value.replace(self.key, "[REDACTED]") if self.key else value
+                        if isinstance(value, dict):
+                            return {k: redact(v) for k, v in value.items()}
+                        if isinstance(value, list):
+                            return [redact(v) for v in value]
+                        return value
+                    self.diagnostic_result = redact({**action, "latency_seconds": self.api_latency,
+                        "usage": self.policy.last_usage or None,
+                        "request_options": self.policy.request_options})
+                    self.running = False
+                    self.phase = "completed"
+                    self.termination_reason = "diagnostic_complete"
+                    self.event("diagnostic", "诊断响应通过；没有执行机器人动作", result=self.diagnostic_result)
+                    return
                 if self.future_token != self.token or not self.running:
                     self.event("info", "已丢弃停止或重置前的API响应")
                     return
@@ -553,6 +638,7 @@ class EpisodeRunner:
                         "收到定时动作块",
                         action=asdict(action),
                         latency_seconds=self.api_latency,
+                        request_index=self.api_calls,
                         usage=self.policy.last_usage,
                     )
                     return
@@ -566,6 +652,7 @@ class EpisodeRunner:
                     action.get("explanation", ""),
                     action=action,
                     latency_seconds=self.api_latency,
+                    request_index=self.api_calls,
                     usage=self.policy.last_usage,
                 )
                 if action["kind"] == "query_depth":
@@ -586,6 +673,8 @@ class EpisodeRunner:
                             action, frame=self.pending_observation["frame_id"]
                         ).legacy()
                     )
+                    self.awaiting_execution = (result["status"] == "accepted" and
+                        self.sim.describe().get("llm_control") == "tcp_target_servo_v2")
                     self.history.append({"action": action, "feedback": result})
                     self.history = self.history[-8:]
                     self.geometry = []
@@ -611,7 +700,12 @@ class EpisodeRunner:
                         "error": self.error,
                     }
                 self.sim.hold()
-                self.event("error", self.error)
+                self.event("error", self.error,
+                    request_index=self.api_calls,
+                    category=getattr(exc, "category", "policy_error"),
+                    http_status=getattr(exc, "http_status", None),
+                    latency_seconds=self.api_latency,
+                    usage=self.policy.last_usage if type(self.policy.last_usage) is dict and self.policy.last_usage else None)
         if (
             self.running
             and self.future is None
@@ -665,6 +759,10 @@ class EpisodeRunner:
             self.event(
                 "request", f"第 {self.api_calls} 次策略调用：读取双相机和机器人状态"
             )
+            if self.diagnostic_stage:
+                self.future = self.pool.submit(self.policy.diagnose, self.diagnostic_stage,
+                    self.task, self.representation.encode(self.pending_observation), self.request_images)
+                return
             self.future = self.pool.submit(
                 self.policy.decide,
                 self.task,
@@ -693,6 +791,10 @@ class EpisodeRunner:
             "max_steps": self.max_steps,
             "api_latency": self.api_latency,
             "pending_request": self.future is not None,
+            "diagnostic_result": self.diagnostic_result,
+            "diagnostic_stage": self.diagnostic_stage,
+            "max_wall_seconds": self.wall_budget,
+            "max_sim_seconds": self.sim_budget,
             "motion_busy": self.sim.busy or self.chunk is not None,
             "backend": self.sim.backend,
             "environment": self.sim.describe(),

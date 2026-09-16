@@ -254,3 +254,21 @@ def test_uploaded_key_is_redacted_from_runtime_failure_state_and_events(configur
     demo.publish(render=False)
     exposed = json.dumps(demo.state) + json.dumps(demo.events) + demo.log_file.read_text(encoding="utf-8")
     assert 'offline-sensitive-upload' not in exposed
+
+
+def test_timeout_latency_and_category_are_recorded(configured_demo):
+    from maniloop.providers.responses import PolicyError
+    demo, _ = configured_demo
+    demo.command('start', {'credential_source':'upload', 'config_toml':uploaded_profile(),
+                          'api_key':'offline-key', 'task':'test'})
+    demo.policy.last_latency = 47.25
+    demo.policy.last_usage = {}
+    demo.future = Future()
+    demo.future_token = demo.token
+    demo.future.set_exception(PolicyError('request timed out', category='timeout'))
+    demo.tick()
+    demo.publish(render=False)
+    assert demo.state['api_latency'] == 47.25
+    event = json.loads(demo.log_file.read_text(encoding='utf-8').splitlines()[-1])
+    assert event['category'] == 'timeout' and event['latency_seconds'] == 47.25
+    assert event['usage'] is None and demo.step_count == 0

@@ -120,6 +120,7 @@ def handler_for(demo):
             name = urlparse(self.path).path.removeprefix("/api/")
             if name not in [
                 "start",
+                "diagnose",
                 "stop",
                 "reset",
                 "configure",
@@ -167,6 +168,8 @@ def handler_for(demo):
 
 def serve(args):
     sim = create_environment(**options_from_args(args))
+    if sim.backend == "libero":
+        sim.set_llm_control(getattr(args, "llm_control", "osc_step"))
     demo = Demo(sim, args.model, timing=args.timing, output=args.output)
     server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_for(demo))
     server.daemon_threads = True

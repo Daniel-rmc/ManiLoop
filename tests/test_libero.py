@@ -271,3 +271,82 @@ def test_local_policy_restart_resets_existing_profile(env, monkeypatch, tmp_path
         assert runner.policy_kind == "lerobot"
     finally:
         runner.close()
+
+
+def test_target_fixed_goal_timeout_and_cancellation(env):
+    import numpy as np
+    env.set_llm_control("tcp_target_servo_v2")
+    result = env.execute(dict(kind="move", frame="world", delta_position=[0, 0, 0.01]))
+    assert result["status"] == "accepted" and env.busy
+    env.step()
+    # Proprioception reports a 4 mm move: remaining command must shrink, not repeat 10 mm.
+    env._sensors["tcp_position"][2] += 0.004
+    np.testing.assert_allclose(env._target.sample(env._sensors)[:3], [0, 0, 0.12], atol=1e-8)
+    env.step(19)  # fake robot is blocked; budget must end rather than report success
+    assert not env.busy and env.feedback["status"] == "timed_out"
+    assert env.feedback["control_steps"] == 20
+    env.execute(dict(kind="move", delta_position=[0, 0, 0.01]))
+    env.hold()
+    assert not env.busy and env.feedback["status"] == "interrupted"
+    assert env.describe()["target_controller"]["max_steps"] == 20
+    assert "target_tracking" in env.observe()[0]["action_limits"]
+
+
+def test_target_rotation_and_pose_settling():
+    import numpy as np
+    from maniloop.controllers.target import PoseTarget
+    from maniloop.controllers.geometry import rotation_matrix
+    sensors = copy.deepcopy(SENSORS)
+    target = PoseTarget(sensors, np.array([0, 0, .01]), np.array([0, 0, .1]), -1)
+    sensors["tcp_position"] = target.position.tolist()
+    sensors["tcp_rotation_matrix"] = rotation_matrix([0, 0, .1]).tolist()
+    assert target.update(sensors)["status"] == "executing"  # velocity not settled yet
+    assert target.update(sensors)["status"] == "executing"
+    result = target.update(sensors)
+    assert result["status"] == "reached" and result["position_error_m"] < 1e-9
+
+
+def test_queued_start_resets_terminated_scene_before_request(env, tmp_path):
+    import queue
+    runner = EpisodeRunner(env, output=tmp_path)
+    try:
+        env.terminated = True
+        reply = queue.Queue()
+        runner.commands.put(("start", dict(task=env.instruction, agent="mock_vla"), reply))
+        runner.advance()
+        assert reply.get()["ok"] and "reset" in env.worker.calls
+        assert not env.terminated and runner.running
+    finally:
+        runner.close()
+
+
+def test_diagnostic_has_no_physics_or_action_in_realtime(env, tmp_path):
+    from concurrent.futures import Future
+    from types import SimpleNamespace
+    runner = EpisodeRunner(env, output=tmp_path, timing="realtime")
+    try:
+        env.terminated = True  # a connection check may inspect an ended scene
+        runner.diagnostic_stage = "action"
+        runner.policy = SimpleNamespace(last_latency=2.5, last_usage={}, request_options={"timeout_seconds": 120})
+        runner.begin_episode("diagnostic", 1)
+        runner.future = Future()
+        runner.future_token = runner.token
+        runner.future.set_result({"stage": "action", "action": {"kind": "move"}, "executed": False})
+        runner.advance(1)
+        assert runner.phase == "completed" and runner.diagnostic_result["executed"] is False
+        assert not env.worker.actions and env.simulation_time == 0
+        assert runner.manifest["mode"] == "connection_diagnostic"
+    finally:
+        runner.close()
+
+
+def test_manual_motion_after_diagnostic_resumes_physics(env, tmp_path):
+    runner = EpisodeRunner(env, output=tmp_path)
+    try:
+        runner.diagnostic_stage = "text"
+        runner.command("manual", {"delta_position": [0,0,.01]})
+        runner.advance(.05)
+        assert runner.diagnostic_stage is None
+        assert len(env.worker.actions) == 1 and env.simulation_time == .05
+    finally:
+        runner.close()

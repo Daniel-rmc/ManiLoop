@@ -8,6 +8,7 @@ import time
 import uuid
 import numpy as np
 from maniloop.core.actions import Action
+from maniloop.controllers.target import PoseTarget
 from .transport import Worker, SUITES
 
 
@@ -32,12 +33,14 @@ class LiberoEnvironment:
             type(v) is not int or v < 0 for v in (task_id, init_state_id)
         ):
             raise ValueError("Invalid LIBERO suite/task/initialization")
-        if observation_profile not in ("debug_rgb128", "lerobot_rgb256"):
+        if observation_profile not in ("debug_rgb128", "lerobot_rgb256", "llm_rgb512"):
             raise ValueError("Unknown LIBERO observation profile")
         self.worker = Worker(python, root)
         self.render_enabled = render
         self.scene_name = suite
         self._queue = deque()
+        self._target = None
+        self.llm_control = "osc_step"
         self._grip = -1.0
         self.epoch = 0
         try:
@@ -65,7 +68,8 @@ class LiberoEnvironment:
         self.simulation_time = 0.0
         self.terminated = False
         self._queue.clear()
-        self._grip = -1.0
+        self._target = None
+        self._grip = 0.0 if self.llm_control == "tcp_target_servo_v2" else -1.0
         self.feedback = {
             "status": "ready",
             "message": "Official LIBERO initialization loaded",
@@ -74,7 +78,7 @@ class LiberoEnvironment:
 
     @property
     def busy(self):
-        return bool(self._queue)
+        return bool(self._queue) or self._target is not None
 
     @property
     def settled(self):
@@ -94,8 +98,21 @@ class LiberoEnvironment:
         self._sensors = self.worker.call("reset", seed=seed)
         self._clear_episode()
 
+    def set_llm_control(self, mode):
+        if mode not in ("osc_step", "tcp_target_servo_v2") or self.busy:
+            raise ValueError("Unknown control mode or action still executing")
+        self.llm_control = mode
+        if self.simulation_time == 0:
+            # Official warmup uses zero gripper action; preserve it in target mode.
+            self._grip = 0.0 if mode == "tcp_target_servo_v2" else -1.0
+
     def describe(self):
-        return copy.deepcopy(self._description)
+        result = copy.deepcopy(self._description)
+        result["llm_control"] = self.llm_control
+        if self.llm_control == "tcp_target_servo_v2":
+            result["target_controller"] = PoseTarget.description()
+            result["llm_action_adapter"] = "Fixed TCP target; proprioceptive OSC feedback up to 20 control steps; no object state"
+        return result
 
     def observe(self):
         result = self.worker.call("observe")
@@ -124,6 +141,16 @@ class LiberoEnvironment:
             "Native osc_pose chunks contain 7 normalized values: world xyz/rotation delta, then -1 open / +1 close. "
             "Images use top-left pixel origin, camera_to_world is OpenCV camera coordinates.",
         }
+        if self.llm_control == "tcp_target_servo_v2":
+            observation["action_limits"]["target_tracking"] = PoseTarget.description()
+            observation["robot_description"] = (
+                "LIBERO Panda, world frame, RGB sensors only. move captures one fixed TCP pose target "
+                "from the current pose plus your delta, then uses proprioceptive feedback at 20 Hz "
+                "for up to 1 second. Rotation is Exp(world rotation vector) @ current rotation. "
+                "Inspect reached/timed_out/interrupted feedback and actual displacement; accepted is not reached. "
+                "Gripper accepts only 0 closed or 1 open and holds arm pose; completed does not prove a grasp. "
+                "No object poses or success feedback are available. Camera pixels have top-left origin."
+            )
         self._snapshot = copy.deepcopy(observation)
         return observation, {
             k: base64.b64decode(v) for k, v in result["images"].items()
@@ -187,6 +214,14 @@ class LiberoEnvironment:
                     "LIBERO supports move/gripper/wait or native osc_pose chunks"
                 )
             self._grip = float(native[6])
+            if self.llm_control == "tcp_target_servo_v2" and kind in ("move", "gripper"):
+                self._target = PoseTarget(
+                    self._sensors, pos if kind == "move" else np.zeros(3),
+                    rot if kind == "move" else np.zeros(3), self._grip,
+                    gripper=kind == "gripper",
+                )
+                self.feedback = {"status": "accepted", "message": "Tracking fixed TCP target from proprioception", "max_control_steps": 20}
+                return dict(self.feedback)
             self._queue.extend(native.tolist() for _ in range(count))
             self.feedback = {
                 "status": "accepted",
@@ -215,15 +250,23 @@ class LiberoEnvironment:
         for _ in range(count):
             if self.terminated:
                 break
-            action = self._queue.popleft() if self._queue else [0.0] * 6 + [self._grip]
+            action = (self._target.sample(self._sensors) if self._target is not None else
+                      self._queue.popleft() if self._queue else [0.0] * 6 + [self._grip])
             result = self.worker.call("step", action=action)
             self._sensors = result["sensors"]
             self.simulation_time = result["steps"] * self.timestep
             self.terminated = result["terminated"]
+            if self._target is not None:
+                self.feedback = self._target.update(self._sensors, self.timestep, self.terminated)
+                if self._target.finished:
+                    self._target = None
             if self.terminated:
                 self._queue.clear()
 
     def hold(self):
+        if self._target is not None:
+            self.feedback = {**self.feedback, "status": "interrupted", "message": "Target cancelled; no remaining samples"}
+        self._target = None
         self._queue.clear()
         self._snapshot = None
 
