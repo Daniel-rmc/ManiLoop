@@ -41,3 +41,13 @@ artifacts/
 
 # Optional local learned-policy runtime and model snapshots
 .venv-vla/
+
+# Private maintainer notes and planning (kept locally)
+/.private/
+/AGENTS.md
+/docs/HANDOFF.md
+/docs/VALIDATION.md
+/docs/worknotes/
+/docs/design/
+/docs/research/
+/docs/experiments/

@@ -24,9 +24,6 @@ Do not include keys, auth.json, private config files, raw provider error bodies,
 or personal run logs in issues or pull requests. Retain asset provenance and
 upstream license notices when modifying or adding robot assets.
 
-For substantial work, read [worknote rules](docs/worknotes/README.md) and the
-[current worknote](docs/worknotes/worknote.md). Update the worknote at meaningful
-milestones, including actual validation, problems, decisions and remaining work.
 Optional LIBERO contributions must preserve the pinned upstream task/controller
 contract and pass the opt-in checks documented in [LIBERO.md](docs/LIBERO.md).
 
@@ -35,7 +32,7 @@ contract and pass the opt-in checks documented in [LIBERO.md](docs/LIBERO.md).
 The canonical repository is https://github.com/Daniel-rmc/ManiLoop and the default
 branch is `main`. Create a short-lived branch for each feature or fix, make focused
 commits, and open a pull request with the problem, changed behavior and validation.
-Check GitHub Actions before merging; update the worknote for meaningful milestones.
+Check GitHub Actions before merging.
 
 For a new checkout:
 

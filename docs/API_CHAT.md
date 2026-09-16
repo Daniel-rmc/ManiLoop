@@ -37,4 +37,4 @@ python -m maniloop chat --port 8769
 
 使用同一 OpenAI SDK 与凭据解析器，聊天适配器独立于动作策略；通过 SDK 的原始响应接口查看所选字段，不返回完整响应包或认证头。参考 [Responses 创建接口](https://developers.openai.com/api/reference/python/resources/responses/methods/create) 与 [Chat Completions 创建接口](https://developers.openai.com/api/reference/python/resources/chat/subresources/completions/methods/create)。
 
-离线验证覆盖实际 SDK 请求、两种协议、多轮上下文、配置切换、部分回复、拒答、401／429／500、超时、密钥脱敏和本地页面访问限制。真实服务结果与兼容性修复维护在 [工作记录](worknotes/worknote.md)。
+离线测试覆盖两种协议、多轮上下文、配置切换、部分回复、拒答、401／429／500、超时、密钥脱敏和本地页面访问限制。使用 `python -m pytest -q` 运行测试；这些接口测试不发起真实模型请求。

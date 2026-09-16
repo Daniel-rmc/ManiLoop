@@ -1,19 +1,18 @@
 # GPT-6 仿真操作演示
 
-本入口复用 ManiLoop 的 LIBERO / MuJoCo、官方 Panda 控制器和独立评分。GPT-6 读取相机与机器人本体状态，每次返回一个经过本地校验的动作；执行后重新观察。工程入口已实现，任务表现以本次实测记录为准，不能由接口测试推断。
+GPT-6 读取双相机与机器人本体状态，每次返回一个经过本地校验的动作，由 LIBERO 的官方 Panda 控制器执行。动作后重新观察，独立评分不进入模型输入。[观看完整演示](https://daniel-rmc.github.io/ManiLoop/#demo)或阅读[模型对比与结果](RESULTS.md)。
 
 ## 启动与登录
 
-最新[成功 episode](research/2026-09-16-gpt6-success-episode.md)使用 paired、medium 和 `--max-calls 0`，46 次决策后通过官方评分；完整录像已导出。这与下方用于逐步诊断的网页预设不同，不能将单次成功理解为稳定成功率。
+公开成功演示使用 paired、medium 和 `--max-calls 0`，46 次决策后通过官方评分。要使用相同配置，请在网页预设基础上设置这三个选项，或使用下方完整命令；模型输出不是确定性重播。
 
 先完成 [主环境](../README.md) 和 [LIBERO 环境](LIBERO.md) 安装。本入口不需要 VLA 权重，独立 API 聊天页仍按 [API_CHAT.md](API_CHAT.md) 使用。
 
-使用近期官方 Codex CLI，并在同一台电脑执行 `codex login`，通过 ChatGPT 登录。`codex login status` 只验证本地登录记录，不能证明访问令牌有效或模型可用。实际请求曾确认 0.144.1 被 GPT-6 拒绝，服务器要求更新客户端；本机使用应用自带 0.154.0-alpha.6.2。官方版本见 [Codex releases](https://github.com/openai/codex/releases)。
+使用支持所选模型、图像与结构化输出的近期[官方 Codex CLI](https://github.com/openai/codex)，并执行 `codex login`，通过自己的 ChatGPT 账号登录。`codex login status` 只验证本地登录记录，模型权限和服务可用性由实际请求决定。
 
-默认使用 PATH 中的 `codex`。如果系统安装了多个版本，可通过 `MANILOOP_CODEX_BIN` 指定官方可执行文件的绝对路径。这个变量是程序路径，不是密钥；CLI 的登录状态检查与推理共用该路径。本次 Mac 上的启动方式：
+默认使用 PATH 中的 `codex`。如果系统安装了多个版本，可通过 `MANILOOP_CODEX_BIN` 指定所需官方可执行文件的路径。启动网页：
 
 ```bash
-export MANILOOP_CODEX_BIN="/Applications/ChatGPT.app/Contents/Resources/codex"
 .venv/bin/python -m maniloop demo \
   --backend libero --libero-suite libero_spatial --libero-task-id 0 --init-state-id 0 \
   --timing controlled --llm-control tcp_target_servo_v2 \
@@ -21,11 +20,9 @@ export MANILOOP_CODEX_BIN="/Applications/ChatGPT.app/Contents/Resources/codex"
   --port 8767 --output runs/gpt6-demo
 ```
 
-其他电脑应替换为实际的官方 CLI 路径，不能假定应用安装位置相同。
-
 打开 <http://127.0.0.1:8767/>，认证来源选择「Codex · 使用当前 ChatGPT 登录」。ManiLoop 不读取或复制 token；官方 CLI 处理认证。该通道使用账户 Codex 额度，和普通 API Key 计费通道分别记录。不会自动换模型或供应商。
 
-每次调用使用临时传感输入目录、独立 ephemeral 会话、`--ignore-user-config`、禁用外部工具与本机 skill。临时目录仅有显式相机图像和动作 schema。输出出现工具事件或不完整响应会被拒绝。CLI 自带的 code-mode-disabled 启动告警仅按精确文本识别；不会为了消除告警启用代码执行。
+每次调用使用临时传感输入目录、独立 ephemeral 会话、`--ignore-user-config`，并禁用外部工具。临时目录仅有显式相机图像和动作 schema。输出出现工具事件或不完整响应会被拒绝。
 
 ## 演示步骤
 
@@ -52,16 +49,17 @@ export MANILOOP_CODEX_BIN="/Applications/ChatGPT.app/Contents/Resources/codex"
 
 ## 批量入口
 
-先通过小范围诊断后，才按确定预算使用：
+运行完整 episode 并记录所有控制步：
 
 ```bash
 .venv/bin/python -m maniloop benchmark \
   --backend libero --libero-suite libero_spatial --libero-task-id 0 --init-state-id 0 \
-  --agent llm_cloud --codex-login --model gpt-6-astra --context-mode paired \
-  --max-calls 30 --max-wall-seconds 3600 --request-timeout-seconds 120 \
+  --seed 0 --agent llm_cloud --codex-login --model gpt-6-astra \
+  --context-mode paired --reasoning-effort medium \
+  --llm-control tcp_target_servo_v2 --observation-profile llm_rgb512 \
+  --max-calls 0 --max-wall-seconds 3600 --max-sim-seconds 120 \
+  --request-timeout-seconds 120 --record-episode \
   --output runs/gpt6-demo-benchmark
 ```
 
 `--max-calls` 限制策略请求次数；Codex CLI 内部的网络重试由官方客户端管理，所以它不等于 HTTP 尝试次数。输出 schema 与客户端响应长度有限制，CLI 没有本接口可用的服务端 `max_output_tokens` 参数，不宣称它是硬 token 预算。
-
-原始 [改造计划](design/GPT6_SIM_DEMO_PLAN.md)保留设计过程；首次联调与最新完整录像分别见 [worknote 的 M13 与 M15](worknotes/worknote.md)。未进行大规模实验或训练，多个初始化的复验仍需在最终配置冻结后另行安排。

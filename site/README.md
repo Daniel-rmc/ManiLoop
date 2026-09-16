@@ -1,6 +1,10 @@
-# ManiLoop project website
+# ManiLoop website
 
-Static showcase at <https://daniel-rmc.github.io/ManiLoop/>. The actual simulator and model calls run locally; this site never accepts credentials or starts inference.
+[English](https://github.com/Daniel-rmc/ManiLoop/blob/main/README.md) · [中文](https://github.com/Daniel-rmc/ManiLoop/blob/main/README.zh-CN.md) · [Project website](https://daniel-rmc.github.io/ManiLoop/)
+
+The site introduces the implemented simulation framework, shows a complete GPT-controlled LIBERO episode, compares recorded model examples, and provides setup instructions. The [interactive workspace](https://daniel-rmc.github.io/ManiLoop/playground/?lang=en) lets visitors inspect the actual recorded observations, actions and feedback. Live simulation and inference run in the local application.
+
+English and Chinese are available throughout the site. `?lang=en` or `?lang=zh` selects a language explicitly; otherwise the saved preference is used, followed by the browser language. The language control updates the URL and saves the choice under `maniloop-language`. The workspace uses the same preference. There are no external fonts, analytics, credentials or model requests on this site.
 
 ## Preview
 
@@ -10,27 +14,33 @@ From the repository root:
 python3 -m http.server 8080 --bind 127.0.0.1 --directory site
 ```
 
-Open <http://127.0.0.1:8080/>. All assets are relative, so the page also works below the `/ManiLoop/` project path. There is no package install, external font, analytics script or build step.
+Open <http://127.0.0.1:8080/>. The static assets use relative paths and also work under `/ManiLoop/`; no package installation or build step is required.
+
+## Episode and model results
+
+`assets/demo-data.json` describes the displayed episode. Task labels, action-frame titles and the outcome note have `en` and `zh` values. Model explanations retain their recorded English text and include a Chinese translation in `explanation_zh`.
+
+A success label requires agreement between the run summary and the verified independent LIBERO evaluator. The complete video also requires the initial frame plus every native control step, a complete terminal record and matching frame rate and simulation time. Changing the website language does not restart video playback.
+
+`assets/model-comparison.json` contains one recorded example per model, with controller and observation settings, budgets, policy calls and available inference counts. These examples do not estimate success rates. Action scheduling and measurement boundaries differ, so the table is not a speed ranking. See [Results and configurations](https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md).
+
+Published camera images and videos come from simulator rendering. ManiLoop source is MIT licensed; LIBERO, robosuite and their assets retain their respective licenses.
 
 ## Publish
 
-Website source lives in `main:site/`. GitHub Pages serves the root of `gh-pages`; `.nojekyll` keeps it a plain static site. After reviewing and committing changes:
+Source files live in `main:site/`; GitHub Pages serves the root of `gh-pages`. After committing a reviewed site update:
 
 ```bash
 git push origin main
 git subtree push --prefix site origin gh-pages
 ```
 
-This is a normal fast-forward publication. Do not force-push if the remote diverges; inspect its changes first. Pages is configured once in repository Settings → Pages → Deploy from a branch → `gh-pages` / root. Check the Pages deployment and live site after publishing.
+Use a normal fast-forward push. `.nojekyll` keeps this a static site.
 
-## Public demo media
+## 中文说明
 
-`assets/demo-data.json` and `assets/episodes/20260916-172331-d3bc5ef2/` present one reviewed GPT-6 episode from 2026-09-16. Initial official success is false; final **LIBERO check_success is true** after 46 decisions and 706 native control steps. The MP4 contains initialization and every control step from this same attempt, including its grasp retries: 707 dual-camera frames at 20 fps, 35.35 seconds. Model waiting time is omitted while controlled simulation is frozen. It is not a concatenation of successful segments.
+官网展示已实现的框架功能、完整 GPT 仿真操作录像、各模型的实际运行示例与安装方法。[交互工作台](https://daniel-rmc.github.io/ManiLoop/playground/?lang=zh)可逐步查看真实运行的观察、动作与反馈；实时仿真和模型推理在本地应用中运行。
 
-The official evaluator stops the episode during the final descent. The gripper is still closed; no additional release or withdrawal was executed after termination. The site displays this boundary explicitly. This one development episode cannot establish a benchmark success rate.
+全站支持英文与中文。URL 参数 `lang` 优先，其次为已保存的语言偏好，最后采用浏览器语言。切换语言会同步入口链接与偏好，不会重播正在播放的视频。页面不收集密钥，也不发起模型请求。
 
-Eight selected timeline points provide decision context alongside the continuous video. These retain real camera images, brief action explanations and available execution feedback. Feedback belongs to the corresponding action, not necessarily the instant shown in a before-image. The final interrupted action has no fabricated completion feedback. `assets/frames/` remains as media from the earlier failed attempt; it is not the current main demonstration.
-
-The raw local run, model request payloads, source snapshot, account usage, credentials, private configuration and weights are not part of the site. Future media should follow the same review and minimization process. See the [success report](https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/research/2026-09-16-gpt6-success-episode.md) for evidence and scope. The [first-run failure report](https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/research/2026-09-16-gpt6-demo-first-run.md) and v0.2.0 history remain available.
-
-ManiLoop source is MIT licensed. Simulation images depict the LIBERO / robosuite Panda scene; upstream projects and assets retain their respective licenses. See the repository's [third-party notes](https://github.com/Daniel-rmc/ManiLoop/blob/main/README.md#许可证与贡献).
+模型结果为单次示例，不代表基准成功率。配置、动作块、预算与计时口径不同，不能由步数或耗时进行速度排名。完整运行条件见[实际结果](https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md)，本地安装见[中文使用说明](https://github.com/Daniel-rmc/ManiLoop/blob/main/README.zh-CN.md)。

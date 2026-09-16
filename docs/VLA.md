@@ -10,7 +10,7 @@ ManiLoop 的 `lerobot` 策略适配器连接已训练权重与官方 LIBERO Pand
 | `act-libero` | [Deepkar/libero-test-act](https://huggingface.co/Deepkar/libero-test-act) | 社区；HuggingFaceVLA/libero 数据训练 | 207 MB |
 | `diffusion-libero` | [ttotmoon/diffusion-libero-v3](https://huggingface.co/ttotmoon/diffusion-libero-v3) | 社区；HuggingFaceVLA/libero 数据训练 | 1.07 GB |
 
-固定 Hub 版本见 [模型目录](../src/maniloop/agents/lerobot/catalog.py)。这些是公开检查点，下载不需要 API Key。没有发现可用的 LeRobot 官方 ACT / DP LIBERO 检查点，因此使用社区候选，并分别记录来源。检查点标题和训练数据声明不能保证任务成功率。
+固定 Hub 版本见 [模型目录](../src/maniloop/agents/lerobot/catalog.py)。这些是公开检查点，下载不需要 API Key。ACT / DP 使用上表列明的社区检查点。检查点标题和训练数据声明不能保证任务成功率。
 
 ## 安装与启动
 
@@ -54,7 +54,7 @@ python -m maniloop demo --backend libero
 
 打开提示的本地地址，选择「本地 LeRobot · 真实模型」与模型，再开始执行。首次模型加载需要等待；开始时自动采用 256 像素相机，并从选定官方初始化重新开始。应使用场景原有英文任务；ACT / DP 不读取文本，即使修改指令也不会改变其目标条件。
 
-自定义安装位置可使用 `MANILOOP_VLA_PYTHON` 和 `MANILOOP_MODELS_ROOT`；后者包含上述选择名的模型子目录及 `smolvlm-tokenizer`。当前适配器仅接受已核对的三个目录配置，通用模型导入属于后续扩展。
+自定义安装位置可使用 `MANILOOP_VLA_PYTHON` 和 `MANILOOP_MODELS_ROOT`；后者包含上述选择名的模型子目录及 `smolvlm-tokenizer`。当前适配器接受上述三个目录配置，不提供任意检查点导入。
 
 ## 输入、控制与评测边界
 
@@ -65,4 +65,4 @@ python -m maniloop demo --backend libero
 - 7 维 OSC 动作，20 Hz 仿真控制；保留检查点的原始动作块和采样步数。动作反归一化后按控制器边界裁剪到 [-1,1]，裁剪数量写入记录。
 - 默认受控时序：等待推理时暂停物理。500 次决策表示最多 25 秒仿真时间，实际耗时取决于硬件和策略。决策预算、墙钟预算与官方成功判定分别记录。
 
-这些是固定策略集成实验，不是完整论文复现。单个任务／初始化无法估计基准成功率，完成推理也不等于抓放成功。实验 manifest 保存模型来源、版本、权重摘要、依赖、设备、预处理与时序；结果保存官方评分、推理次数和裁剪数量。实际结果：SmolVLA 79 步成功，Diffusion 108 步成功，ACT 在 500 步预算内未成功。仅验证 spatial task 0 / init 0 / seed 0；详见 [实验报告](experiments/2026-09-15-libero-local.md) 与 [工作记录](worknotes/worknote.md)。
+每次运行的 manifest 保存模型来源、版本、权重摘要、依赖、设备、预处理与时序；结果保存官方评分、推理次数和裁剪数量。已记录的单任务结果与 GPT-6 对比见 [模型对比与指标定义](RESULTS.md)。单个任务／初始化无法估计基准成功率，完成推理也不等于任务成功。

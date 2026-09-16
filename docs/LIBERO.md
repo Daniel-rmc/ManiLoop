@@ -27,7 +27,7 @@ python -m maniloop demo --backend libero --port 8767
 
 这些生成目录均被 Git 忽略，不属于开源代码包。脚本可重跑；发现已有上游源码被修改或版本不符会停止，不覆盖你的修改。若 uv 未在 PATH 中，可传入 `--uv /path/to/uv`。
 
-Windows PowerShell 中可用 `.\.venv\Scripts\python.exe` 替换 `python`。本次真实渲染验证平台为 macOS Apple Silicon；Linux 提供可手动触发的 CI 集成检查，Windows LIBERO 尚未实机验证。无显示器的 Ubuntu/Debian 安装 `libosmesa6`，在运行前设置 `MUJOCO_GL=osmesa`；有正确 GPU 驱动时可使用 EGL。macOS 从已登录的桌面会话启动，不需要设置该变量。
+Windows PowerShell 中可用 `.\.venv\Scripts\python.exe` 替换 `python`。LIBERO 渲染已在 macOS Apple Silicon 验证；Linux 提供可手动触发的 CI 集成检查，Windows LIBERO 尚未实机验证。无显示器的 Ubuntu/Debian 安装 `libosmesa6`，在运行前设置 `MUJOCO_GL=osmesa`；有正确 GPU 驱动时可使用 EGL。macOS 从已登录的桌面会话启动，不需要设置该变量。
 
 已在其他目录安装时，启动主程序前设置：
 
@@ -82,7 +82,7 @@ ManiLoop 保留 `maniloop_libero_rgb_proprio_v1` 作为基线，并增加 LLM �
 
 worker 用自己的临时 `LIBERO_CONFIG_PATH`，避免首次导入交互询问，也不改用户 `~/.libero`。macOS 上只绕过 MuJoCo 2.3.7 未使用的 CGL 加载入口，实际使用 robosuite 自己的 GLFW 上下文；不修改上游模型、控制器或任务文件。
 
-本地学习策略另用 `lerobot_rgb256`：256×256 无损 RGB，以及 TCP 四元数和两个夹指关节位置，经 LeRobot 官方处理器组成 8 维本体状态。实际模型验证见 [实验记录](experiments/2026-09-15-libero-local.md)。
+本地学习策略另用 `lerobot_rgb256`：256×256 无损 RGB，以及 TCP 四元数和两个夹指关节位置，经 LeRobot 官方处理器组成 8 维本体状态。四种模型的已记录结果及指标定义见 [模型对比](RESULTS.md)。
 
 离线测试和真实集成检查分开：
 
@@ -92,5 +92,3 @@ MANILOOP_TEST_LIBERO=1 python -m pytest tests/test_libero_integration.py -q
 ```
 
 第二项需要安装 LIBERO 和可用渲染环境；验证官方重置一致性、双相机、物理运动、独立评分及五个任务目录。未设置变量时会明确跳过。每个目录可列出不等于所有任务逐一通过物理验证，当前重点验证 spatial task 0。
-
-关键兼容经验和各里程碑实际结果维护在 [worknotes/worknote.md](worknotes/worknote.md)，记录规范见 [worknotes/README.md](worknotes/README.md)。
