@@ -482,6 +482,7 @@
     if (recordingFailed) renderRecordingError();
     if (comparison) renderComparison(comparison);
     if (comparisonFailed) renderComparisonError();
+    document.dispatchEvent(new CustomEvent("maniloop:language", { detail: { language } }));
     if (persist) {
       try { localStorage.setItem("maniloop-language", language); } catch { /* Switching still works without storage. */ }
       const url = new URL(window.location.href);
@@ -549,7 +550,6 @@
     const reportUrl = safeReportUrl(data.report_url);
     if (reportUrl) byId("record-report").href = reportUrl;
     byId("demo-intro").textContent = t("demo_model_intro", { model });
-    byId("hero-image").alt = t("hero_task_alt", { task: localized(data.task) });
     renderEpisode(data, verified);
   }
 
@@ -647,7 +647,6 @@
       byId("record-layout").hidden = !frames.length;
       if (!frames.length) return;
       slider.max = String(frames.length - 1);
-      byId("hero-image").src = frames[0].external;
       renderFrame(0);
       byId("playback-controls").hidden = false;
       for (const frame of frames.slice(1)) {

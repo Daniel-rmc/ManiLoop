@@ -11,8 +11,9 @@
   <meta property="og:url" content="https://daniel-rmc.github.io/ManiLoop/">
   <title>ManiLoop — See. Act. Observe again.</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=bilingual-workspace-1">
-  <script src="app.js?v=bilingual-workspace-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=recorded-skills-1">
+  <script src="app.js?v=recorded-skills-1" defer></script>
+  <script src="showcase.js?v=recorded-skills-2" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
@@ -31,15 +32,28 @@
         <div class="tech-strip" aria-label="Technology stack" data-i18n-aria="tech_stack"><span>Python 3.12</span><span>MuJoCo</span><span>LIBERO</span><span>GPT + VLA</span></div>
       </div>
       <div class="hero-visual">
-        <div class="visual-heading"><span><span class="square-marker" aria-hidden="true"></span><span data-i18n="observation_label">OBSERVATION / 01</span></span><span>LIBERO · PANDA</span></div>
+        <div class="visual-heading"><span><span class="square-marker" aria-hidden="true"></span><span data-showcase-i18n="heading">RECORDED POLICY LOOP</span></span><span>GPT · LIBERO · PANDA</span></div>
         <div class="hero-image-frame">
           <img id="hero-image" src="assets/episodes/20260916-172331-d3bc5ef2/01-external.jpg" alt="A recorded LIBERO scene with the Panda arm, bowls and a plate" data-i18n-alt="hero_alt" width="512" height="512" fetchpriority="high">
+          <video id="hero-video" muted loop playsinline preload="metadata" aria-label="Recorded robot task preview" hidden></video>
           <span class="image-corner corner-tl" aria-hidden="true"></span><span class="image-corner corner-tr" aria-hidden="true"></span><span class="image-corner corner-bl" aria-hidden="true"></span><span class="image-corner corner-br" aria-hidden="true"></span>
-          <div class="image-overlay"><span data-i18n="external_camera">EXTERNAL CAMERA</span><span>512 × 512 / RGB</span></div>
+          <div class="image-overlay"><span data-showcase-i18n="recorded">RECORDED · EXTERNAL CAMERA</span><button id="hero-play-toggle" type="button" aria-pressed="false" disabled><span id="hero-play-label">Play</span><span id="hero-play-icon" aria-hidden="true">▶</span></button></div>
         </div>
-        <div class="visual-caption"><span data-i18n="real_image">An actual simulator frame</span><a href="#demo"><span data-i18n="browse_episode">Explore the episode</span><span aria-hidden="true">↓</span></a></div>
-        <div class="hero-note"><span class="note-index">01—</span><p><span data-i18n="sensor_note">The policy sees images and robot state.</span><br><strong data-i18n="score_note">The evaluator stays separate.</strong></p></div>
+        <div class="hero-scrub"><button id="hero-previous-decision" type="button" aria-label="Previous decision" disabled>←</button><button id="hero-next-decision" type="button" aria-label="Next decision" disabled>→</button><label class="visually-hidden" for="hero-progress" data-showcase-i18n="seek">Seek in the recorded preview</label><input id="hero-progress" type="range" min="0" max="1" value="0" step="0.05" disabled><span id="hero-time">0.00 / — s</span></div>
+        <div class="visual-caption"><span id="hero-playback-note" data-showcase-i18n="timing">Simulation time · Model waits omitted</span><a id="hero-full-video" href="#demo"><span data-showcase-i18n="full_video">Full episode</span><span aria-hidden="true">↗</span></a></div>
+        <div class="hero-decision" id="hero-decision" hidden>
+          <div class="hero-decision-heading"><span data-showcase-i18n="action_note">MODEL ACTION NOTE · RECORDED</span><strong id="hero-decision-number">—</strong></div>
+          <p id="hero-action-explanation"></p>
+          <dl class="hero-action-fields"><div><dt data-showcase-i18n="command">Requested action</dt><dd id="hero-action-command">—</dd></div><div><dt data-showcase-i18n="feedback">Previous action feedback</dt><dd id="hero-action-feedback">—</dd></div></dl>
+          <p class="hero-note-hint" data-showcase-i18n="pause_hint">Pause to read the model's saved action note. This page makes no model requests.</p>
+        </div>
+        <div class="hero-note"><span class="note-index">∥</span><p><span data-i18n="sensor_note">The policy sees images and robot state.</span><br><strong data-i18n="score_note">The evaluator stays separate.</strong></p></div>
       </div>
+    </section>
+    <section class="skill-gallery page-width" id="skills" aria-labelledby="skills-title" hidden>
+      <div class="skill-gallery-heading"><div><p class="eyebrow" data-showcase-i18n="gallery_eyebrow">RECORDED SKILLS</p><h2 id="skills-title" data-showcase-i18n="gallery_title">See a task through.</h2></div><p data-showcase-i18n="gallery_description">Select a task to play its recorded actions above. Each card is one independently verified episode, not a benchmark success rate.</p></div>
+      <div class="skill-cards" id="skill-cards" role="group" aria-label="Select a recorded task"></div>
+      <div class="skill-selected-detail"><div><strong id="hero-task-name"></strong><p id="hero-task-summary"></p><p id="hero-outcome-note"></p></div><a id="hero-workspace-link" class="text-link" href="playground/?lang=en" hidden><span data-showcase-i18n="workspace">Inspect this episode</span><span aria-hidden="true">↗</span></a></div>
     </section>
     <section id="framework" class="framework-section page-width section-space" aria-labelledby="framework-title">
       <div class="section-heading"><p class="eyebrow" data-i18n="framework_eyebrow">01 / THE FRAMEWORK</p><div><h2 id="framework-title" data-i18n="framework_title">Close the loop. Inspect every step.</h2><p class="section-intro" data-i18n="framework_intro">A shared interface for model inference, simulator control and recorded feedback. See what the policy asked for and what the robot actually did.</p></div></div>
