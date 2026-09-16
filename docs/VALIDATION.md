@@ -16,11 +16,17 @@ budget. This is one development run, not a benchmark success rate. See the
 [first-run report](research/2026-09-16-gpt6-demo-first-run.md) and
 [demo guide](GPT6_DEMO.md).
 
-Commit `35713b8` passed all four checks in the
-[current release workflow](https://github.com/Daniel-rmc/ManiLoop/actions/runs/35076094827):
+Commit `ff21875` (framework plus showcase) passed all four checks in the
+[current release workflow](https://github.com/Daniel-rmc/ManiLoop/actions/runs/35077155415):
 Ubuntu, macOS and Windows / Python 3.12 offline tests, plus Linux OSMesa rendering
 for both ARX X5 and Franka Panda. These checks do not measure model task success.
 
+The [project website](https://daniel-rmc.github.io/ManiLoop/) was published through
+[this successful Pages deployment](https://github.com/Daniel-rmc/ManiLoop/actions/runs/35077194641).
+The public root and all 22 site files return HTTP 200 and match the reviewed local
+files byte for byte. Local browser checks cover frame navigation, playback,
+slider boundaries, command copying and a 390 px layout without horizontal overflow.
+The site is a static showcase and recorded replay; simulation and inference run locally.
 
 ## GitHub Actions — 2026-09-16
 
