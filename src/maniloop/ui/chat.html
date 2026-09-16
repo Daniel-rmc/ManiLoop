@@ -15,7 +15,7 @@
 <div class="field"><label for="source">配置方式</label><select id="source"><option value="manual">手动填写 API 地址和 Key</option><option value="upload">选择 config.toml + Key</option><option value="file">读取本地配置 / CC Switch</option></select></div>
 <div id="manual-fields"><div class="field"><label for="base-url">API 地址（Base URL）</label><input id="base-url" type="url" value="https://api.openai.com/v1" autocomplete="off" spellcheck="false"><p class="hint">填写服务商提供的基础地址，不要附加 /responses 或 /chat/completions。</p></div></div>
 <div id="upload-fields" hidden><div class="field"><label for="config-upload">选择 config.toml</label><input id="config-upload" type="file" accept=".toml,text/plain"></div><div class="field"><label for="config-toml">或粘贴 TOML 内容</label><textarea id="config-toml" rows="5" spellcheck="false" autocomplete="off" placeholder="model = &quot;你的模型名称&quot;"></textarea></div></div>
-<div id="file-fields" hidden><div class="field"><label for="config-list">已发现的配置</label><select id="config-list"><option value="">正在读取路径…</option></select></div><div class="field"><label for="config-path">本地文件路径</label><input id="config-path" autocomplete="off" spellcheck="false"><p class="hint">读取 CC Switch 当前 Codex 供应商；每次发送都会重新读取。</p></div></div>
+<div id="file-fields" hidden><div class="field"><label for="config-list">已发现的配置</label><select id="config-list"><option value="">自定义路径…</option></select><button class="button small subtle" id="discover-configs" type="button" style="margin-top:8px">发现本地配置</button></div><div class="field"><label for="config-path">本地文件路径</label><input id="config-path" autocomplete="off" spellcheck="false"><p class="hint">点击发现后查找 Codex / CC Switch 路径；读取配置或发送时才读取所选凭据。</p></div></div>
 <div class="field"><label for="api-key">API Key</label><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="输入密钥；配置已有 Key 时可留空"><p class="hint">不会写入浏览器存储、聊天记录或仓库。</p></div>
 <div class="actions"><button class="button" id="preview" type="button">读取并检查配置</button><button class="button subtle" id="forget" type="button">清除配置</button></div>
 <div class="preview" id="preview-result" role="status">尚未检查。读取配置不会调用模型。</div>
@@ -116,11 +116,20 @@ $('chat-form').onsubmit = async e => {
   } catch(e) { clearInterval(timer); bubble('system',e.message); $('status').textContent='发送失败；可以调整配置后再试'; }
   finally { delete payload.api_key; delete payload.config_toml; clearInterval(timer); setBusy(false); $('chat-log').scrollTop=$('chat-log').scrollHeight; }
 };
-request('options').then(r => {
+async function loadOptions(discover = false) {
+  const r = await request('options' + (discover ? '?discover=1' : ''));
   $('config-list').replaceChildren();
   for (const c of r.configs) { const o=document.createElement('option');o.value=c.path;o.textContent=c.label; $('config-list').append(o); }
   const custom=document.createElement('option');custom.value='';custom.textContent='自定义路径…';$('config-list').append(custom);
-  $('config-path').value=r.configs[0]?.path||'';
+  if (!$('config-path').value) $('config-path').value=r.configs[0]?.path||'';
+  $('config-list').value=r.configs.some(c => c.path === $('config-path').value) ? $('config-path').value : '';
   $('model').placeholder=`留空跟随配置（默认 ${r.default_model}）`;
-}).catch(displayError);
+}
+$('discover-configs').onclick = async () => {
+  if (busy) return; setBusy(true);
+  try { await loadOptions(true); }
+  catch(e) { displayError(e); }
+  finally { setBusy(false); }
+};
+loadOptions().catch(displayError);
 </script></body></html>

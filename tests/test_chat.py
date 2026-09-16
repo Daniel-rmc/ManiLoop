@@ -1,6 +1,8 @@
 """Text workbench tests through the real SDK and local HTTP, without paid calls."""
 import json
 import threading
+from pathlib import Path
+from types import SimpleNamespace
 from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
@@ -13,6 +15,7 @@ import pytest
 from openai import OpenAI
 from maniloop.providers.chat import ChatService, response_summary
 from maniloop.providers.credentials import ConfigError, load_toml_config
+from maniloop.providers import credentials
 from maniloop.ui.server import handler_for
 
 KEY = "offline-chat-secret"
@@ -149,3 +152,54 @@ def test_chat_routes_without_simulator_and_origin_guard(wire):
         assert error.value.code==404
     finally:
         server.shutdown();server.server_close();thread.join()
+
+
+@pytest.mark.parametrize('demo_page', [False, True])
+def test_page_options_require_explicit_configuration_discovery(wire, tmp_path, monkeypatch, demo_page):
+    """Opening either workbench must not inspect the user's configuration files."""
+    config_dir = tmp_path / '.codex'
+    config_dir.mkdir()
+    config_path = config_dir / 'config.toml'
+    auth_path = config_dir / 'auth.json'
+    config_path.write_text('model="test-model"\nmodel_provider="test"\n'
+                           '[model_providers.test]\nbase_url="https://provider.example/v1"\nwire_api="responses"', encoding='utf-8')
+    auth_path.write_text(json.dumps({'OPENAI_API_KEY': KEY}), encoding='utf-8')
+    cc_dir = tmp_path / '.cc-switch'
+    cc_dir.mkdir()
+    settings_path = cc_dir / 'settings.json'
+    settings_path.write_text(json.dumps({'codexConfigDir': str(config_dir)}), encoding='utf-8')
+    monkeypatch.setattr(Path, 'home', lambda: tmp_path)
+    for name in ('CODEX_HOME', 'ARX_CONFIG_PATH', 'OPENAI_API_KEY', 'OPENAI_BASE_URL'):
+        monkeypatch.delenv(name, raising=False)
+    reads = []
+    read_stable = credentials._read_stable
+    def observed_read(paths):
+        reads.extend(path for path, _ in paths)
+        return read_stable(paths)
+    monkeypatch.setattr(credentials, '_read_stable', observed_read)
+    demo = SimpleNamespace(manual_base_url=None, default_model='test-model') if demo_page else None
+    server = ThreadingHTTPServer(('127.0.0.1', 0), handler_for(demo=demo))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    root = f'http://127.0.0.1:{server.server_port}'
+    options_path = '/api/config-options' if demo_page else '/api/chat/options'
+    try:
+        with urlopen(root + ('/' if demo_page else '/chat')) as r:
+            assert r.status == 200
+        with urlopen(root + options_path) as r:
+            assert json.load(r)['configs'] == []
+        assert reads == [] and wire[0] == []
+        with urlopen(root + options_path + '?discover=1') as r:
+            assert any(item['path'] == str(config_path) for item in json.load(r)['configs'])
+        assert reads == [settings_path] and wire[0] == []
+        request = Request(root + '/api/chat/preview',
+                          data=json.dumps({'credential_source': 'file', 'config_path': str(config_path)}).encode(),
+                          headers={'Content-Type': 'application/json'})
+        with urlopen(request) as r:
+            result = json.load(r)
+        assert result['config']['key_configured'] and KEY not in json.dumps(result)
+        assert reads == [settings_path, config_path, auth_path] and wire[0] == []
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()

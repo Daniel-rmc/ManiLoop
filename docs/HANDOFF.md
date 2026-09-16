@@ -1,6 +1,7 @@
 # ManiLoop：新电脑迁移与继续工作交接
 
 > 更新日期：2026-09-16。本文面向项目作者和接手的开发助手。
+> 最新状态：v0.2 已加入 Codex 登录、单步／暂停、前后图像与回放。GPT 诊断和小位移通过，首次完整抓放未成功；见 [当前演示说明](GPT6_DEMO.md)、[实测报告](research/2026-09-16-gpt6-demo-first-run.md) 和最新 worknote。下文原迁移基线保留为历史证据。
 > 仓库：<https://github.com/Daniel-rmc/ManiLoop>；默认分支：`main`。
 > 本次迁移核对时，已有代码基线为 `d3530ed`，本地工作区干净，GitHub 远端 `main` 与本地一致。本文和对应工作记录会在此基线上作为新的交接提交同步。
 >
@@ -220,7 +221,7 @@ Compress-Archive -Path runs,artifacts,arx5_demo/artifacts -DestinationPath ../ma
 | LIBERO | 复用固定官方任务、初始化、Panda OSC 与独立 `check_success()`；不是对所有任务的完整验证 |
 | 本地策略 | 同一 spatial task 0 / init 0 / seed 0：SmolVLA 79 步成功、Diffusion 108 步成功、ACT 500 步预算内未成功；不能外推整个 benchmark |
 | 云端文字通信 | 用户配置的供应商通过 Responses 返回完整文字；SDK 空错误对象误判已经修复 |
-| 云端视觉／动作 | 真实图像理解、结构化动作与自主抓放仍待验证；不能把本地模拟供应商测试当作真实云端成功 |
+| 云端视觉／动作 | GPT-6 真实文字、图像、结构化动作及 5 毫米上移通过；首次完整抓放 24 次决策后官方评分 false，稳定自主抓放尚未通过 |
 | LLM 执行器 | `tcp_target_servo_v2` 已实现，依据本体反馈追踪固定目标；保留 `osc_step` 作基线 |
 | 语义九动作 | Show-Harness 分析与设计建议已完成，适配器尚未实现 |
 | 论文研究 | 正在选题讨论；还没有锁定假设、预算、任务集合或实验方案，没有启动论文实验 |
@@ -342,7 +343,8 @@ git rev-parse origin/main
 docs/worknotes/README.md 和 docs/worknotes/worknote.md，并检查 Git 当前状态。
 
 先按交接文档确认新电脑环境与离线检查，不沿用旧电脑的绝对路径或虚拟环境。
-API Key 和 TOML 由我在新电脑重新提供。真实云端视觉动作闭环尚未验证；
+API Key 和 TOML 由我在新电脑重新提供，或通过官方 Codex CLI 重新登录。
+GPT-6 真实诊断与小位移已经通过，首次完整抓放未成功；
 Show-Harness 九动作适配仍是设计。不要把聊天通过、mock 运行或控制器测试
 写成模型抓取成功。
 

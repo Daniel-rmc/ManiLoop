@@ -32,6 +32,7 @@ class Experiment:
     observation_profile: str = "llm_rgb512"
     request_timeout_seconds: float = 120.0
     reasoning_effort: str = "auto"
+    context_mode: str = "current"
     seed: int = 0
     max_calls: int = 30
     max_sim_seconds: float = 120.0
@@ -83,6 +84,8 @@ class Experiment:
             raise ValueError("Unknown reasoning effort")
         if self.timing not in ("controlled", "realtime"):
             raise ValueError("Unknown timing mode")
+        if self.context_mode not in ("current", "paired"):
+            raise ValueError("Unknown sensor context mode")
         if (
             type(self.seed) is not int
             or self.seed < 0
@@ -120,6 +123,7 @@ def load_suite(path: Path) -> list[Experiment]:
         "timing",
         "llm_control",
         "observation_profile",
+        "context_mode",
     }:
         raise ValueError(
             "Matrix needs supported robot/scene/task/seed/agent/timing axes"
@@ -179,6 +183,7 @@ def run_episode(
                 "max_steps": case.max_calls,
                 "llm_control": case.llm_control,
                 "observation_profile": case.observation_profile,
+                "context_mode": case.context_mode,
                 "request_options": {"timeout_seconds": case.request_timeout_seconds,
                                     "reasoning_effort": case.reasoning_effort},
             },
@@ -205,6 +210,8 @@ def run_episode(
                 ),
             )
             sim.step(int(remaining / sim.timestep))
+            runner._review_signature = None
+            runner.update_review()
         usage = {}
         usage_by_request = {}
         for index, line in enumerate(runner.log_file.read_text(encoding="utf-8").splitlines()):

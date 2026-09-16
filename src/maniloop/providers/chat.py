@@ -101,8 +101,8 @@ class ChatService:
         self.default_model = default_model or os.environ.get("OPENAI_MODEL") or DEFAULT_MODEL
         self.lock = threading.Lock()
 
-    def options(self):
-        configs = discover_configs()
+    def options(self, *, discover=False):
+        configs = discover_configs() if discover else []
         return {"ok": True, "configs": configs, "default_model": self.default_model}
 
     def resolve(self, payload, allow_missing_key=False):

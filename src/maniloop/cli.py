@@ -41,11 +41,13 @@ def main(argv=None):
             "--timing", choices=["controlled", "realtime"], default="controlled"
         )
         p.add_argument("--model", default=None)
+        p.add_argument("--codex-login", action="store_true", help="Use the official Codex CLI's ChatGPT login; no API key")
     demo.add_argument("--port", type=int, default=8765)
     for p in (demo, batch):
         p.add_argument("--llm-control", choices=["tcp_target_servo_v2", "osc_step"], default="tcp_target_servo_v2")
         p.add_argument("--observation-profile", choices=["llm_rgb512", "debug_rgb128"], default="llm_rgb512")
     batch.add_argument("--request-timeout-seconds", type=float, default=120)
+    batch.add_argument("--context-mode", choices=["current", "paired"], default="current")
     batch.add_argument("--reasoning-effort", choices=["auto", "low", "medium", "high", "xhigh"], default="auto")
     batch.add_argument(
         "--suite", type=Path, help="Experiment matrix TOML (contains no credentials)"
@@ -143,6 +145,7 @@ def main(argv=None):
                     timing=args.timing,
                     llm_control=args.llm_control, observation_profile=args.observation_profile,
                     request_timeout_seconds=args.request_timeout_seconds, reasoning_effort=args.reasoning_effort,
+                    context_mode=args.context_mode,
                     seed=args.seed,
                     max_calls=args.max_calls,
                     max_sim_seconds=args.max_sim_seconds,
@@ -151,9 +154,9 @@ def main(argv=None):
             ]
         )
         connection = {
-            "credential_source": "file" if args.provider_config else "manual",
+            "credential_source": "codex" if args.codex_login else "file" if args.provider_config else "manual",
             "config_path": str(args.provider_config) if args.provider_config else None,
-            "api_key": os.environ.get("OPENAI_API_KEY"),
+            "api_key": None if args.codex_login else os.environ.get("OPENAI_API_KEY"),
             "model": args.model,
         }
         args.output.mkdir(parents=True, exist_ok=True)

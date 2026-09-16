@@ -25,7 +25,7 @@ from openai import (
 )
 
 DEFAULT_MODEL = "gpt-6-astra"
-from maniloop.core.observations import PUBLIC_OBSERVATION_FIELDS
+from maniloop.core.observations import PUBLIC_OBSERVATION_FIELDS, guard_sensor_tree
 
 ACTION_SCHEMA = {
     "type": "object",
@@ -100,6 +100,13 @@ Coordinate and action contract:
 - done: declare that the task appears complete based on current visible evidence.
   This is your claim; an independent evaluator determines actual success.
 - wait: request a fresh observation without movement if the evidence is insufficient.
+
+Images labeled previous/external or previous/wrist belong to the previous action's
+BEFORE snapshot; external and wrist without that prefix are the CURRENT snapshot.
+When a sensor_transition_v1 entry is present, compare its before/after proprioception
+and those images to check the intended motion against the observed effect. The
+feedback describes controller execution only; reached/completed never proves a
+grasp or task success. Query pixels only in current camera images.
 
 Always echo the exact current observation_id. All schema fields are required.
 For non-move actions use delta_position=[0,0,0] and delta_rotation=[0,0,0].
@@ -341,6 +348,10 @@ class GPTPolicy:
             raise PolicyError("A nonempty observation_id is required.")
         if type(history) is not list or type(geometry_results) is not list:
             raise PolicyError("History and geometry_results must be lists.")
+        try:
+            guard_sensor_tree([observation, history, geometry_results])
+        except ValueError as exc:
+            raise PolicyError(str(exc)) from None
         if (
             type(images) is not dict
             or not images
@@ -410,7 +421,7 @@ class GPTPolicy:
             raise PolicyError(
                 "OpenAI returned invalid JSON; no action was produced."
             ) from None
-        return validate_action(action, observation_id, set(images))
+        return validate_action(action, observation_id, set(images) - {name for name in images if name.startswith("previous/")})
 
     @property
     def request_options(self):

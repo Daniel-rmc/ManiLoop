@@ -43,6 +43,10 @@ def describe_run(runner):
         ),
         "timing": runner.timing,
         "memory": "reset_per_episode",
+        "context_mode": runner.context_mode,
+        "feedback_protocol": "sensor_transition_v1" if runner.context_mode == "paired" else "action_feedback_v1",
+        "initial_cadence": "single_step" if runner.single_step else "continuous",
+        "human_pause_budget": "wall_clock_includes_pauses",
         "observation_max_age": runner.max_age if runner.timing == "realtime" else None,
         "endpoint": (
             runner.credentials["base_url"]

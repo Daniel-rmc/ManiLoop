@@ -63,7 +63,8 @@ def handler_for(demo=None, chat=None):
             if path == "/chat" or (path == "/" and demo is None):
                 self.send(200, (ROOT / "ui" / "chat.html").read_bytes(), "text/html; charset=utf-8")
             elif path == "/api/chat/options":
-                self.json(200, chat.options())
+                discover = parse_qs(urlparse(self.path).query).get("discover") == ["1"]
+                self.json(200, chat.options(discover=discover))
             elif demo is None:
                 self.json(404, {"error": "Not found"})
             elif path == "/":
@@ -73,7 +74,8 @@ def handler_for(demo=None, chat=None):
                     "text/html; charset=utf-8",
                 )
             elif path == "/api/config-options":
-                configs = discover_configs()
+                discover = parse_qs(urlparse(self.path).query).get("discover") == ["1"]
+                configs = discover_configs() if discover else []
                 try:
                     manual_base = normalize_base_url(
                         demo.manual_base_url or os.environ.get("OPENAI_BASE_URL")
@@ -105,6 +107,13 @@ def handler_for(demo=None, chat=None):
                 with demo.lock:
                     state = dict(demo.state)
                 self.json(200, state)
+            elif path == "/replay/current":
+                with demo.lock:
+                    replay = getattr(demo, "replay_html", b"")
+                if replay:
+                    self.send(200, replay, "text/html; charset=utf-8")
+                else:
+                    self.json(404, {"error": "当前实验尚无回看记录"})
             elif path in ["/camera/external.jpg", "/camera/wrist.jpg"]:
                 with demo.lock:
                     img = demo.images.get(path.split("/")[-1].split(".")[0])
@@ -131,6 +140,9 @@ def handler_for(demo=None, chat=None):
                 "start",
                 "diagnose",
                 "stop",
+                "pause",
+                "resume",
+                "step",
                 "reset",
                 "configure",
                 "manual",
@@ -190,6 +202,11 @@ def serve(args):
     if sim.backend == "libero":
         sim.set_llm_control(getattr(args, "llm_control", "osc_step"))
     demo = Demo(sim, args.model, timing=args.timing, output=args.output)
+    if args.output:
+        from maniloop.recording.replay import load_latest_replay
+        demo.replay_html = load_latest_replay(args.output)
+    if getattr(args, "codex_login", False):
+        demo.credential_source = "codex"
     server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_for(demo))
     server.daemon_threads = True
     threading.Thread(target=server.serve_forever, daemon=True).start()

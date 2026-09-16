@@ -4,13 +4,15 @@ A MuJoCo-based platform for studying and benchmarking LLM-driven robot manipulat
 
 ManiLoop 是用于评测机器人操作策略的 MuJoCo 仿真平台。评测对象是「模型 + 观测表示 + 动作接口 + 控制器」的完整配置，实验按这些条件分组，研究不同具身体、任务与交互方式下的闭环表现。
 
-v0.1 提供 ARX X5 / Franka Panda、两个桌面布局、抓放 / 推物任务、云端 LLM API 闭环、命令行批量实验与网页调试。同时提供模拟动作块检查，以及独立 LeRobot 推理接口，支持 LIBERO 数据训练的 SmolVLA、ACT、Diffusion 检查点。默认采用受控时序：模型推理时暂停物理，动作执行后重新观察；实时模式单独记录和比较。
+v0.2 提供 ARX X5 / Franka Panda、两个桌面布局、抓放 / 推物任务、云端 LLM API 闭环、命令行批量实验与网页调试。同时提供模拟动作块检查，以及独立 LeRobot 推理接口，支持 LIBERO 数据训练的 SmolVLA、ACT、Diffusion 检查点。默认采用受控时序：模型推理时暂停物理，动作执行后重新观察；实时模式单独记录和比较。
 
 可选接入 **LIBERO 官方任务**：复用官方 Panda、场景、初始化和评分，使用独立运行环境。支持网页选择任务和批量实验，详见 [LIBERO 安装与使用](docs/LIBERO.md)。
 
+GPT-6 闭环操作演示现支持 Codex 登录、单步／连续执行、前后视觉反馈和离线回看，见 [演示使用说明](docs/GPT6_DEMO.md)。
+
 可选安装本地学习策略：[SmolVLA / ACT / Diffusion 安装与实验](docs/VLA.md)。其中 SmolVLA 来自 LeRobot 官方；ACT / Diffusion 为社区视觉模仿基线。
 
-**先看场景、再接模型。** 不需要 API Key 就能启动仿真、手动移动和开合夹爪。接入模型时支持 API Key、导入 `config.toml` 配合单独的 Key，以及可选的 CC Switch 配置读取。
+**先看场景、再接模型。** 不需要 API Key 就能启动仿真、手动移动和开合夹爪。接入模型时支持 Codex ChatGPT 登录、API Key、导入 `config.toml` 配合单独的 Key，以及可选的 CC Switch 配置读取。
 
 ![初始化场景](docs/images/scene.jpg)
 
@@ -23,7 +25,7 @@ v0.1 提供 ARX X5 / Franka Panda、两个桌面布局、抓放 / 推物任务�
 | Python | **推荐 Python 3.12**；当前依赖要求至少 3.12 |
 | 操作系统 | macOS、Linux、Windows 均通过 Python 3.12 离线测试；渲染已验证 macOS 桌面与 Linux OSMesa，Windows 渲染尚未验证 |
 | 图形环境 | 能创建 OpenGL 渲染上下文；普通桌面环境即可，Linux 无显示器配置见下文 |
-| 模型服务 | 仅 GPT 控制需要网络及有效 API Key；服务须支持 **Responses API、图像输入、JSON Schema 结构化输出** |
+| 模型服务 | GPT 控制需要网络和有效 Codex ChatGPT 登录，或支持 **Responses API、图像输入、JSON Schema 结构化输出** 的 API 服务与 Key |
 | 本地模型/GPU | 云端 API 模式无需本地权重；可选本地学习策略支持 CPU / Apple MPS / CUDA，见 [VLA 说明](docs/VLA.md) |
 | 其他工具 | 基础功能不需要 Node.js、ROS、Docker、CC Switch 或实体机械臂；LIBERO 额外需要 Git / uv，见专门说明 |
 
@@ -128,7 +130,7 @@ wire_api = "responses"
 
 路径模式每次决策前会重新读取所选文件。切换发生在 API 等待期间时，会丢弃旧供应商的响应，再重新观察。若单独填写了 Key 后文件中的 API 地址发生改变，任务会停止，要求为新地址重新配置 Key。
 
-只有 ChatGPT/Codex OAuth 登录信息的配置不能直接作为 API Key；请使用供应商的 API Key。CC Switch 不是启动本 Demo 的必要条件。
+只有 ChatGPT/Codex OAuth 登录信息的配置不能直接作为 API Key；使用账户登录时请选择独立的「Codex」通道，见 [GPT-6 演示说明](docs/GPT6_DEMO.md)。API 配置通道仍需供应商的 API Key。CC Switch 不是启动本 Demo 的必要条件。
 
 ### 模型和密钥的保存方式
 

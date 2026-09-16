@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 from dataclasses import asdict
+from copy import deepcopy
+from maniloop.core.observations import paired_sensors, guard_sensor_tree
 from maniloop.core.actions import Action, ActionChunk
 from maniloop.backends.base import Environment
 from maniloop.agents.mock_vla import MockVLAAgent
@@ -95,6 +97,15 @@ class EpisodeRunner:
         self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="gpt")
         self.future = None
         self.running = False
+        self.paused = False
+        self.pause_requested = False
+        self.single_step = False
+        self.context_mode = "current"
+        self.last_transition = None
+        self.transition_before = None
+        self.replay_frames = []
+        self.replay_html = b""
+        self._review_signature = None
         self.termination_reason = None
         self.phase = "ready"
         self.error = ""
@@ -133,14 +144,82 @@ class EpisodeRunner:
                 f.write(json.dumps(entry, ensure_ascii=False, allow_nan=False) + "\n")
 
     def stop(self, message="任务已停止", reason="user_stop"):
+        if not self.running and self.log_file and self.termination_reason:
+            # A completed run is immutable even if Stop/Reset is sent again.
+            self.update_review()
+            self.sim.hold()
+            return
         self.running = False
+        self.paused = self.pause_requested = False
         self.chunk = None
         self.awaiting_execution = False
         self.phase = "stopped"
         self.termination_reason = reason
         self.token += 1
+        if self.future is not None and hasattr(self.policy, "cancel"):
+            self.policy.cancel()
         self.sim.hold()
         self.event("info", message)
+        self.update_review()
+
+    def update_review(self):
+        """Human-only artifact: never used to build a policy request."""
+        if not self.log_file:
+            return
+        signature = (self.api_calls, self.step_count, self.phase, self.termination_reason)
+        if signature == self._review_signature:
+            return
+        from maniloop.recording.replay import render_replay
+        # A human review must not replace the synchronized policy snapshot or
+        # invalidate a pending depth query. Use only read-only sensor properties.
+        images, _ = self.sim.render_images()
+        observation = {"simulation_time": float(self.sim.simulation_time),
+                       "frame_id": self.pending_observation.get("frame_id"),
+                       "tcp_position": self.sim.tcp_position.tolist(),
+                       "gripper_opening": self.sim.gripper_opening}
+        summary = {"api_calls": self.api_calls, "step_count": self.step_count,
+                   "termination_reason": self.termination_reason, "error": self.error,
+                   "evaluation": self.sim.evaluation(), "paused": self.paused,
+                   "phase": self.phase, "diagnostic_stage": self.diagnostic_stage,
+                   "human_pause_used": getattr(self, "human_pause_used", False)}
+        frames = self.replay_frames + [{"request_index": self.api_calls,
+            "observation": paired_sensors(observation), "images": images, "phase": "final"}]
+        # Read the complete event stream; the live panel deliberately keeps only 120 events.
+        events = [json.loads(line) for line in self.log_file.read_text(encoding="utf-8").splitlines()]
+        html = render_replay(manifest=self.manifest, frames=frames, events=events, summary=summary)
+        (self.log_file.parent / "replay.html").write_bytes(html)
+        (self.log_file.parent / "review-summary.json").write_text(
+            json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        self.replay_html = html
+        self._review_signature = signature
+
+    def pause_at_boundary(self):
+        if (self.running and self.pause_requested and self.future is None
+                and self.chunk is None and not self.sim.busy and self.sim.settled):
+            self.paused = True
+            self.pause_requested = False
+            self.phase = "paused"
+            self.event("pause", "已在动作结束处暂停；继续前不再调用模型")
+            self.update_review()
+
+    def finish_transition(self):
+        if self.transition_before is None:
+            return
+        before, images, action, request_index = self.transition_before
+        after, after_images = self.sim.observe()
+        feedback = deepcopy(self.sim.feedback)
+        guard_sensor_tree({"feedback": feedback})
+        transition = {"protocol": "sensor_transition_v1", "request_index": request_index,
+                      "before": paired_sensors(before), "action": action,
+                      "feedback": feedback, "after": paired_sensors(after)}
+        self.last_transition = (transition, images)
+        if self.history and self.history[-1].get("action") == action:
+            self.history[-1] = {"action": action, "feedback": feedback}
+        self.replay_frames.append({"request_index": request_index,
+            "observation": paired_sensors(after), "images": dict(after_images), "phase": "after"})
+        self.event("transition", "动作前后传感证据已记录", transition=transition,
+                   request_index=request_index)
+        self.transition_before = None
 
     def resolve_connection(self, payload, *, allow_missing_key=False):
         source = payload.get("credential_source", "manual")
@@ -227,6 +306,14 @@ class EpisodeRunner:
 
     def connection_request(self, name, payload):
         # Called on an HTTP worker: listing models must never block physics.
+        if payload.get("credential_source") == "codex":
+            from maniloop.providers.codex import login_status
+            status = login_status()
+            public = {"source": "codex", "provider": "Codex · ChatGPT 登录",
+                      "base_url": "", "path": "", "model": DEFAULT_MODEL,
+                      "models": [DEFAULT_MODEL], "key_configured": status["logged_in"],
+                      "error": "" if status["logged_in"] else status["message"], **status}
+            return {"ok": status["logged_in"], "config": public, "models": [DEFAULT_MODEL]}
         if name == "config-preview":
             config = self.resolve_connection(
                 {"credential_source": "file", **payload}, allow_missing_key=True
@@ -242,6 +329,23 @@ class EpisodeRunner:
     def command(self, name, payload):
         if name == "stop":
             self.stop()
+        elif name in {"pause", "resume", "step"}:
+            if not self.running or self.diagnostic_stage:
+                raise ValueError("请先开始一个机器人演示")
+            if self.policy_kind != "llm_cloud":
+                raise ValueError("单步与暂停目前仅用于 LLM 演示")
+            if name == "pause":
+                self.human_pause_used = True
+                self.pause_requested = not self.paused
+                self.pause_at_boundary()
+            else:
+                if not self.paused:
+                    raise ValueError("请等待当前动作完成并暂停")
+                self.paused = False
+                self.single_step = name == "step"
+                self.pause_requested = False
+                self.phase = "observing"
+                self.event("resume", "执行下一次决策" if self.single_step else "恢复连续执行")
         elif name == "configure":
             if self.running or self.future is not None:
                 raise ValueError("请先停止任务并等待请求结束")
@@ -261,6 +365,9 @@ class EpisodeRunner:
             if timing not in ("controlled", "realtime"):
                 replacement.close()
                 raise ValueError("未知时序模式")
+            if self.log_file:
+                self.update_review()
+                self.log_file = None
             self.sim.close()
             self.sim = replacement
             self.timing = timing
@@ -270,7 +377,12 @@ class EpisodeRunner:
             self._physics_remainder = 0.0
             self.command("reset", {"seed": payload.get("seed", 0)})
         elif name == "reset":
+            if self.log_file and not self.running:
+                self.update_review()
+                self.log_file = None
             self.stop("正在重置场景，旧请求返回后将被丢弃")
+            self.log_file = None
+            self.last_transition = self.transition_before = None
             self.seed = int(payload.get("seed", 0))
             self.sim.reset(self.seed)
             self.phase = "ready"
@@ -293,6 +405,14 @@ class EpisodeRunner:
                 raise ValueError("请输入1至4000字的任务")
             if self.running or self.future is not None or self.sim.busy:
                 raise ValueError("已有任务或API请求尚未结束，请停止并等待请求返回")
+            context_mode = payload.get("context_mode", "current")
+            single_step = payload.get("single_step", False)
+            if context_mode not in {"current", "paired"} or type(single_step) is not bool:
+                raise ValueError("上下文模式或单步设置无效")
+            if single_step and (diagnostic or payload.get("agent", "llm_cloud") != "llm_cloud"):
+                raise ValueError("单步仅用于 LLM 操作演示")
+            self.context_mode = context_mode
+            self.single_step = single_step
             self.diagnostic_stage = diagnostic
             self.diagnostic_result = None
             if diagnostic and payload.get("agent", "llm_cloud") != "llm_cloud":
@@ -345,7 +465,7 @@ class EpisodeRunner:
                 return
             self.policy_kind = "llm_cloud"
             source = payload.get("credential_source", "manual")
-            config = self.resolve_connection(payload)
+            config = None if source == "codex" else self.resolve_connection(payload)
             override = payload.get("model") or None
             if override is not None and (
                 not isinstance(override, str)
@@ -354,7 +474,7 @@ class EpisodeRunner:
             ):
                 raise ValueError("模型名称无效")
             override = override.strip() if override else None
-            model = override or config.model or DEFAULT_MODEL
+            model = override or (config.model if config else None) or DEFAULT_MODEL
             max_steps = 1 if diagnostic else int(payload.get("max_steps", 30))
             if not 1 <= max_steps <= 100:
                 raise ValueError("API调用上限必须在1至100之间")
@@ -362,7 +482,18 @@ class EpisodeRunner:
             if type(options) is not dict:
                 raise ValueError("请求设置必须是对象")
             self.request_options = dict(options)
-            self.activate_connection(config, model, source)
+            if source == "codex":
+                from maniloop.providers.codex import CodexPolicy
+                policy = CodexPolicy(model=model, request_options=self.request_options)
+                self.close_policy()
+                self.policy = policy
+                self.key = ""
+                self.model = model
+                self.credentials = {"source": "codex", "provider": "Codex · ChatGPT 登录",
+                    "path": "", "base_url": "", "model": model, "models": [model],
+                    "key_configured": True, "error": ""}
+            else:
+                self.activate_connection(config, model, source)
             if not diagnostic and self.sim.backend == "libero":
                 profile = payload.get("observation_profile", self.sim.describe().get("observation_profile", "debug_rgb128"))
                 mode = payload.get("llm_control", self.sim.llm_control)
@@ -424,6 +555,12 @@ class EpisodeRunner:
         self.max_steps = max_steps
         self.api_latency = None
         self.awaiting_execution = False
+        self.paused = self.pause_requested = False
+        self.human_pause_used = self.single_step
+        self.last_transition = self.transition_before = None
+        self.replay_frames = []
+        self.replay_html = b""
+        self._review_signature = None
         self.termination_reason = None
         self.task = task
         self.step_count = 0
@@ -473,6 +610,11 @@ class EpisodeRunner:
         if self.running and self.sim.terminated and not self.diagnostic_stage:
             self.stop("环境已结束", reason="environment_terminated")
         self.tick()
+        if not self.running and self.log_file:
+            self.update_review()
+        if self.paused:
+            self._physics_remainder = 0.0
+            return
         if self.diagnostic_stage:
             return  # Diagnostics never advance physics, including realtime mode.
         if (
@@ -529,8 +671,8 @@ class EpisodeRunner:
         self.running = False
         self.chunk = None
         self.token += 1
-        self.pool.shutdown(wait=True, cancel_futures=True)
         self.close_policy()
+        self.pool.shutdown(wait=True, cancel_futures=True)
         self.sim.close()
 
     def _visual_changed(self, old_images, new_images):
@@ -563,9 +705,10 @@ class EpisodeRunner:
         if self.awaiting_execution and not self.sim.busy:
             self.awaiting_execution = False
             feedback = dict(self.sim.feedback)
-            self.history.append({"action": self.last_action, "feedback": feedback})
-            self.history = self.history[-8:]
-            self.event("execution", feedback["message"], feedback=feedback)
+            self.event("execution", feedback["message"], feedback=feedback, request_index=self.api_calls)
+        if self.transition_before is not None and not self.sim.busy and self.sim.settled:
+            self.finish_transition()
+        self.pause_at_boundary()
         # Never schedule a second request until the first has returned, even after stop/reset.
         if self.future is not None and self.future.done():
             future = self.future
@@ -575,6 +718,8 @@ class EpisodeRunner:
                     future.exception()
                     self.event("info", "已丢弃停止或重置前的API响应")
                     return
+                if self.single_step and not self.diagnostic_stage:
+                    self.pause_requested = True
                 if self.credential_source == "file" and self.refresh_local_connection():
                     future.exception()
                     self.event("info", "配置已切换，已丢弃旧供应商响应并重新观察")
@@ -596,6 +741,7 @@ class EpisodeRunner:
                         "usage": self.policy.last_usage or None,
                         "request_options": self.policy.request_options})
                     self.running = False
+                    self.paused = self.pause_requested = False
                     self.phase = "completed"
                     self.termination_reason = "diagnostic_complete"
                     self.event("diagnostic", "诊断响应通过；没有执行机器人动作", result=self.diagnostic_result)
@@ -664,10 +810,13 @@ class EpisodeRunner:
                     # Keep the synchronized snapshot for the follow-up query/action; revalidate before execution.
                 elif action["kind"] == "done":
                     self.running = False
+                    self.paused = self.pause_requested = False
                     self.phase = "completed"
                     self.termination_reason = "model_done"
                     self.event("complete", "模型声明任务结束；成功与否以独立评估为准")
                 else:
+                    self.transition_before = (deepcopy(self.pending_observation), dict(self.request_images),
+                                              deepcopy(action), self.api_calls)
                     result = self.sim.execute(
                         Action.from_legacy(
                             action, frame=self.pending_observation["frame_id"]
@@ -682,12 +831,15 @@ class EpisodeRunner:
                     self.phase = (
                         "executing" if result["status"] == "accepted" else "observing"
                     )
-                    self.event(result["status"], result["message"], feedback=result)
+                    self.event(result["status"], result["message"], feedback=result, request_index=self.api_calls)
                     self.next_request = time.monotonic() + (
                         0.15 if self.timing == "realtime" else 0.0
                     )
+                if self.single_step and self.running:
+                    self.pause_requested = True
             except Exception as exc:
                 self.running = False
+                self.paused = self.pause_requested = False
                 self.phase = "error"
                 self.termination_reason = "policy_error"
                 self.error = str(exc)
@@ -708,6 +860,8 @@ class EpisodeRunner:
                     usage=self.policy.last_usage if type(self.policy.last_usage) is dict and self.policy.last_usage else None)
         if (
             self.running
+            and not self.paused
+            and not self.pause_requested
             and self.future is None
             and self.chunk is None
             and self.sim.settled
@@ -745,6 +899,16 @@ class EpisodeRunner:
             self.phase = "thinking"
             self.api_calls += 1
             self.future_token = self.token
+            policy_images = dict(self.request_images)
+            policy_history = deepcopy(self.history)
+            if self.context_mode == "paired" and self.last_transition is not None:
+                transition, before_images = self.last_transition
+                policy_history.append({"transition": deepcopy(transition)})
+                policy_images.update({"previous/" + name: data for name, data in before_images.items()})
+            guard_sensor_tree(policy_history)
+            self.replay_frames.append({"request_index": self.api_calls,
+                "observation": paired_sensors(self.pending_observation),
+                "images": dict(self.request_images), "phase": "before"})
             if self.log_file:
                 directory = self.log_file.parent
                 for camera, data in self.request_images.items():
@@ -756,6 +920,10 @@ class EpisodeRunner:
                     json.dumps(self.pending_observation, ensure_ascii=False, indent=2),
                     encoding="utf-8",
                 )
+                (directory / f"{self.api_calls:03d}-context.json").write_text(
+                    json.dumps({"context_mode": self.context_mode, "history": policy_history,
+                                "image_labels": list(policy_images)}, ensure_ascii=False, indent=2),
+                    encoding="utf-8")
             self.event(
                 "request", f"第 {self.api_calls} 次策略调用：读取双相机和机器人状态"
             )
@@ -767,8 +935,8 @@ class EpisodeRunner:
                 self.policy.decide,
                 self.task,
                 self.representation.encode(self.pending_observation),
-                self.request_images,
-                list(self.history),
+                policy_images,
+                policy_history,
                 list(self.geometry),
             )
 
@@ -779,6 +947,10 @@ class EpisodeRunner:
             images = {}
         state = {
             "running": self.running,
+            "paused": self.paused,
+            "pause_requested": self.pause_requested,
+            "context_mode": self.context_mode,
+            "replay_available": bool(self.replay_html),
             "ready": True,
             "error": self.error,
             "phase": self.phase,
@@ -804,6 +976,7 @@ class EpisodeRunner:
             "task_instruction": self.sim.instruction,
             "timing": self.timing,
             "agent": self.policy_kind,
+            "credential_source": self.credential_source,
             "sim_time": float(self.sim.simulation_time),
             "tcp_position": self.sim.tcp_position.tolist(),
             "gripper_opening": self.sim.gripper_opening,

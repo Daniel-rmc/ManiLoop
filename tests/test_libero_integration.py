@@ -123,3 +123,51 @@ def test_target_gripper_hold_close_and_open(official):
         assert np.linalg.norm(official.tcp_position - position) < .002
         assert (official.gripper_opening < .1 if target == 0 else official.gripper_opening > .9)
     official.set_llm_control("osc_step")
+
+
+def test_demo_paired_single_step_on_real_libero(tmp_path):
+    """Actual sensor/servo/UI-runner path with a fixture policy, never GPT."""
+    import time
+    from copy import deepcopy
+    from maniloop.runtime.runner import EpisodeRunner
+    from maniloop.core.observations import guard_sensor_tree
+
+    class FixturePolicy:
+        last_latency = 0.0
+        last_usage = {}
+        request_options = {'transport': 'offline_fixture'}
+        def __init__(self): self.requests = []
+        def decide(self, task, observation, images, history, geometry):
+            self.requests.append(deepcopy((observation, images, history)))
+            return dict(observation_id=observation['observation_id'], kind='move',
+                        delta_position=[0, 0, .005], delta_rotation=[0, 0, 0],
+                        gripper_opening=0, camera='', pixel=[0, 0], explanation='offline fixture')
+
+    env = LiberoEnvironment(observation_profile='llm_rgb512')
+    env.set_llm_control('tcp_target_servo_v2')
+    runner = EpisodeRunner(env, model='offline-fixture', output=tmp_path)
+    try:
+        policy = runner.policy = FixturePolicy()
+        runner.context_mode = 'paired'
+        runner.single_step = True
+        runner.begin_episode('offline integration motion only', 2)
+        for expected in (1, 2):
+            if expected == 2: runner.command('step', {})
+            for _ in range(3000):
+                runner.advance(.05)
+                if runner.paused: break
+                time.sleep(.001)
+            assert runner.paused and runner.api_calls == expected and not env.busy
+        current, images, history = policy.requests[1]
+        assert set(images) == {'external', 'wrist', 'previous/external', 'previous/wrist'}
+        assert all(Image.open(io.BytesIO(data)).size == (512, 512) for data in images.values())
+        transition = history[-1]['transition']
+        assert transition['feedback']['status'] in {'reached', 'timed_out'}
+        assert transition['after']['tcp_position'][2] > transition['before']['tcp_position'][2]
+        guard_sensor_tree([current, history])
+        frozen = env.simulation_time
+        runner.advance(1)
+        assert env.simulation_time == frozen
+        assert runner.replay_html and (runner.log_file.parent / 'review-summary.json').exists()
+    finally:
+        runner.close()
