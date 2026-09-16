@@ -290,6 +290,8 @@ pyproject.toml       # 可安装的 Python 包与 maniloop 命令
 
 接口职责、数据边界、时序和扩展方法见 [框架设计](docs/ARCHITECTURE.md)。新功能先通过最小可运行实验验证，再提炼共用抽象。
 
+[Show-Harness 工程分析](docs/research/SHOW_HARNESS_ANALYSIS.md) 对照论文与固定版本源码，说明 VLM 语义动作闭环、标定与评测边界，并给出 ManiLoop 的分阶段实施建议。
+
 ## 许可证与贡献
 
 项目采用 [MIT](LICENSE)。ARX X5 资产保留上游 MIT 声明，Panda 资产保留 Apache-2.0 许可证，见 [第三方声明](THIRD_PARTY_NOTICES.md)。贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
