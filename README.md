@@ -27,7 +27,7 @@ v0.1 提供 ARX X5 / Franka Panda、两个桌面布局、抓放 / 推物任务�
 
 运行依赖固定在 [requirements.txt](requirements.txt)：MuJoCo 3.12.0、NumPy 2.5.3、Pillow 12.3.0、OpenAI Python SDK 3.8.0。测试依赖为 pytest 9.1.1，见 [requirements-dev.txt](requirements-dev.txt)。固定的是直接依赖版本，传递依赖由 pip 解析。
 
-安装 [Python 3.12](https://www.python.org/downloads/) 后，通过仓库页面下载 ZIP 并解压，或 `git clone` 此仓库。以下命令都从 `maniloop` 仓库根目录执行。MuJoCo 的 Python 包已经包含引擎，无须单独安装 `mujoco-py` 或下载引擎二进制文件。参见 [MuJoCo 安装说明](https://mujoco.readthedocs.io/en/stable/python.html#installation)。
+安装 [Python 3.12](https://www.python.org/downloads/) 后，通过仓库页面下载 ZIP 并解压，或执行 `git clone https://github.com/Daniel-rmc/ManiLoop.git maniloop`。以下命令都从 `maniloop` 仓库根目录执行。MuJoCo 的 Python 包已经包含引擎，无须单独安装 `mujoco-py` 或下载引擎二进制文件。参见 [MuJoCo 安装说明](https://mujoco.readthedocs.io/en/stable/python.html#installation)。
 
 ## 2. 从零启动
 

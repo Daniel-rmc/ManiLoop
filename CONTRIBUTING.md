@@ -29,3 +29,22 @@ For substantial work, read [worknote rules](docs/worknotes/README.md) and the
 milestones, including actual validation, problems, decisions and remaining work.
 Optional LIBERO contributions must preserve the pinned upstream task/controller
 contract and pass the opt-in checks documented in [LIBERO.md](docs/LIBERO.md).
+
+## Git workflow
+
+The canonical repository is https://github.com/Daniel-rmc/ManiLoop and the default
+branch is `main`. Create a short-lived branch for each feature or fix, make focused
+commits, and open a pull request with the problem, changed behavior and validation.
+Check GitHub Actions before merging; update the worknote for meaningful milestones.
+
+For a new checkout:
+
+```sh
+git clone https://github.com/Daniel-rmc/ManiLoop.git
+cd ManiLoop
+git switch -c feature/your-change
+```
+
+Before committing, inspect `git status` and `git diff --staged` to confirm only the
+intended source, tests and documentation are included. Keep downloaded models,
+virtual environments, benchmark installations and generated runs out of Git.
