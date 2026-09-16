@@ -20,7 +20,7 @@
       status_completed: "Action execution completed", unavailable_feedback: "Not recorded", preview_aria: "Recorded preview: {task}",
       unavailable: "Preview unavailable. Open the full episode.", manual_play: "Press Play · Simulation time · Model waits omitted",
       reduced_motion: "Motion paused by your preference · Press Play to watch", seek_value: "{seconds} of {total} seconds",
-      feedback_error: "TCP error {error} mm", feedback_hint: "The model receives this robot-state execution feedback. TCP error compares the measured TCP position with its commanded target, not an object. Action execution completion does not mean task success.", terminal_note: "Environment terminated during the last action; see the episode result below.",
+      feedback_error: "TCP error {error} mm", feedback_hint: "Feedback to the model uses only camera images and proprioception available on a real robot; no privileged simulator ground truth is provided. The controller computes TCP error from the model's previous command and the measured post-action TCP position, without object ground truth. Action execution completion does not mean task success.", terminal_note: "Environment terminated during the last action; see the episode result below.",
       card_aria: "Play recorded task: {task}",
     },
     zh: {
@@ -40,7 +40,7 @@
       status_completed: "动作执行完成", unavailable_feedback: "未记录", preview_aria: "录制任务预览：{task}",
       unavailable: "预览暂时无法播放，可打开完整录像。", manual_play: "点击播放 · 按仿真时间播放 · 未展示模型等待时间",
       reduced_motion: "已按你的动态效果偏好暂停 · 点击播放即可观看", seek_value: "第 {seconds} 秒，共 {total} 秒",
-      feedback_error: "TCP误差 {error} 毫米", feedback_hint: "这些本体执行反馈会提供给模型。TCP误差是末端实测位置与已发指令目标之差，不是物体距离；动作执行完成不等于任务成功。", terminal_note: "环境在最后一次动作中终止，详见下方回合结果。",
+      feedback_error: "TCP误差 {error} 毫米", feedback_hint: "提供给模型的反馈仅来自真实机器人可获得的相机图像与本体观测，不传入仿真特权真值。TCP误差由控制器依据模型上一条指令和执行后的末端实测位置计算，不使用物体真值。动作执行完成不等于任务成功。", terminal_note: "环境在最后一次动作中终止，详见下方回合结果。",
       card_aria: "播放已录制任务：{task}",
     },
   };
