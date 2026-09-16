@@ -1263,6 +1263,1574 @@
         "cut": false
       },
       "report_url": "https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md"
+    },
+    {
+      "id": "20260916-192032-dfc63995",
+      "label": {
+        "en": "Turn on the stove",
+        "zh": "开启炉具"
+      },
+      "task": {
+        "en": "Turn on the stove.",
+        "zh": "开启炉具。"
+      },
+      "model": "GPT-6 Astra",
+      "context": {
+        "suite": "libero_goal",
+        "task_id": 7,
+        "init_state_id": 0,
+        "seed": 0,
+        "context_mode": "paired",
+        "reasoning_effort": "medium",
+        "observation_profile": "llm_rgb512",
+        "action_interface": "tcp_target_servo_v2",
+        "timing": "controlled"
+      },
+      "summary": {
+        "decisions": 27,
+        "structured_decisions": 26,
+        "execute_attempts": 26,
+        "accepted_actions": 25,
+        "rejected_requests": 2,
+        "control_steps": 447,
+        "simulation_seconds": 22.35,
+        "wall_seconds": 355.5911187499296,
+        "frame_count": 448,
+        "fps": 20,
+        "video_duration_seconds": 22.4
+      },
+      "evaluation": {
+        "source": "LIBERO check_success",
+        "success": true,
+        "current_success": true,
+        "terminated": true,
+        "initial_success": false,
+        "verified": true
+      },
+      "outcome_note": {
+        "en": "LIBERO's official TurnOn condition became true during execution of request 27, which commanded a +0.25 rad turn about world Z. The environment stopped after three native control steps; no gripper release or withdrawal followed. Two earlier requests were rejected without motion. The final recorded burner remains dark, so this episode demonstrates the simulator's condition being met, without a visible lighting effect.",
+        "zh": "第 27 次请求要求绕世界 Z 轴转动 +0.25 弧度，在执行 3 个原生控制步后触发 LIBERO 官方 TurnOn 成功条件，环境随即终止；之后未松爪或退离。此前两次请求被拒绝，未产生运动。录制末帧的炉盘仍为暗色，本回合证明达到了仿真器判定条件，未展示可见的亮起效果。"
+      },
+      "cues": [
+        {
+          "start_seconds": 0.0,
+          "decision": 3,
+          "explanation": {
+            "en": "Approach the visible stove knob with a smaller step within the translation limit, using the current observation ID.",
+            "zh": "使用当前观测编号，以不超过位移限制的小步接近可见的炉具旋钮。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              -0.02,
+              0.025,
+              -0.035
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": null
+        },
+        {
+          "start_seconds": 0.9500000000000001,
+          "decision": 4,
+          "explanation": {
+            "en": "The previous approach reached its target; the stove knob remains below and to the right of the gripper. Continue a small approach toward it.",
+            "zh": "上次接近动作到达了目标；炉具旋钮仍在夹爪下方偏右。继续小幅接近。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              -0.014,
+              0.03,
+              -0.037
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0016087280429226128
+          }
+        },
+        {
+          "start_seconds": 1.6,
+          "decision": 5,
+          "explanation": {
+            "en": "The previous motion reached its target, and the stove knob remains below and right of the gripper. Continue a small approach toward the knob.",
+            "zh": "上次运动到达了目标，炉具旋钮仍在夹爪下方偏右。继续小幅接近旋钮。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              -0.014,
+              0.03,
+              -0.037
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0017092329034704289
+          }
+        },
+        {
+          "start_seconds": 2.2,
+          "decision": 6,
+          "explanation": {
+            "en": "The last approach reached its target, but the gripper remains above and offset from the stove knob. Move another small step toward the visible control.",
+            "zh": "上次接近动作到达了目标，但夹爪仍在炉具旋钮上方且有偏移。再向可见的控制旋钮小幅移动。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              -0.03,
+              0.025,
+              -0.03
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0015073837074873698
+          }
+        },
+        {
+          "start_seconds": 3.1,
+          "decision": 7,
+          "explanation": {
+            "en": "The last motion reached its target, but the gripper is still above and offset from the stove knob. Continue a small approach toward the visible knob.",
+            "zh": "上次运动到达了目标，但夹爪仍在炉具旋钮上方且有偏移。继续小幅接近可见的旋钮。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              -0.037,
+              0.02,
+              -0.025
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0015419941092357848
+          }
+        },
+        {
+          "start_seconds": 4.05,
+          "decision": 8,
+          "explanation": {
+            "en": "The previous move reached its target. The knob remains offset from the fingers in the wrist view; move closer and lower to align with it.",
+            "zh": "上次运动到达了目标。腕部视图中旋钮与夹指仍有偏移；继续靠近并下降，使两者对齐。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              -0.022,
+              0.035,
+              -0.027
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0015499720971978576
+          }
+        },
+        {
+          "start_seconds": 5.0,
+          "decision": 9,
+          "explanation": {
+            "en": "The last move brought the stove knob closer to alignment, but it remains offset from the fingers. Move slightly toward it and lower to prepare for contact.",
+            "zh": "上次运动使炉具旋钮更接近对齐位置，但与夹指仍有偏移。略微靠近并下降，准备接触。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              -0.025,
+              0.03,
+              -0.02
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0013997392343194266
+          }
+        },
+        {
+          "start_seconds": 6.0,
+          "decision": 10,
+          "explanation": {
+            "en": "The stove control is left of the gripper in the external view. Make a small leftward and downward correction after the previous approach timed out.",
+            "zh": "外部视图中，炉具控制旋钮位于夹爪左侧。上次接近动作超时后，向左下方做小幅修正。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              -0.035,
+              -0.01
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.009222331465387685
+          }
+        },
+        {
+          "start_seconds": 7.0,
+          "decision": 11,
+          "explanation": {
+            "en": "The last correction stalled and the fingers shifted unevenly near the stove control. Lift slightly to clear possible contact before realigning with the knob.",
+            "zh": "上次修正受阻，夹指在炉具控制旋钮附近发生了不均匀的偏移。略微抬升以解除可能的接触，再与旋钮重新对齐。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.03
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.010880365262473888
+          }
+        },
+        {
+          "start_seconds": 8.0,
+          "decision": 12,
+          "explanation": {
+            "en": "The lift fell short, and the stove knob remains beside the left finger. Open the gripper to provide clearance for aligning around the control.",
+            "zh": "抬升未达到预期，炉具旋钮仍在左侧夹指旁边。张开夹爪，为围绕控制旋钮对齐留出空间。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 1
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.018510778584539686
+          }
+        },
+        {
+          "start_seconds": 9.0,
+          "decision": 13,
+          "explanation": {
+            "en": "The fingers opened, but the stove knob remains left of their center in the wrist view. Shift toward the knob with a slight lift to improve alignment and clearance.",
+            "zh": "夹指已经张开，但腕部视图中炉具旋钮仍偏离夹指中心、位于左侧。朝旋钮移动并略微抬升，改善对齐和间隙。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.015,
+              0.025,
+              0.01
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0028453173203210965
+          }
+        },
+        {
+          "start_seconds": 9.950000000000001,
+          "decision": 14,
+          "explanation": {
+            "en": "The last move improved alignment, but the knob is still slightly left of the open fingers in the wrist view. Make a small correction and lower toward its handle.",
+            "zh": "上次运动改善了对齐，但腕部视图中旋钮仍略偏在张开的夹指左侧。做小幅修正，并朝旋钮柄下降。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.008,
+              0.014,
+              -0.02
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0013286642644147724
+          }
+        },
+        {
+          "start_seconds": 10.950000000000001,
+          "decision": 15,
+          "explanation": {
+            "en": "The approach lowered the open fingers around the stove knob’s handle, which is nearly centered in the wrist view. Close the gripper to engage the handle before turning it.",
+            "zh": "接近动作使张开的夹指下降到炉具旋钮柄两侧，旋钮柄在腕部视图中基本居中。闭合夹爪，先夹住旋钮柄再转动。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0075631879515232064
+          }
+        },
+        {
+          "start_seconds": 11.950000000000001,
+          "decision": 16,
+          "explanation": {
+            "en": "The fingers have closed near the stove control, but engagement is uncertain. Apply a small turn to check whether the handle rotates with them.",
+            "zh": "夹指已在炉具控制旋钮附近闭合，但是否夹住仍不确定。小幅转动，检查旋钮柄是否随之旋转。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0.35
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.011276788112590724
+          }
+        },
+        {
+          "start_seconds": 12.950000000000001,
+          "decision": 17,
+          "explanation": {
+            "en": "The wrist rotated and the control handle appears to have shifted relative to the stove, but the burner remains dark. Try a smaller additional turn while maintaining contact.",
+            "zh": "腕部发生了旋转，控制旋钮柄相对炉具似乎有所移动，但炉盘仍暗着。保持接触，再尝试一次更小的转动。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0.2
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.006622463595515531
+          }
+        },
+        {
+          "start_seconds": 13.950000000000001,
+          "decision": 18,
+          "explanation": {
+            "en": "The handle stayed aligned with the fingers while the stove shifted in the wrist view, suggesting engagement. Turn another small increment because the burner still appears dark.",
+            "zh": "炉具在腕部视图中移动时，旋钮柄仍与夹指保持对齐，说明可能已夹住。炉盘看起来仍暗着，再小幅转动一次。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0.3
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.003918914510272634
+          }
+        },
+        {
+          "start_seconds": 14.950000000000001,
+          "decision": 19,
+          "explanation": {
+            "en": "The burner remains dark, and the handle shifted relative to the fingers during the last turn. Open the gripper to release uncertain contact before realigning around the handle.",
+            "zh": "炉盘仍暗着，上次转动时旋钮柄相对夹指发生了移动。张开夹爪，解除不确定的接触，再围绕旋钮柄重新对齐。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 1
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.012665508630253888
+          }
+        },
+        {
+          "start_seconds": 15.950000000000001,
+          "decision": 20,
+          "explanation": {
+            "en": "The gripper is open, but the knob remains offset from its center and the burner is dark. Shift toward the knob with a small lift to improve alignment and clearance.",
+            "zh": "夹爪已张开，但旋钮仍偏离夹爪中心，炉盘仍暗着。朝旋钮移动并略微抬升，改善对齐和间隙。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.003,
+              0.022,
+              0.015
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.005900967602691772
+          }
+        },
+        {
+          "start_seconds": 16.95,
+          "decision": 21,
+          "explanation": {
+            "en": "The last move brought the knob closer to the open fingers’ center. Make a small alignment correction and lower the fingers around its handle before grasping.",
+            "zh": "上次运动使旋钮更接近张开的夹指中心。做小幅对齐修正，并使夹指下降到旋钮柄两侧，再进行抓取。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.003,
+              0.007,
+              -0.012
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0013875311265835017
+          }
+        },
+        {
+          "start_seconds": 17.95,
+          "decision": 22,
+          "explanation": {
+            "en": "The latest motion closely followed the requested correction, and the knob handle appears between the open fingers. Close the gripper to engage it before attempting another turn.",
+            "zh": "上次运动基本跟随了请求的修正，旋钮柄看起来位于张开的夹指之间。闭合夹爪，先夹住旋钮柄，再尝试转动。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.001311139178706708
+          }
+        },
+        {
+          "start_seconds": 18.75,
+          "decision": 23,
+          "explanation": {
+            "en": "The fingers closed near the knob handle with little TCP movement, but engagement remains uncertain. Apply a small turn to check whether the handle follows and the stove activates.",
+            "zh": "夹指在旋钮柄附近闭合，末端位置变化很小，但是否夹住仍不确定。小幅转动，检查旋钮柄是否跟随、炉具是否开启。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0.25
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.001494543147388065
+          }
+        },
+        {
+          "start_seconds": 19.400000000000002,
+          "decision": 24,
+          "explanation": {
+            "en": "The wrist reached its turn, but the handle shifted relative to the fingers and the burner remains dark. Open the gripper to release uncertain contact before repositioning.",
+            "zh": "腕部到达了请求的旋转目标，但旋钮柄相对夹指发生了移动，炉盘仍暗着。张开夹爪，解除不确定的接触，再重新定位。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 1
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0015791859845162726
+          }
+        },
+        {
+          "start_seconds": 20.200000000000003,
+          "decision": 25,
+          "explanation": {
+            "en": "The gripper is open and the burner remains dark. Shift slightly toward the knob’s center and lower the fingers around the handle to improve engagement.",
+            "zh": "夹爪已张开，炉盘仍暗着。略微移向旋钮中心，并让夹指下降到旋钮柄两侧，以改善夹持。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              -0.006,
+              0.006,
+              -0.018
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.0004628569970872328
+          }
+        },
+        {
+          "start_seconds": 21.200000000000003,
+          "decision": 26,
+          "explanation": {
+            "en": "The downward adjustment brought the knob handle between the open fingers in the wrist view. Close the gripper to engage the handle before testing another turn.",
+            "zh": "下降调整使腕部视图中的旋钮柄位于张开的夹指之间。闭合夹爪，夹住旋钮柄，再尝试转动。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.003965992586274271
+          }
+        },
+        {
+          "start_seconds": 22.200000000000003,
+          "decision": 27,
+          "explanation": {
+            "en": "The fingers stopped partially closed around the knob, suggesting contact, while the burner remains dark. Apply a small turn to check whether the knob follows and activates the stove.",
+            "zh": "夹指在旋钮周围部分闭合后停止，提示可能已发生接触，但炉盘仍暗着。小幅转动，检查旋钮是否跟随并开启炉具。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0.25
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0027839970635167364
+          }
+        }
+      ],
+      "preview": {
+        "video": "assets/episodes/20260916-192032-dfc63995/preview.mp4",
+        "poster": "assets/episodes/20260916-192032-dfc63995/poster.jpg",
+        "width": 512,
+        "height": 512,
+        "duration_seconds": 22.4,
+        "fps": 20,
+        "frame_count": 448,
+        "sha256": "f6e9ad3ff07a13cbf3adae4d9953eb1bef4263afb2136ac9e6f5bc298739cfa1"
+      },
+      "full_video": "assets/episodes/20260916-192032-dfc63995/episode.mp4",
+      "conditions": {
+        "context_mode": "paired",
+        "reasoning_effort": "medium",
+        "llm_control": "tcp_target_servo_v2",
+        "observation_profile": "llm_rgb512",
+        "timing": "controlled",
+        "max_calls": 0,
+        "max_sim_seconds": 120.0,
+        "max_wall_seconds": 3600.0,
+        "source_sha256": "9340aaa951c890196f023401eee13af02f66be53aaa09b29ecd104ba46d40c7a",
+        "codex_cli_version": "0.154.0-alpha.6.2"
+      },
+      "recording": {
+        "frame_count": 448,
+        "fps": 20,
+        "video_duration_seconds": 22.4,
+        "frames_sha256": "96edb887b7fa61e26729350cd5fab0eb25c4cfca0fdaa5da97cef0b6ff999e8b",
+        "full_video_sha256": "23b25ed2db4f7b944a18036bd992fe4e933ab4388dc6400923c00a0d529a648d",
+        "initial_success": false,
+        "terminated": true,
+        "interpolated": false,
+        "cut": false
+      },
+      "report_url": "https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md"
+    },
+    {
+      "id": "20260916-192749-a5d3f634",
+      "label": {
+        "en": "Cream cheese into basket",
+        "zh": "奶酪入篮"
+      },
+      "task": {
+        "en": "Pick up the cream cheese and place it in the basket.",
+        "zh": "拿起奶油奶酪并放入篮子。"
+      },
+      "model": "GPT-6 Astra",
+      "context": {
+        "suite": "libero_object",
+        "task_id": 1,
+        "init_state_id": 0,
+        "seed": 0,
+        "context_mode": "paired",
+        "reasoning_effort": "medium",
+        "observation_profile": "llm_rgb512",
+        "action_interface": "tcp_target_servo_v2",
+        "timing": "controlled"
+      },
+      "summary": {
+        "decisions": 29,
+        "structured_decisions": 29,
+        "execute_attempts": 29,
+        "accepted_actions": 29,
+        "rejected_requests": 0,
+        "control_steps": 390,
+        "simulation_seconds": 19.5,
+        "wall_seconds": 327.0573015830014,
+        "frame_count": 391,
+        "fps": 20,
+        "video_duration_seconds": 19.55
+      },
+      "evaluation": {
+        "source": "LIBERO check_success",
+        "success": true,
+        "current_success": true,
+        "terminated": true,
+        "initial_success": false,
+        "verified": true
+      },
+      "outcome_note": {
+        "en": "Request 28 opened the gripper to release the cream cheese. Official success was reached four native control steps into request 29, which commanded a 5 cm upward move. The final views show the package inside the basket and the gripper open above it. The episode stopped immediately at that first success, before the full lift was completed.",
+        "zh": "第 28 次请求张开夹爪，释放奶油奶酪。第 29 次请求要求上升 5 厘米，在执行 4 个原生控制步后触发官方成功。末帧可见包装位于篮内，张开的夹爪位于其上方。回合在首次成功时立即终止，未完成请求的整段抬升。"
+      },
+      "cues": [
+        {
+          "start_seconds": 0.0,
+          "decision": 1,
+          "explanation": {
+            "en": "The cream cheese is the flat blue-and-white package visible in both views. Move toward a position above it while maintaining clearance.",
+            "zh": "奶油奶酪是两路视图中可见的蓝白色扁平包装。保持间隙，向其上方移动。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.043,
+              -0.025,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": null
+        },
+        {
+          "start_seconds": 1.0,
+          "decision": 2,
+          "explanation": {
+            "en": "The previous move nearly reached its target. The cream cheese remains ahead of the gripper; continue approaching above it while maintaining clearance.",
+            "zh": "上次运动接近了目标位置。奶油奶酪仍在夹爪前方；保持间隙，继续接近其上方。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.043,
+              -0.025,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0019953902767119633
+          }
+        },
+        {
+          "start_seconds": 2.0,
+          "decision": 3,
+          "explanation": {
+            "en": "The arm moved toward the cream cheese but timed out near its target. Take a smaller step toward alignment above the package while maintaining height.",
+            "zh": "机械臂朝奶油奶酪移动，但在目标附近超时。保持高度，以更小的步幅对齐到包装上方。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.035,
+              -0.02,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.00318240175863032
+          }
+        },
+        {
+          "start_seconds": 3.0,
+          "decision": 4,
+          "explanation": {
+            "en": "The arm moved toward the cream cheese despite timing out near its target. Continue aligning above the package while lowering slightly toward a grasp.",
+            "zh": "机械臂虽在目标附近超时，但已朝奶油奶酪移动。继续在包装上方对齐，并略微下降以准备抓取。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.035,
+              -0.02,
+              -0.025
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0035054834438299617
+          }
+        },
+        {
+          "start_seconds": 4.0,
+          "decision": 5,
+          "explanation": {
+            "en": "The previous motion brought the gripper closer to the cream cheese. Make a small alignment correction and descend toward the package while retaining clearance.",
+            "zh": "上次运动使夹爪更接近奶油奶酪。做小幅对齐修正，并朝包装下降，同时保留间隙。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.018,
+              -0.013,
+              -0.044
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0037608736815037598
+          }
+        },
+        {
+          "start_seconds": 4.75,
+          "decision": 6,
+          "explanation": {
+            "en": "The cream cheese is approximately aligned beneath the gripper, and the last descent reached its target. Open the fingers fully before lowering around the package.",
+            "zh": "奶油奶酪大致位于夹爪正下方，上次下降到达了目标。先完全张开夹指，再下降到包装两侧。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 1
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.001569986430145129
+          }
+        },
+        {
+          "start_seconds": 5.3500000000000005,
+          "decision": 7,
+          "explanation": {
+            "en": "The fingers are now fully open, and the cream cheese remains aligned below them. Lower the gripper toward the package for grasping.",
+            "zh": "夹指现已完全张开，奶油奶酪仍对齐在其下方。让夹爪朝包装下降以准备抓取。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.05
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.000535285343535891
+          }
+        },
+        {
+          "start_seconds": 5.95,
+          "decision": 8,
+          "explanation": {
+            "en": "The last descent reached its target, and the cream cheese remains centered between the open fingers in the wrist view. Lower another small step toward grasping height.",
+            "zh": "上次下降到达了目标，腕部视图中奶油奶酪仍位于张开的夹指之间。再小幅下降，接近抓取高度。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.05
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0003250006464260036
+          }
+        },
+        {
+          "start_seconds": 6.550000000000001,
+          "decision": 9,
+          "explanation": {
+            "en": "The last descent reached its target. The cream cheese remains aligned between the open fingers, which are still above the package; lower toward grasping height.",
+            "zh": "上次下降到达了目标。奶油奶酪仍对齐在张开的夹指之间，夹指还在包装上方；继续下降到抓取高度。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.05
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.00031374125989139614
+          }
+        },
+        {
+          "start_seconds": 7.1000000000000005,
+          "decision": 10,
+          "explanation": {
+            "en": "The descent reached its target, and the cream cheese remains centered between the open fingers. Lower 3 cm to bring the fingers alongside the package for grasping.",
+            "zh": "下降到达了目标，奶油奶酪仍位于张开的夹指之间。下降 3 厘米，使夹指靠近包装两侧以便抓取。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.03
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.00043991188292987333
+          }
+        },
+        {
+          "start_seconds": 7.6000000000000005,
+          "decision": 11,
+          "explanation": {
+            "en": "The descent reached its target, and the cream cheese remains centered between the open fingers. Close the gripper to attempt a grasp.",
+            "zh": "下降到达了目标，奶油奶酪仍位于张开的夹指之间。闭合夹爪，尝试抓取。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.00045637824751165035
+          }
+        },
+        {
+          "start_seconds": 8.4,
+          "decision": 12,
+          "explanation": {
+            "en": "The fingers closed, but a grasp is unverified. Lift 3 cm to check whether the cream cheese moves with the gripper.",
+            "zh": "夹指已闭合，但尚未验证抓取。抬升 3 厘米，检查奶油奶酪是否随夹爪移动。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.03
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.00014279688693630228
+          }
+        },
+        {
+          "start_seconds": 8.9,
+          "decision": 13,
+          "explanation": {
+            "en": "The cream cheese stayed on the floor during the lift and appears smaller in the wrist view, indicating a missed grasp. Open the fingers to prepare for repositioning.",
+            "zh": "抬升过程中奶油奶酪留在地面，在腕部视图中变小，说明没有抓住。张开夹指，准备重新定位。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 1
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.000497655339959852
+          }
+        },
+        {
+          "start_seconds": 9.700000000000001,
+          "decision": 14,
+          "explanation": {
+            "en": "The cream cheese remains on the floor, and the open fingers appear above it. Lower 4.5 cm to bring the fingers alongside the package for another grasp attempt.",
+            "zh": "奶油奶酪仍在地面，张开的夹指看起来位于其上方。下降 4.5 厘米，使夹指靠近包装两侧，再次尝试抓取。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.045
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.00014300826364806727
+          }
+        },
+        {
+          "start_seconds": 10.700000000000001,
+          "decision": 15,
+          "explanation": {
+            "en": "The gripper descended about 4.3 cm despite timing out, and the cream cheese remains between the open fingers. Close the fingers to attempt a grasp at this lower height.",
+            "zh": "夹爪虽然超时，仍下降了约 4.3 厘米，奶油奶酪仍位于张开的夹指之间。在这个更低的位置闭合夹指，尝试抓取。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0021776801487233544
+          }
+        },
+        {
+          "start_seconds": 11.200000000000001,
+          "decision": 16,
+          "explanation": {
+            "en": "The fingers have closed around the cream cheese but the grasp is unverified. Lift 3 cm to check whether the package moves with the gripper.",
+            "zh": "夹指已在奶油奶酪周围闭合，但尚未验证抓取。抬升 3 厘米，检查包装是否随夹爪移动。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.03
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.0003420511114015651
+          }
+        },
+        {
+          "start_seconds": 11.700000000000001,
+          "decision": 17,
+          "explanation": {
+            "en": "The cream cheese rose with the gripper in the external view and stayed fixed in the wrist view, supporting a successful grasp. Lift another 5 cm for clearance before moving toward the basket.",
+            "zh": "外部视图显示奶油奶酪随夹爪上升，腕部视图中的相对位置保持不变，支持已抓住的判断。再抬升 5 厘米留出间隙，然后移向篮子。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.05
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0005306524107508743
+          }
+        },
+        {
+          "start_seconds": 12.25,
+          "decision": 18,
+          "explanation": {
+            "en": "The cream cheese rose with the gripper and remained fixed in the wrist view, supporting a secure grasp. Lift another 5 cm to gain clearance above the basket rim.",
+            "zh": "奶油奶酪随夹爪上升，在腕部视图中的相对位置保持不变，支持抓持稳固的判断。再抬升 5 厘米，使其高于篮沿。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.05
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0004140829577428228
+          }
+        },
+        {
+          "start_seconds": 12.8,
+          "decision": 19,
+          "explanation": {
+            "en": "The cream cheese moved upward with the gripper and stayed fixed in the wrist view. Lift another 5 cm to ensure the package clears the basket rim before transport.",
+            "zh": "奶油奶酪随夹爪向上移动，在腕部视图中的相对位置保持不变。再抬升 5 厘米，确保搬运前包装能够越过篮沿。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.05
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0005548116062925328
+          }
+        },
+        {
+          "start_seconds": 13.4,
+          "decision": 20,
+          "explanation": {
+            "en": "The cream cheese rose with the gripper and stayed fixed in the wrist view. Move 5 cm toward the basket while maintaining the lifted height.",
+            "zh": "奶油奶酪随夹爪上升，在腕部视图中的相对位置保持不变。保持抬升后的高度，向篮子移动 5 厘米。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0.05,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.00048385892440107954
+          }
+        },
+        {
+          "start_seconds": 14.0,
+          "decision": 21,
+          "explanation": {
+            "en": "The cream cheese moved with the gripper toward the basket and remained fixed in the wrist view. Continue 5 cm toward the basket at the current height.",
+            "zh": "奶油奶酪随夹爪朝篮子移动，在腕部视图中的相对位置保持不变。保持当前高度，继续向篮子移动 5 厘米。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0.05,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.001241793675965647
+          }
+        },
+        {
+          "start_seconds": 14.600000000000001,
+          "decision": 22,
+          "explanation": {
+            "en": "The cream cheese moved with the gripper and remains steady in the wrist view. Continue 5 cm toward the basket while maintaining height.",
+            "zh": "奶油奶酪随夹爪移动，在腕部视图中保持稳定。保持高度，继续向篮子移动 5 厘米。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0.05,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0012570194850020618
+          }
+        },
+        {
+          "start_seconds": 15.200000000000001,
+          "decision": 23,
+          "explanation": {
+            "en": "The cream cheese moved right with the gripper and remained steady in the wrist view. Continue 5 cm toward the basket at the current height.",
+            "zh": "奶油奶酪随夹爪向右移动，在腕部视图中保持稳定。保持当前高度，继续向篮子移动 5 厘米。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0.05,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0013444096481388806
+          }
+        },
+        {
+          "start_seconds": 15.8,
+          "decision": 24,
+          "explanation": {
+            "en": "The cream cheese moved with the gripper and stayed steady in the wrist view. Continue 5 cm toward the basket while maintaining height.",
+            "zh": "奶油奶酪随夹爪移动，在腕部视图中保持稳定。保持高度，继续向篮子移动 5 厘米。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0.05,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0013015910120956883
+          }
+        },
+        {
+          "start_seconds": 16.45,
+          "decision": 25,
+          "explanation": {
+            "en": "The cream cheese moved with the gripper and remains steady in the wrist view. Continue 5 cm toward the basket to bring it over the opening while maintaining height.",
+            "zh": "奶油奶酪随夹爪移动，在腕部视图中保持稳定。保持高度，继续向篮子移动 5 厘米，使其到达篮口上方。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0.05,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0014008941733507385
+          }
+        },
+        {
+          "start_seconds": 17.2,
+          "decision": 26,
+          "explanation": {
+            "en": "The cream cheese moved with the gripper and remains steady in the wrist view. Move 4 cm toward the basket’s center while maintaining height.",
+            "zh": "奶油奶酪随夹爪移动，在腕部视图中保持稳定。保持高度，朝篮子中心移动 4 厘米。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0.04,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0019973379236471783
+          }
+        },
+        {
+          "start_seconds": 17.95,
+          "decision": 27,
+          "explanation": {
+            "en": "The cream cheese moved with the gripper and now appears centered over the basket opening in both views. Lower it 3 cm into the basket before releasing.",
+            "zh": "奶油奶酪随夹爪移动，现在两路视图中都看起来位于篮口中央上方。先下降 3 厘米进入篮子，再释放。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.03
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0018765497173951185
+          }
+        },
+        {
+          "start_seconds": 18.5,
+          "decision": 28,
+          "explanation": {
+            "en": "The cream cheese lowered with the gripper and appears inside the basket opening in both views. Open the gripper to release it into the basket.",
+            "zh": "奶油奶酪随夹爪下降，在两路视图中都看起来位于篮口内。张开夹爪，将其释放到篮子中。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 1
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0010301050089311869
+          }
+        },
+        {
+          "start_seconds": 19.3,
+          "decision": 29,
+          "explanation": {
+            "en": "The gripper is open and the cream cheese has shifted down into the basket. Raise the gripper 5 cm to clear it and check that the cheese remains in the basket.",
+            "zh": "夹爪已张开，奶油奶酪已向下落入篮子。让夹爪上升 5 厘米以留出间隙，并检查奶酪是否留在篮子中。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.05
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.0002327474889762421
+          }
+        }
+      ],
+      "preview": {
+        "video": "assets/episodes/20260916-192749-a5d3f634/preview.mp4",
+        "poster": "assets/episodes/20260916-192749-a5d3f634/poster.jpg",
+        "width": 512,
+        "height": 512,
+        "duration_seconds": 19.55,
+        "fps": 20,
+        "frame_count": 391,
+        "sha256": "c28217e6775c3755bf05d2d60ebc15742c7776e8f76e93ccaee8dbbb746168a8"
+      },
+      "full_video": "assets/episodes/20260916-192749-a5d3f634/episode.mp4",
+      "conditions": {
+        "context_mode": "paired",
+        "reasoning_effort": "medium",
+        "llm_control": "tcp_target_servo_v2",
+        "observation_profile": "llm_rgb512",
+        "timing": "controlled",
+        "max_calls": 0,
+        "max_sim_seconds": 120.0,
+        "max_wall_seconds": 3600.0,
+        "source_sha256": "9340aaa951c890196f023401eee13af02f66be53aaa09b29ecd104ba46d40c7a",
+        "codex_cli_version": "0.154.0-alpha.6.2"
+      },
+      "recording": {
+        "frame_count": 391,
+        "fps": 20,
+        "video_duration_seconds": 19.55,
+        "frames_sha256": "a339a99b169e42fbc58f81da16ab2f4a8119545db53e74b9630acdc480289ee3",
+        "full_video_sha256": "85c4585969ff764921acbd430fa63b52f01cd9f0b6e12bca8d076a7a2638c30d",
+        "initial_success": false,
+        "terminated": true,
+        "interpolated": false,
+        "cut": false
+      },
+      "report_url": "https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md"
     }
   ]
 }

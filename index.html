@@ -13,7 +13,7 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css?v=recorded-skills-1">
   <script src="app.js?v=recorded-skills-1" defer></script>
-  <script src="showcase.js?v=recorded-skills-2" defer></script>
+  <script src="showcase.js?v=recorded-skills-4" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
@@ -45,6 +45,7 @@
           <div class="hero-decision-heading"><span data-showcase-i18n="action_note">MODEL ACTION NOTE · RECORDED</span><strong id="hero-decision-number">—</strong></div>
           <p id="hero-action-explanation"></p>
           <dl class="hero-action-fields"><div><dt data-showcase-i18n="command">Requested action</dt><dd id="hero-action-command">—</dd></div><div><dt data-showcase-i18n="feedback">Previous action feedback</dt><dd id="hero-action-feedback">—</dd></div></dl>
+          <p class="hero-note-hint" data-showcase-i18n="feedback_hint">The model receives this robot-state execution feedback. TCP error compares the measured TCP position with its commanded target, not an object. Action execution completion does not mean task success.</p>
           <p class="hero-note-hint" data-showcase-i18n="pause_hint">Pause to read the model's saved action note. This page makes no model requests.</p>
         </div>
         <div class="hero-note"><span class="note-index">∥</span><p><span data-i18n="sensor_note">The policy sees images and robot state.</span><br><strong data-i18n="score_note">The evaluator stays separate.</strong></p></div>
@@ -53,7 +54,7 @@
     <section class="skill-gallery page-width" id="skills" aria-labelledby="skills-title" hidden>
       <div class="skill-gallery-heading"><div><p class="eyebrow" data-showcase-i18n="gallery_eyebrow">RECORDED SKILLS</p><h2 id="skills-title" data-showcase-i18n="gallery_title">See a task through.</h2></div><p data-showcase-i18n="gallery_description">Select a task to play its recorded actions above. Each card is one independently verified episode, not a benchmark success rate.</p></div>
       <div class="skill-cards" id="skill-cards" role="group" aria-label="Select a recorded task"></div>
-      <div class="skill-selected-detail"><div><strong id="hero-task-name"></strong><p id="hero-task-summary"></p><p id="hero-outcome-note"></p></div><a id="hero-workspace-link" class="text-link" href="playground/?lang=en" hidden><span data-showcase-i18n="workspace">Inspect this episode</span><span aria-hidden="true">↗</span></a></div>
+      <div class="skill-selected-detail"><div><strong id="hero-task-name"></strong><p id="hero-task-summary"></p><p id="hero-wall-note" data-showcase-i18n="wall_scope">Run time includes model planning and waiting, simulation execution and recording; environment initialization and policy loading are excluded. Video playback follows simulation time.</p><p id="hero-outcome-note"></p></div><a id="hero-workspace-link" class="text-link" href="playground/?lang=en" hidden><span data-showcase-i18n="workspace">Inspect this episode</span><span aria-hidden="true">↗</span></a></div>
     </section>
     <section id="framework" class="framework-section page-width section-space" aria-labelledby="framework-title">
       <div class="section-heading"><p class="eyebrow" data-i18n="framework_eyebrow">01 / THE FRAMEWORK</p><div><h2 id="framework-title" data-i18n="framework_title">Close the loop. Inspect every step.</h2><p class="section-intro" data-i18n="framework_intro">A shared interface for model inference, simulator control and recorded feedback. See what the policy asked for and what the robot actually did.</p></div></div>

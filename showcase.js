@@ -12,13 +12,15 @@
       gallery_eyebrow: "RECORDED SKILLS", gallery_title: "See a task through.",
       gallery_description: "Select a task to play its recorded actions above. Each card is one independently verified episode, not a benchmark success rate.",
       gallery_aria: "Select a recorded task", workspace: "Inspect this episode", verified: "FINAL RESULT · SUCCESS",
-      step: "DECISION {step} / {total}", final: "FINAL FRAME", summary: "{model} · {decisions} decisions · {steps} control steps · {seconds} s simulation",
-      card_summary: "{decisions} decisions · {seconds} s simulation", move: "Move TCP", gripper: "Gripper", wait: "Wait", done: "Done",
-      gripper_command: "gripper {value}", no_feedback: "No preceding action", status_reached: "Target reached", status_timed_out: "Controller timed out",
-      status_completed: "Action completed", unavailable_feedback: "Not recorded", preview_aria: "Recorded preview: {task}",
+      step: "REQUEST {step} / {total}", final: "FINAL FRAME", summary: "{model} · {decisions} model requests{actions} · {steps} control steps · {seconds} s simulation{wall_time}",
+      executed_actions: " · {count} executed actions", card_summary: "{decisions} model requests · {seconds} s simulation{wall_time}",
+      wall_time: " · {minutes} min run time", wall_missing: " · Run time not recorded", wall_scope: "Run time includes model planning and waiting, simulation execution and recording; environment initialization and policy loading are excluded. Video playback follows simulation time.",
+      move: "Move TCP", gripper: "Gripper", wait: "Wait", done: "Done",
+      gripper_command: "gripper {value}", no_feedback: "No preceding action", status_reached: "TCP target reached", status_timed_out: "Controller timed out",
+      status_completed: "Action execution completed", unavailable_feedback: "Not recorded", preview_aria: "Recorded preview: {task}",
       unavailable: "Preview unavailable. Open the full episode.", manual_play: "Press Play · Simulation time · Model waits omitted",
       reduced_motion: "Motion paused by your preference · Press Play to watch", seek_value: "{seconds} of {total} seconds",
-      feedback_error: "TCP error {error} mm", terminal_note: "Environment terminated during the last action; see the episode result below.",
+      feedback_error: "TCP error {error} mm", feedback_hint: "The model receives this robot-state execution feedback. TCP error compares the measured TCP position with its commanded target, not an object. Action execution completion does not mean task success.", terminal_note: "Environment terminated during the last action; see the episode result below.",
       card_aria: "Play recorded task: {task}",
     },
     zh: {
@@ -30,13 +32,15 @@
       gallery_eyebrow: "已录制的操作技能", gallery_title: "看任务如何完成。",
       gallery_description: "选择任务，在上方播放其真实操作记录。每张卡片代表一次经过独立验证的回合，不代表基准成功率。",
       gallery_aria: "选择已录制的任务", workspace: "逐步检查此回合", verified: "回合最终结果 · 成功",
-      step: "决策 {step} / {total}", final: "最终画面", summary: "{model} · {decisions} 次决策 · {steps} 个控制步 · {seconds} 秒仿真",
-      card_summary: "{decisions} 次决策 · {seconds} 秒仿真", move: "移动 TCP", gripper: "夹爪", wait: "等待", done: "完成声明",
-      gripper_command: "夹爪 {value}", no_feedback: "尚无前一步动作", status_reached: "目标到位", status_timed_out: "控制器超时",
-      status_completed: "动作完成", unavailable_feedback: "未记录", preview_aria: "录制任务预览：{task}",
+      step: "请求 {step} / {total}", final: "最终画面", summary: "{model} · {decisions} 次模型请求{actions} · {steps} 个控制步 · {seconds} 秒仿真{wall_time}",
+      executed_actions: " · {count} 次执行动作", card_summary: "{decisions} 次模型请求 · {seconds} 秒仿真{wall_time}",
+      wall_time: " · 实际运行 {minutes} 分钟", wall_missing: " · 实际耗时未记录", wall_scope: "实际运行耗时包含模型规划与等待、仿真执行和记录；不含环境初始化与策略加载。视频按仿真时间播放。",
+      move: "移动 TCP", gripper: "夹爪", wait: "等待", done: "完成声明",
+      gripper_command: "夹爪 {value}", no_feedback: "尚无前一步动作", status_reached: "末端目标到位", status_timed_out: "控制器超时",
+      status_completed: "动作执行完成", unavailable_feedback: "未记录", preview_aria: "录制任务预览：{task}",
       unavailable: "预览暂时无法播放，可打开完整录像。", manual_play: "点击播放 · 按仿真时间播放 · 未展示模型等待时间",
       reduced_motion: "已按你的动态效果偏好暂停 · 点击播放即可观看", seek_value: "第 {seconds} 秒，共 {total} 秒",
-      feedback_error: "TCP 误差 {error} 毫米", terminal_note: "环境在最后一次动作中终止，详见下方回合结果。",
+      feedback_error: "TCP误差 {error} 毫米", feedback_hint: "这些本体执行反馈会提供给模型。TCP误差是末端实测位置与已发指令目标之差，不是物体距离；动作执行完成不等于任务成功。", terminal_note: "环境在最后一次动作中终止，详见下方回合结果。",
       card_aria: "播放已录制任务：{task}",
     },
   };
@@ -68,6 +72,7 @@
   function finite(value) { return typeof value === "number" && Number.isFinite(value) && value >= 0; }
   function bilingual(value) { return value && typeof value.en === "string" && typeof value.zh === "string"; }
   function number(value, precision = 2) { return value.toLocaleString(language === "zh" ? "zh-CN" : "en-US", { maximumFractionDigits: precision }); }
+  function wallTime(summary) { return finite(summary.wall_seconds) ? t("wall_time", { minutes: number(summary.wall_seconds / 60, 1) }) : t("wall_missing"); }
 
   function validEpisode(item) {
     if (!item || typeof item.id !== "string" || !/^[a-zA-Z0-9_-]+$/.test(item.id) || !bilingual(item.label) || !bilingual(item.task) ||
@@ -163,7 +168,9 @@
     video.setAttribute("aria-label", t("preview_aria", { task: title }));
     image.alt = t("preview_aria", { task: title });
     byId("hero-task-name").textContent = title;
-    byId("hero-task-summary").textContent = t("summary", { model: selected.model, decisions: number(selected.summary.decisions), steps: number(selected.summary.control_steps), seconds: number(selected.summary.simulation_seconds) });
+    const actions = Number.isInteger(selected.summary.accepted_actions) && selected.summary.accepted_actions >= 0
+      ? t("executed_actions", { count: number(selected.summary.accepted_actions) }) : "";
+    byId("hero-task-summary").textContent = t("summary", { model: selected.model, decisions: number(selected.summary.decisions), actions, steps: number(selected.summary.control_steps), seconds: number(selected.summary.simulation_seconds), wall_time: wallTime(selected.summary) });
     byId("hero-outcome-note").textContent = localized(selected.outcome_note);
     byId("hero-full-video").href = selected.full_video;
     const workspace = byId("hero-workspace-link");
@@ -252,7 +259,7 @@
       const thumbnail = document.createElement("img");
       thumbnail.src = item.preview.poster; thumbnail.alt = ""; thumbnail.width = 128; thumbnail.height = 128; thumbnail.loading = "lazy";
       const copy = document.createElement("span"); copy.className = "skill-card-copy";
-      for (const [className, text] of [["skill-card-result", t("verified")], ["skill-card-title", localized(item.label)], ["skill-card-meta", t("card_summary", { decisions: number(item.summary.decisions), seconds: number(item.summary.simulation_seconds) })]]) {
+      for (const [className, text] of [["skill-card-result", t("verified")], ["skill-card-title", localized(item.label)], ["skill-card-meta", t("card_summary", { decisions: number(item.summary.decisions), seconds: number(item.summary.simulation_seconds), wall_time: wallTime(item.summary) })]]) {
         const field = document.createElement("span"); field.className = className; field.textContent = text; copy.appendChild(field);
       }
       button.append(thumbnail, copy);
@@ -326,7 +333,7 @@
 
   async function load() {
     try {
-      const response = await fetch("assets/showcase.json?v=recorded-skills-1", { credentials: "omit" });
+      const response = await fetch("assets/showcase.json?v=recorded-skills-4", { credentials: "omit" });
       if (!response.ok) return;
       const data = await response.json();
       if (data.format !== "maniloop_showcase_v1" || !Array.isArray(data.episodes) || data.episodes.length > 50) return;
