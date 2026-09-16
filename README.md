@@ -2,35 +2,39 @@
 
 **[English](README.md)** · [简体中文](README.zh-CN.md)
 
-A MuJoCo framework for testing GPT and learned robot manipulation policies with visual feedback, local controls, and recorded episodes.
+**Run robot manipulation experiments locally, and inspect the full visual control loop.** ManiLoop connects GPT or learned policies to MuJoCo tasks through a browser workspace and CLI: choose a task, connect a model, execute actions, and review what actually happened.
 
-[Project website](https://daniel-rmc.github.io/ManiLoop/) · [Interactive workspace](https://daniel-rmc.github.io/ManiLoop/playground/?lang=en) · [Watch the successful episode](https://daniel-rmc.github.io/ManiLoop/#demo) · [Model results](docs/RESULTS.md)
+**[Get started ↓](#step-1--open-the-local-workspace)** · [Connect a model](#step-3--connect-your-model) · [Observed results](docs/RESULTS.md#english) · [Project website](https://daniel-rmc.github.io/ManiLoop/?lang=en)
 
-![ManiLoop tabletop simulation](docs/images/scene.jpg)
+![The running local ManiLoop application: dual simulation cameras, task selection, and Codex model configuration](docs/images/workspace-local.png)
 
-## What you can do
+*The actual local application, shown in its current Chinese interface. This is the working simulator UI, not the website’s recorded replay.*
 
-- **Run GPT in a visual control loop.** The model observes external and wrist cameras, chooses a bounded action, and sees the result before deciding again. Connect through Codex ChatGPT login or a compatible Responses API.
-- **Test local policies.** Run SmolVLA, ACT, and Diffusion Policy checkpoints through an isolated LeRobot process, with CPU, Apple MPS, or CUDA inference.
-- **Choose a simulation environment.** Use the bundled ARX X5 and Franka Panda tabletop scenes, or install official LIBERO tasks with their original Panda controller, initial states, and success checks.
-- **Inspect individual decisions.** Use the browser interface for manual controls, single steps, pause/resume, paired before/after observations, and offline decision replay.
-- **Record complete episodes.** Save every LIBERO control-step frame and export a dual-camera MP4. CLI runs also save actions, observations, configuration, and independent evaluation results.
+## What you can run
 
-Policies receive camera observations and robot sensor state. Object ground truth, simulator contact lists, rewards, and success signals stay outside the policy input. The evaluator can use simulator state independently, and its result controls episode termination.
+The workspace brings **camera observations, model actions, controller feedback, and independent evaluation** together. Use manual controls before connecting a model, single-step GPT decisions, pause and resume, compare before/after observations, run CLI experiment matrices, and export complete LIBERO episodes.
 
-## Successful demonstration
+| Environment / task | Available operations |
+| --- | --- |
+| Built-in `pick_place` | Lift the red cube, place it inside the target region, release, and settle |
+| Built-in `push` | Push the cube along the table into the target region without lifting it |
+| `libero_spatial` · 10 tasks | Select and move a bowl based on its spatial relationship to other objects |
+| `libero_object` · 10 tasks | Pick different objects and place them in a basket |
+| `libero_goal` · 10 tasks | Goal variants including drawer opening, object placement, plate pushing, and stove control |
+| `libero_90` · 90 tasks | Kitchen, living-room, and study tasks, including drawers, microwaves, and stacking |
+| `libero_10` · 10 tasks | Longer tasks combining multiple objects or manipulation operations |
 
-[Watch GPT-6 Astra perform the LIBERO bowl task →](https://daniel-rmc.github.io/ManiLoop/#demo)
+The built-in tasks support **ARX X5 and Franka Panda**, each with `tabletop_a` and `tabletop_b` layouts. LIBERO uses its official Panda, initial states, OSC controller, and success rules. These are available task catalogs; they do not mean every task has been completed by every model. Changing the instruction text does not change a task’s evaluator.
 
-GPT-6 completed one continuous attempt from the official initialization with **46 decisions and 706 control steps**. The video retains the unsuccessful grasp attempts and subsequent adjustments within that episode: **707 dual-camera frames, 20 fps, 35.35 seconds**. Playback follows simulation time and omits the waiting time between model responses.
+Policies receive images and robot sensor state. **Object ground truth, simulator contacts, rewards, and success signals are excluded from policy input.** Independent evaluation can inspect simulator state and stop an episode; a model’s `done` declaration is not the success criterion.
 
-The official success condition became true during the final lowering action, and execution stopped immediately. Release and retreat after that point were not tested. This is an observed task success, not evidence of a benchmark-wide success rate. See [results and evaluation details](docs/RESULTS.md).
+[See real manual debugging: arm and gripper controls, sensor readings, execution feedback, and independent evaluation](docs/images/workspace-feedback.png). This screenshot shows feedback from a manual jog, not a successful task.
 
-## Install and open the simulator
+## Step 1 · Open the local workspace
 
-Use **Python 3.12** and run commands from the repository root. You need an OpenGL rendering context; a local GPU or model weights are not required for hosted GPT inference. The base installation does not require ROS, Docker, or a physical robot.
+Use **Python 3.12**, Git, and an OpenGL-capable environment. Hosted GPT inference does not require local model weights or a local GPU. The base application needs neither ROS, Docker, nor a physical robot.
 
-### macOS / Linux
+**macOS / Linux**
 
 ```bash
 git clone https://github.com/Daniel-rmc/ManiLoop.git
@@ -41,7 +45,7 @@ python -m pip install -r requirements.txt
 python -m maniloop demo
 ```
 
-### Windows PowerShell
+**Windows PowerShell**
 
 ```powershell
 git clone https://github.com/Daniel-rmc/ManiLoop.git
@@ -51,41 +55,101 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m maniloop demo
 ```
 
-On Windows, use `.\.venv\Scripts\python.exe` in place of `python`. The remaining multiline examples use Bash syntax; in PowerShell, join their lines into one command. No activation script or execution-policy change is required.
+Open [http://127.0.0.1:8765](http://127.0.0.1:8765). Select a robot, layout, and task; apply the configuration, try manual arm and gripper controls, then reset. **No API key is needed for this step.** The server listens on localhost; keep its terminal open and press `Ctrl+C` to stop it. Use `--port 8766` if needed.
 
-Open [http://127.0.0.1:8765](http://127.0.0.1:8765). You can choose a robot and task, move the arm, operate the gripper, and reset the scene without connecting a model. Keep the terminal running; `Ctrl+C` closes the server. The service listens only on localhost.
+Continue from the repository root after stopping the server. **Windows:** replace subsequent `python` commands with `.\.venv\Scripts\python.exe`; join multiline Bash examples into one line, removing trailing `\`. After installing `uv`, add `--uv .\.venv\Scripts\uv.exe` when running either setup script. No activation script or execution-policy change is required.
 
-For headless Ubuntu/Debian, install `libosmesa6` and set `MUJOCO_GL=osmesa` before launching Python. EGL is another option when compatible GPU drivers are available. Do not apply these Linux settings to macOS.
+For headless Ubuntu/Debian, install `libosmesa6` and set `MUJOCO_GL=osmesa` before starting Python. EGL is another option with compatible drivers. These Linux settings do not apply to macOS.
 
-## Run GPT on LIBERO
+<a id="run-gpt-on-libero"></a>
 
-LIBERO uses its own Python 3.10 environment. Install it separately from the main Python 3.12 application:
+## Step 2 · Add official LIBERO tasks
 
 ```bash
 python -m pip install uv
 python scripts/setup_libero.py
-python -m maniloop list --backend libero
+python -m maniloop list --backend libero --libero-suite libero_goal
 python -m maniloop smoke --backend libero
+python -m maniloop demo --backend libero --port 8767
 ```
 
-The installer needs Git and network access; it downloads a managed Python interpreter and the pinned LIBERO source and assets. No VLA weights or demonstration dataset are needed. If you use Windows without activation, pass the installed `uv` explicitly:
+Open [http://127.0.0.1:8767](http://127.0.0.1:8767). Select a suite, task ID, and initialization ID in the environment panel. IDs start at zero; `list` prints the available task names. The default is `libero_spatial` task 0, init 0: move the black bowl between the plate and ramekin onto the plate.
 
-```powershell
-.\.venv\Scripts\python.exe -m pip install uv
-.\.venv\Scripts\python.exe scripts/setup_libero.py --uv .\.venv\Scripts\uv.exe
-```
+The installer needs network access and several GB of disk space, but no demonstration dataset or policy weights. It downloads the pinned official source, assets, and a managed interpreter while keeping dependencies separate:
 
-For account-based access, install a current official [Codex CLI](https://github.com/openai/codex), run `codex login`, and then start the page:
+| Environment | Purpose |
+| --- | --- |
+| `.venv` · Python 3.12 | Main application, UI, model connections, bundled MuJoCo scenes |
+| `.venv-libero` · Python 3.10 | LIBERO simulation and its pinned dependencies |
+| `.venv-vla` · Python 3.12 | Optional LeRobot inference and learned policies |
+
+Keep these environments separate. See [LIBERO setup and task selection](docs/LIBERO.md).
+
+## Step 3 · Connect your model
+
+Choose one route below. Stop the existing server before running a different launch command.
+
+| Model route | How to connect | Compatibility boundary |
+| --- | --- | --- |
+| GPT through Codex | Official Codex CLI login; select the Codex source | Uses models available to that CLI/account; ManiLoop does not extract login tokens |
+| Hosted or self-hosted vision model | Enter the service base URL, model ID, and API key, or import provider TOML | Robot control requires **Responses API + image input + JSON Schema output** |
+| Local LeRobot checkpoints | Select a supported model loaded by the isolated inference worker | Three reviewed LIBERO checkpoint presets; not arbitrary model-folder import |
+
+<details><summary>See model controls in the actual local application</summary>
+
+![Task and model configuration in the running local ManiLoop application](docs/images/workspace-models.png)
+
+*Current local UI; model and task settings here configure real execution.*
+</details>
+
+### GPT / compatible model APIs
+
+Install a current official [Codex CLI](https://github.com/openai/codex), then:
 
 ```bash
+codex login
 python -m maniloop demo --backend libero --codex-login --port 8767
 ```
 
-Open [http://127.0.0.1:8767](http://127.0.0.1:8767). Choose the Codex source, load a task, and use single-step or continuous execution. Codex manages its own login; ManiLoop does not extract its tokens. If multiple CLI versions are installed, set `MANILOOP_CODEX_BIN` to the intended executable.
+Choose the Codex source and load the GPT demo preset. Start with the text/image/action-format diagnostics or a single action. `MANILOOP_CODEX_BIN` selects the executable if several CLI versions are installed. See [GPT controls](docs/GPT6_DEMO.md).
 
-You can instead select an API provider in the page and supply its base URL, model ID, and API key, or import a TOML configuration. Robot control requires image input and JSON Schema output through the Responses API. Model requests use the selected account's quota or provider billing; opening the page does not start inference.
+For an API connection, select the manual or imported-config source, enter your model ID and the provider’s base URL, then supply its key. Examples: [OpenAI configuration](examples/openai.example.toml), [custom provider configuration](examples/custom.example.toml). A model you host locally can use this route **if its server implements the required Responses protocol**; a local base URL can be `http://127.0.0.1:8000/v1`. A Chat Completions-only server is not compatible with robot control; the separate [text chat page](docs/API_CHAT.md) supports both protocols. Selecting a model ID does not guarantee it supports vision or structured actions. Requests consume the selected account quota or provider billing; opening the page does not start inference.
 
-To record a complete attempt with GPT-6:
+### Local SmolVLA, ACT, and Diffusion Policy
+
+```bash
+python scripts/setup_vla.py --models smolvla-libero act-libero diffusion-libero
+python -m maniloop demo --backend libero --port 8767
+```
+
+Select the local LeRobot source and a downloaded model. Omit `--models` to install only SmolVLA. Inference runs offline on CPU, Apple MPS, or CUDA; the checkpoint’s saved preprocessing and action queue are retained.
+
+Or run a local checkpoint from the CLI; replace `smolvla-libero` with `act-libero` or `diffusion-libero` to select another installed preset:
+
+```bash
+python -m maniloop benchmark --backend libero --agent lerobot \
+  --local-model smolvla-libero --libero-suite libero_spatial --libero-task-id 0 \
+  --init-state-id 0 --seed 0 --max-calls 500 --max-sim-seconds 25 \
+  --max-wall-seconds 1800 --output runs/local-demo
+```
+
+| Preset | Checkpoint | Input |
+| --- | --- | --- |
+| `smolvla-libero` | [lerobot/smolvla_libero](https://huggingface.co/lerobot/smolvla_libero) · official | Images, robot state, language |
+| `act-libero` | [Deepkar/libero-test-act](https://huggingface.co/Deepkar/libero-test-act) · community | Images and robot state |
+| `diffusion-libero` | [ttotmoon/diffusion-libero-v3](https://huggingface.co/ttotmoon/diffusion-libero-v3) · community | Images and robot state |
+
+To use these presets **already stored on another local disk**, set `MANILOOP_MODELS_ROOT` to their parent directory. It must contain the preset-named folders, such as `smolvla-libero/`, plus `smolvlm-tokenizer/` for SmolVLA. `MANILOOP_VLA_PYTHON` can point to a compatible inference environment. These options relocate supported snapshots; they do not import arbitrary Hugging Face repositories or custom weights. Details and fixed revisions: [local model guide](docs/VLA.md).
+
+### Integrating your own checkpoint or policy
+
+A new checkpoint needs its own model registration, correct preprocessing and action mapping, and source metadata. Do not replace a preset’s files and treat the result as that preset. For a custom inference implementation, implement [`Agent`](src/maniloop/agents/base.py): `reset()` and `decide(task, observation, images, history, geometry_results)`, returning an action dictionary or [`ActionChunk`](src/maniloop/core/actions.py). Connect it to `EpisodeRunner`, and add a CLI/UI choice if needed; there is no automatic arbitrary-checkpoint loader.
+
+A new simulation backend implements [`Environment`](src/maniloop/backends/base.py) and is registered through the [environment factory](src/maniloop/backends/factory.py). Match camera/state inputs, action dimensions, units, and timing, while keeping evaluation separate. See [architecture and extension interfaces](docs/ARCHITECTURE.md).
+
+## Step 4 · Record a run and inspect its result
+
+Run a new GPT-6 attempt from official initialization, with all LIBERO control steps recorded:
 
 ```bash
 python -m maniloop benchmark \
@@ -96,65 +160,34 @@ python -m maniloop benchmark \
   --output runs/gpt-demo
 ```
 
-`--max-calls 0` removes the decision-count limit. Official environment termination, simulation limits, and the wall-clock budget still apply. Physics pauses during inference in the default `controlled` mode. A new run is not guaranteed to reproduce the showcased outcome.
+Default `controlled` timing pauses physics during inference. `--max-calls 0` removes the decision-count cap; official termination, simulation limits, and the wall-clock budget still apply. Each attempt gets a separate directory containing `manifest.json`, `events.jsonl`, `result.json`, and `replay.html`. Inspect **`result.json → evaluation.success`** for the independent outcome; open `replay.html` locally for decision-by-decision review. Full frames and integrity metadata are in `recording/`.
 
-See the [LIBERO guide](docs/LIBERO.md) and [GPT control guide](docs/GPT6_DEMO.md) for task selection, diagnostics, camera profiles, and control settings.
-
-## Test local models
-
-After installing LIBERO, download the supported checkpoints into a separate inference environment:
-
-```bash
-python scripts/setup_vla.py --models smolvla-libero act-libero diffusion-libero
-python -m maniloop benchmark --backend libero --agent lerobot \
-  --local-model smolvla-libero --max-calls 500 \
-  --max-sim-seconds 25 --max-wall-seconds 1800
-```
-
-Running the installer without `--models` downloads only SmolVLA. Windows users can add `--uv .\.venv\Scripts\uv.exe` as above. In the browser, choose the local LeRobot source and a downloaded model. SmolVLA accepts the language instruction; the selected ACT and Diffusion checkpoints use images and robot state without language conditioning.
-
-| Environment | Purpose |
-| --- | --- |
-| `.venv` · Python 3.12 | ManiLoop, UI, model connections, and bundled MuJoCo scenes |
-| `.venv-libero` · Python 3.10 | Official LIBERO simulation and its pinned dependencies |
-| `.venv-vla` · Python 3.12 | LeRobot and learned-policy inference |
-
-Keep these environments separate. Checkpoints are downloaded independently and are not included in the repository. See [local model setup and sources](docs/VLA.md).
-
-### Observed model results
-
-Each row is **one selected run** of `libero_spatial`, task 0, init 0, seed 0.
-
-| Model | Official result | Control steps | GPT requests / local inferences | Simulation time |
-| --- | --- | ---: | ---: | ---: |
-| GPT-6 Astra | Success | 706 | 46 | 35.30 s |
-| SmolVLA | Success | 78 | 2 | 3.90 s |
-| ACT | Not successful within the budget | 500 | 5 | 25.00 s |
-| Diffusion Policy | Success | 79 | 10 | 3.95 s |
-
-These observations are not a success-rate estimate or a model ranking. GPT requests produce individual high-level actions; local policies cache action chunks, so their inference counts have a different meaning. The runs also differ in observations, controllers, budgets, and entry points. Wall-clock durations are not directly comparable. [Full conditions and sources](docs/RESULTS.md).
-
-## Record, replay, and diagnose
-
-Runs are saved under `runs/` with their manifest, events, observations, independent score, and decision replay. With `--record-episode`, `recording/` also contains the initial frame and every native control-step frame from that same attempt. Successful and unsuccessful attempts remain separate.
-
-With `ffmpeg` installed, export the complete recording:
+With `ffmpeg` installed, export the video:
 
 ```bash
 python -m maniloop.recording.video runs/gpt-demo/EPISODE_ID/recording
 ```
 
-Replace `EPISODE_ID` with the actual run directory name. The exporter verifies the frame sequence and hashes before creating `episode.mp4`. Use `--ffmpeg /path/to/ffmpeg` for an encoder outside PATH, or `--allow-failure` to export an unsuccessful attempt for review. See [episode recording](docs/EPISODE_RECORDING.md).
+Replace `EPISODE_ID` with the actual run directory name. The exporter checks frame order and hashes before creating `episode.mp4`; use `--ffmpeg /path/to/ffmpeg` if needed. Failed runs remain saved and can be exported with `--allow-failure`. Playback follows simulation time and omits frozen model waiting. See [recording and export](docs/EPISODE_RECORDING.md). To batch the three local models using the [example matrix](examples/libero-local-suite.toml), run `python -m maniloop benchmark --suite examples/libero-local-suite.toml --output runs/local-suite`.
 
-For a standalone API text chat page:
+## Recorded examples and observed results
 
-```bash
-python -m maniloop chat --port 8769
-```
+[Explore the recorded workspace](https://daniel-rmc.github.io/ManiLoop/playground/?lang=en) or [watch the successful episode](https://daniel-rmc.github.io/ManiLoop/?lang=en#demo) without installing anything. The public replay uses saved data; **new tasks and model calls run in the local application**. Try “Single step”, compare “Before action” / “After action”, and jump to decision 46’s final frame.
 
-Open [http://127.0.0.1:8769/chat](http://127.0.0.1:8769/chat). This page supports Responses and Chat Completions and operates independently of robot tasks. [Chat setup](docs/API_CHAT.md).
+The GPT episode contains 46 decisions and 706 control steps, including grasp retries. Its complete video has 707 dual-camera frames at 20 fps, lasting 35.35 seconds. Official success triggered during the final lowering action; the environment stopped immediately without an additional release or retreat check.
 
-To check the installation without model requests:
+| Model | Official outcome | GPT requests / local inferences | Control steps | Simulation time |
+| --- | --- | ---: | ---: | ---: |
+| GPT-6 Astra | Success | 46 | 706 | 35.30 s |
+| SmolVLA | Success | 2 | 78 | 3.90 s |
+| ACT | Not successful within budget | 5 | 500 | 25.00 s |
+| Diffusion Policy | Success | 10 | 79 | 3.95 s |
+
+Each row is **one selected run** on `libero_spatial` task 0 / init 0 / seed 0, not a success rate or ranking. GPT produces high-level actions; local inference generates queues consumed over multiple control steps. Inputs, controllers, budgets, and execution paths differ, so wall-clock times are not directly comparable. New model runs may produce different outcomes. [Full results and conditions](docs/RESULTS.md#english).
+
+## Guides, checks, and scope
+
+[LIBERO tasks](docs/LIBERO.md) · [GPT controls](docs/GPT6_DEMO.md) · [Local checkpoints](docs/VLA.md) · [API text chat](docs/API_CHAT.md) · [Recording](docs/EPISODE_RECORDING.md) · [Architecture](docs/ARCHITECTURE.md)
 
 ```bash
 python -m pip install -r requirements-dev.txt
@@ -162,12 +195,10 @@ python -m pytest -q
 python -m maniloop smoke
 ```
 
-Offline tests run on macOS, Linux, and Windows. Rendering has been checked on macOS and Linux OSMesa; Windows rendering and LIBERO execution have not been validated. A rendering check needs a graphics backend; the test suite does not make paid model requests.
-
-The framework runs in simulation. The ARX gripper is approximate, and the software has not been validated as a real-robot control or safety system. Using official LIBERO assets does not by itself reproduce a paper's complete evaluation protocol. See [architecture and interfaces](docs/ARCHITECTURE.md) for the observation, action, and evaluation boundaries.
+These checks do not make model requests. Offline tests cover macOS, Linux, and Windows; rendering has been verified on macOS and Linux OSMesa. Windows rendering and LIBERO execution have not been validated. Rendering needs a graphics backend. ManiLoop is simulation software: the ARX gripper is approximate, and real-robot control or safety has not been validated. Official LIBERO assets alone do not establish paper-level benchmark comparability.
 
 <a id="许可证与贡献"></a>
 
 ## License
 
-ManiLoop is [MIT licensed](LICENSE). ARX X5 assets retain their upstream MIT notice; Panda assets retain Apache-2.0. LIBERO, LeRobot, and downloaded checkpoints retain their own licenses. See [third-party notices](THIRD_PARTY_NOTICES.md) for sources and redistribution requirements.
+ManiLoop is [MIT licensed](LICENSE). ARX X5 assets retain MIT; Panda assets retain Apache-2.0. LIBERO, LeRobot, and downloaded checkpoints retain their own licenses. See [third-party notices](THIRD_PARTY_NOTICES.md).
