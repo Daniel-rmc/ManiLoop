@@ -10,6 +10,10 @@
 
 *The actual local application, shown in its current Chinese interface. This is the working simulator UI, not the website’s recorded replay.*
 
+[Watch GPT place a bowl, turn a stove knob, and move cream cheese into a basket](https://daniel-rmc.github.io/ManiLoop/?lang=en#skills): play verified episodes, pause at each action, and read the model's recorded action notes alongside the controller feedback. Full videos and execution conditions are included.
+
+These three recorded GPT successes took **5.5–11.1 minutes of episode wall time**, including model planning, communication, execution and recording, after scene and policy loading. These are selected examples, not average completion times or a speed ranking. [See timing and results](docs/RESULTS.md#recorded-wall-clock-time).
+
 ## What you can run
 
 The workspace brings **camera observations, model actions, controller feedback, and independent evaluation** together. Use manual controls before connecting a model, single-step GPT decisions, pause and resume, compare before/after observations, run CLI experiment matrices, and export complete LIBERO episodes.
