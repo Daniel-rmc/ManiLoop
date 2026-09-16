@@ -173,7 +173,7 @@ def test_runner_idle_freezes_and_mock_has_exactly_two_control_steps(env, tmp_pat
                 break
         assert runner.phase == "completed"
         assert len(env.worker.actions) == 2
-        manifest = json.loads((runner.log_file.parent / "manifest.json").read_text())
+        manifest = json.loads((runner.log_file.parent / "manifest.json").read_text(encoding="utf-8"))
         assert manifest["policy"]["action_interface"] == "libero_osc_chunk_v1"
     finally:
         runner.close()

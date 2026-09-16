@@ -175,7 +175,7 @@ def test_mock_episode_recording_and_grouping(tmp_path):
     manifest = json.loads(
         (
             __import__("pathlib").Path(result["run_directory"]) / "manifest.json"
-        ).read_text()
+        ).read_text(encoding="utf-8")
     )
     assert manifest["policy"]["memory"] == "reset_per_episode"
     assert manifest["robot_revision"]
@@ -252,6 +252,6 @@ def test_benchmark_provider_switch_aborts_before_new_request(tmp_path, monkeypat
         assert runner.phase == "error" and not runner.running
         assert runner.api_calls == 0 and factory.call_count == 1
         assert "配置发生变化" in runner.error
-        assert "synthetic-" not in runner.log_file.read_text()
+        assert "synthetic-" not in runner.log_file.read_text(encoding="utf-8")
     finally:
         runner.close()

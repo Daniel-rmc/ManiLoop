@@ -198,7 +198,7 @@ def test_uploaded_toml_never_reads_or_writes_local_files(monkeypatch):
     '# SECRET-UPLOAD\n' + '字' * (MAX_CONFIG_BYTES // 3 + 1),
     '\ud800 SECRET-UPLOAD',
     b'not-a-text-input SECRET-UPLOAD',
-])
+], ids=['malformed-toml', 'oversized-utf8', 'invalid-surrogate', 'non-text'])
 def test_uploaded_toml_rejects_invalid_or_oversized_content_without_leak(content):
     with pytest.raises(ConfigError) as exc:
         load_toml_config(content, api_key='SECRET-OVERRIDE')

@@ -180,7 +180,7 @@ def test_uploaded_toml_and_separate_key_resolve_and_start(configured_demo, tmp_p
     assert 'offline-separate' not in exposed and 'offline-embedded' not in exposed
     assert 'config_toml' not in exposed
     assert not list(tmp_path.rglob('*.toml'))
-    assert 'offline-separate' not in demo.log_file.read_text()
+    assert 'offline-separate' not in demo.log_file.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize('source', ['upload', 'file'])
@@ -234,7 +234,7 @@ def test_file_override_endpoint_switch_stops_before_creating_client(configured_d
     np.testing.assert_array_equal(demo.sim.data.ctrl[demo.sim.gripper_act],
                                   old_controls[demo.sim.gripper_act])
     demo.publish(render=False)
-    exposed = json.dumps(demo.state) + demo.log_file.read_text()
+    exposed = json.dumps(demo.state) + demo.log_file.read_text(encoding="utf-8")
     assert 'offline-bound-key' not in exposed and 'offline-other-key' not in exposed
 
 
@@ -252,5 +252,5 @@ def test_uploaded_key_is_redacted_from_runtime_failure_state_and_events(configur
     assert '[REDACTED]' in demo.error
     assert factory.call_count == 1
     demo.publish(render=False)
-    exposed = json.dumps(demo.state) + json.dumps(demo.events) + demo.log_file.read_text()
+    exposed = json.dumps(demo.state) + json.dumps(demo.events) + demo.log_file.read_text(encoding="utf-8")
     assert 'offline-sensitive-upload' not in exposed
