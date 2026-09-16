@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "date": "2026-09-16",
+  "scope": {
+    "en": "Four recorded model examples on LIBERO spatial task 0 / init 0 / seed 0. One selected episode is shown per model; this is not a success-rate estimate or leaderboard.",
+    "zh": "四条真实模型运行示例，均为 LIBERO spatial task 0 / init 0 / seed 0。每个模型展示一条选定记录，不是成功率估计或排行榜。"
+  },
+  "report_url": "https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md",
+  "rows": [
+    {
+      "id": "gpt6-astra",
+      "model": "GPT-6 Astra",
+      "status": {
+        "en": "Success",
+        "zh": "成功"
+      },
+      "success": true,
+      "decisions": 46,
+      "inference_calls": null,
+      "control_steps": 706,
+      "simulation_seconds": 35.3,
+      "wall_seconds": 667.3306492079282,
+      "comparison_group": "08dc4e9dc355800d",
+      "conditions": {
+        "en": "RGB512 × 2 · paired sensor context · medium reasoning · TCP target tracking via official OSC · controlled timing. No decision cap; 120 s simulation / 3600 s wall limits; official 990-step horizon.",
+        "zh": "双 RGB512 · paired 传感上下文 · medium 推理 · 通过官方 OSC 跟踪 TCP 目标 · 受控时序。不限决策次数；120 秒仿真／3600 秒墙钟；官方上限 990 控制步。"
+      },
+      "notes": {
+        "en": "46 policy calls are model-service requests; internal server inference count is unavailable. Official success stopped the final descent before any extra release or withdrawal. Full recording is available.",
+        "zh": "46 次策略调用是模型服务请求，服务内部推理次数不可得。官方成功在最后下降途中触发，没有额外松爪或退离。提供完整回合录像。"
+      }
+    },
+    {
+      "id": "smolvla",
+      "model": "SmolVLA",
+      "status": {
+        "en": "Success",
+        "zh": "成功"
+      },
+      "success": true,
+      "decisions": 78,
+      "inference_calls": 2,
+      "control_steps": 78,
+      "simulation_seconds": 3.9,
+      "wall_seconds": null,
+      "comparison_group": "7c36264c489d92e4",
+      "checkpoint": "lerobot/smolvla_libero",
+      "revision": "31d453f7edd78c839a8bbc39744a292686daf0de",
+      "conditions": {
+        "en": "RGB256 × 2 + 8-D proprioception + language · native OSC · 50-step action queue / 10 sampling steps · MPS. Web entry; 500 calls / 120 s simulation / 600 s wall limits.",
+        "zh": "双 RGB256、8 维本体与语言 · 原生 OSC · 50 步动作队列／10 次采样 · MPS。网页入口；上限 500 次调用／120 秒仿真／600 秒墙钟。"
+      },
+      "notes": {
+        "en": "78 select_action calls used two model-generated action queues. A wall-time measurement with the CLI timing definition was not preserved, so no value is inferred.",
+        "zh": "78 次 select_action 调用使用两次模型生成的动作队列。未保存与 CLI 同口径的墙钟测量，不补算数值。"
+      }
+    },
+    {
+      "id": "act",
+      "model": "ACT",
+      "status": {
+        "en": "Not successful within budget",
+        "zh": "预算内未成功"
+      },
+      "success": false,
+      "decisions": 500,
+      "inference_calls": 5,
+      "control_steps": 500,
+      "simulation_seconds": 25,
+      "wall_seconds": 66.12918087502476,
+      "comparison_group": "4d89fef468f39e80",
+      "checkpoint": "Deepkar/libero-test-act",
+      "revision": "b6a5253edf0c9d9e458629fdeb489f514ff6300f",
+      "conditions": {
+        "en": "RGB256 × 2 + 8-D proprioception · no language input · native OSC · 100-step action queue · MPS. CLI entry; 500 calls / 25 s simulation / 1800 s wall limits.",
+        "zh": "双 RGB256 与 8 维本体 · 无语言输入 · 原生 OSC · 100 步动作队列 · MPS。CLI 入口；上限 500 次调用／25 秒仿真／1800 秒墙钟。"
+      },
+      "notes": {
+        "en": "Five action-queue inferences completed without runtime error. The simulation budget ended with official success false. This result does not characterize the ACT method as a whole.",
+        "zh": "五次动作队列推理均正常执行；仿真预算结束时官方成功为 false。该结果不能代表整个 ACT 方法。"
+      }
+    },
+    {
+      "id": "diffusion",
+      "model": "Diffusion Policy",
+      "status": {
+        "en": "Success",
+        "zh": "成功"
+      },
+      "success": true,
+      "decisions": 79,
+      "inference_calls": 10,
+      "control_steps": 79,
+      "simulation_seconds": 3.95,
+      "wall_seconds": 57.353563375072554,
+      "comparison_group": "4471c4cb135b0c90",
+      "checkpoint": "ttotmoon/diffusion-libero-v3",
+      "revision": "5825af28c585ade6827ea7e8f6234f3ab04e8ab1",
+      "conditions": {
+        "en": "RGB256 × 2 + 8-D proprioception · no language input · native OSC · two-observation history / 8-step queue / 100 DDPM sampling steps · MPS. CLI entry; 500 calls / 25 s simulation / 1800 s wall limits.",
+        "zh": "双 RGB256 与 8 维本体 · 无语言输入 · 原生 OSC · 两帧历史／8 步队列／100 次 DDPM 采样 · MPS。CLI 入口；上限 500 次调用／25 秒仿真／1800 秒墙钟。"
+      },
+      "notes": {
+        "en": "Ten action-queue inferences produced the 79 executed native steps. The inference count is not the number of DDPM sampling iterations.",
+        "zh": "十次动作队列推理支持 79 个实际原生控制步；这里的推理次数不是 DDPM 采样迭代数。"
+      }
+    }
+  ],
+  "caveat": {
+    "en": "Different comparison groups: sensor resolution, language conditioning, action scheduling and budgets differ. GPT calls are service requests; local policy calls include cached queue reads. Local inference counts refer to queue generation, not diffusion iterations. Wall times include different execution paths and recording work; they are not a speed ranking. All results use the unchanged official task evaluator, outside policy inputs.",
+    "zh": "各行属于不同比较组：传感分辨率、语言条件、动作调度和预算均不同。GPT 调用是服务请求，本地策略调用包含从已有队列取动作；本地推理次数指队列生成，不是扩散迭代。墙钟包含不同入口与记录开销，不能进行速度排名。所有结果均来自未修改的官方评分，评分不进入策略输入。"
+  }
+}

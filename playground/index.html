@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>ManiLoop · Recorded interactive workspace</title>
+  <meta name="description" content="Explore a real GPT-6 robot manipulation episode in ManiLoop's interactive workspace: dual cameras, 46 decisions, actual sensor feedback, and a complete recording.">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+<main class="shell">
+  <header class="topbar">
+    <a class="brand" href="../?lang=en" id="brand-link" aria-label="ManiLoop project" data-i18n-aria="projectAria">
+      <span class="brandmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h13M7 20v-5l5-4-3-5M14 11l4-4M16 5l4 4 2-2M16 5l2-2"/><circle cx="9" cy="5" r="2"/><circle cx="13" cy="12" r="2"/><path d="M4 20v-3h6"/></svg></span>
+      <span><span class="brandname">ManiLoop <span data-i18n="brand">Robot workspace</span></span><span class="eyebrow" data-i18n="flow">LANGUAGE → ACTION → OBSERVATION</span></span>
+    </a>
+    <div class="topmeta"><a href="../?lang=en" id="project-link" class="project-link" data-i18n="back">← Project</a><div class="language-switch" role="group" aria-label="Language" data-i18n-aria="languageLabel"><button class="button subtle" type="button" data-lang="en" lang="en" aria-pressed="true">EN</button><button class="button subtle" type="button" data-lang="zh" lang="zh-CN" aria-pressed="false">中文</button></div></div>
+  </header>
+  <section class="intro">
+    <div><div class="recorded-label"><span class="dot busy"></span><span data-i18n="recorded">Recorded interactive workspace</span></div><h1 data-i18n="title">Look through the robot’s decisions.</h1><p data-i18n="intro">Explore the real workspace with a complete, recorded GPT-6 episode.</p></div>
+    <a href="#local-run" class="button subtle" data-i18n="runLocal">Run your own task ↗</a>
+  </section>
+  <div class="session-notice recorded-notice"><strong data-i18n="noticeTitle">You are browsing a recording.</strong> <span data-i18n="notice">Controls navigate saved observations; they do not call a model or run new physics. All 46 decisions come from one uninterrupted episode.</span></div>
+  <p id="load-error" class="inline-error" role="alert" hidden></p>
+  <noscript><p class="inline-error">Enable JavaScript to explore the recording. / 启用 JavaScript 后可交互查看录像。</p></noscript>
+
+  <div class="workspace">
+    <div class="left-column">
+      <section class="panel camera-panel" aria-label="Recorded dual-camera observations" data-i18n-aria="cameraAria">
+        <div class="panel-header"><div class="panel-title"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2" y="4" width="10" height="10" rx="2"/><path d="m12 7 4-2v8l-4-2z"/></svg><span data-i18n="cameraTitle">Simulation view</span></div><span class="status-chip"><i class="dot busy"></i><span data-i18n="savedFrames">Saved camera frames</span></span></div>
+        <div class="viewport" id="viewport">
+          <img id="external-image" class="camera camera-main" src="frames/001-before-external.jpg" alt="Recorded external camera before decision 1" width="512" height="512">
+          <span class="camera-label" data-i18n="external">EXTERNAL CAMERA</span><span class="viewport-corner">LIBERO / PANDA</span>
+          <div class="wrist-view"><img id="wrist-image" class="camera" src="frames/001-before-wrist.jpg" alt="Recorded wrist camera before decision 1" width="512" height="512"><span class="camera-label" data-i18n="wrist">WRIST CAMERA</span></div>
+          <span class="axes-label"><b class="x">X</b><b class="y">Y</b><b class="z">Z</b><span data-i18n="world">WORLD FRAME</span></span>
+        </div>
+        <div class="view-footer"><span id="frame-position" aria-live="polite">01 / 46 · Before action</span><button id="camera-layout" type="button" class="button subtle" data-i18n="expandCameras" aria-pressed="false">Side-by-side cameras</button></div>
+        <div class="phase-controls" role="group" aria-label="Recorded view" data-i18n-aria="phaseAria"><button id="before-button" type="button" class="button subtle" aria-pressed="true" data-i18n="before">Before action</button><button id="after-button" type="button" class="button subtle" aria-pressed="false" data-i18n="after">After action</button><span id="frame-time" class="mono">0.00 s</span></div>
+      </section>
+      <section class="panel metrics" aria-label="Robot sensors at the selected frame" data-i18n-aria="sensorsAria">
+        <div class="metric"><div class="metric-label" data-i18n="tcp">TCP position · m</div><div id="tcp-value" class="metric-value coords">—</div><div class="metric-sub">X / Y / Z</div></div>
+        <div class="metric"><div class="metric-label" data-i18n="gripper">Gripper opening</div><div class="metric-value"><span id="gripper-value">—</span><small>%</small></div><div class="metric-sub" data-i18n="gripperRange">0 closed · 100 open</div></div>
+        <div class="metric"><div class="metric-label" data-i18n="decision">Decision</div><div class="metric-value"><span id="decision-value">1</span><small>/ 46</small></div><div class="metric-sub" id="kind-value">move</div></div>
+        <div class="metric"><div class="metric-label" data-i18n="simTime">Simulation time</div><div class="metric-value"><span id="time-value">0.00</span><small>s</small></div><div class="metric-sub" data-i18n="recordedSensors">Recorded sensors</div></div>
+      </section>
+      <section class="panel">
+        <div class="panel-header"><div class="panel-title" data-i18n="explanation">Model’s action explanation</div><span id="action-kind" class="pill">MOVE</span></div>
+        <div class="decision-body"><p id="action-explanation"></p><p class="key-hint" data-i18n="explanationNote">The model’s stated interpretation, not an independent measurement.</p><details id="original-explanation" hidden><summary data-i18n="originalEnglish">Original model text · English</summary><p id="original-text" lang="en"></p></details><dl id="action-values" class="value-grid"></dl></div>
+      </section>
+    </div>
+
+    <div class="right-column">
+      <section class="panel task-panel">
+        <div class="panel-header"><div class="panel-title"><span class="number-tag">01</span><span data-i18n="playback">Episode playback</span></div><span id="play-status" class="small" aria-live="polite" data-i18n="paused">Paused</span></div>
+        <div class="task-body">
+          <p class="task-description" id="task-description">Pick up the black bowl between the plate and the ramekin and place it on the plate.</p>
+          <div class="playback-main"><button id="play-button" type="button" class="button primary" data-i18n="play" disabled>▶ Continuous replay</button><button id="pause-button" type="button" class="button stop" data-i18n="pause" disabled>Pause</button></div>
+          <div class="playback-secondary"><button id="previous-button" type="button" class="button" data-i18n="previous" disabled>← Previous decision</button><button id="step-button" type="button" class="button" data-i18n="step" disabled>Single step →</button></div>
+          <div class="timeline-control"><label for="decision-slider" class="field-label"><span data-i18n="jump">Jump to a decision</span><output id="slider-value">1 / 46</output></label><input id="decision-slider" type="range" min="1" max="46" step="1" value="1" aria-label="Decision" data-i18n-aria="decision" disabled></div>
+          <div class="configuration playback-options"><div><label for="decision-select" class="field-label" data-i18n="selectDecision">Decision</label><select id="decision-select" class="input" disabled></select></div><div><label for="play-speed" class="field-label" data-i18n="viewDuration">View duration</label><select id="play-speed" class="input"><option value="2200">2.2 s</option><option value="1200">1.2 s</option><option value="600">0.6 s</option></select></div></div>
+          <div class="reset-row"><button id="reset-button" type="button" class="button subtle" data-i18n="reset" disabled>↺ Reset replay</button><button id="final-button" type="button" class="button subtle" data-i18n="finalJump" disabled>Final frame ↗</button></div>
+          <p class="key-hint" data-i18n="playbackNote">Single step alternates before/after views. Decision replay skips between recorded keyframes; the complete video below shows every control step.</p>
+        </div>
+      </section>
+      <section class="panel"><div class="panel-header"><div class="panel-title"><span class="number-tag">02</span><span data-i18n="configuration">Recorded configuration</span></div><span class="small" data-i18n="readOnly">Read only</span></div><div class="configuration-body"><dl class="config-grid" id="configuration-values"></dl><p class="key-hint" data-i18n="configNote">These are this episode’s settings. To change the task, model, or API connection, run ManiLoop locally.</p></div></section>
+      <section class="panel result-panel"><div class="panel-header"><div class="panel-title" data-i18n="finalResult">Episode’s final result</div><span class="success-tag" data-i18n="success">SUCCESS</span></div><div class="result-body"><p data-i18n="finalResultNote">Official LIBERO success at control step 706. This is the episode’s final evaluation, not the score at the frame currently selected.</p><p class="key-hint" data-i18n="scope">Success triggered during the final lowering action. The environment stopped with the gripper still closed; release and retreat were not tested.</p><p class="boundary-note" data-i18n="separation">Human review only · Evaluation was excluded from policy input.</p><a id="results-link" class="text-link" href="https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md" target="_blank" rel="noopener" data-i18n="results">Read the result and conditions ↗</a></div></section>
+    </div>
+  </div>
+
+  <section class="diagnostics" aria-label="Recorded actions and feedback" data-i18n-aria="diagnosticsAria">
+    <div class="panel"><div class="panel-header"><div class="tabs" role="tablist" aria-label="Recorded fields" data-i18n-aria="fieldsAria"><button id="tab-observation" class="tab" type="button" role="tab" aria-selected="true" aria-controls="inspect-observation" data-i18n="observationTab">Robot sensors</button><button id="tab-action" class="tab" type="button" role="tab" aria-selected="false" aria-controls="inspect-action" tabindex="-1" data-i18n="actionTab">Action fields</button></div><span class="small" data-i18n="originalFields">Original field names</span></div><div id="inspect-observation" class="inspect-body" role="tabpanel" aria-labelledby="tab-observation" tabindex="0"><pre id="observation-content"></pre></div><div id="inspect-action" class="inspect-body" role="tabpanel" aria-labelledby="tab-action" tabindex="0" hidden><pre id="action-content"></pre></div></div>
+    <div class="panel"><div class="panel-header"><div class="panel-title" data-i18n="feedback">Execution feedback</div><span id="feedback-chip" class="small"></span></div><div class="inspect-body feedback-body"><p id="feedback-description"></p><dl class="value-grid" id="feedback-values"></dl><details><summary data-i18n="rawFeedback">Original recorded feedback</summary><pre id="feedback-content"></pre></details></div></div>
+    <div class="panel log-panel"><div class="panel-header"><div class="panel-title" data-i18n="timelineTitle">All 46 decisions</div><span class="small" data-i18n="timelineHint">Select any decision</span></div><div class="decision-rail" id="decision-rail" aria-label="Episode decisions" data-i18n-aria="timelineTitle"></div><div class="log-container" id="event-log" aria-live="polite"></div></div>
+  </section>
+
+  <section class="panel complete-video" id="video-section"><div class="panel-header"><div class="panel-title" data-i18n="videoTitle">The complete episode · every control step</div><span class="small mono" data-i18n="videoStats">707 FRAMES · 20 FPS</span></div><div class="video-body"><video id="episode-video" controls playsinline preload="none" poster="../assets/episodes/20260916-172331-d3bc5ef2/01-external.jpg" aria-label="Complete recorded GPT-6 episode" data-i18n-aria="videoTitle"><source src="../assets/episodes/20260916-172331-d3bc5ef2/episode.mp4" type="video/mp4"></video><p class="key-hint" data-i18n="videoNote">35.35 seconds of simulation playback, including all grasp retries in this single attempt. Model waiting time is omitted. No cuts, interpolation, or newly generated actions.</p></div></section>
+  <section class="panel local-panel" id="local-run"><div class="panel-header"><div class="panel-title" data-i18n="localTitle">Use the live workspace on your computer</div></div><div class="local-body"><p data-i18n="localNote">The local application lets you select tasks, configure model access, and execute new robot actions. Install the main and LIBERO environments, then run:</p><pre><code>python -m maniloop demo --backend libero --codex-login --port 8767</code></pre><div class="local-links"><a id="setup-link" class="button primary" href="https://github.com/Daniel-rmc/ManiLoop#run-gpt-on-libero" target="_blank" rel="noopener" data-i18n="setup">Installation & model setup ↗</a><button id="copy-command" class="button" type="button" data-i18n="copy">Copy command</button><span id="copy-status" class="key-hint" role="status"></span></div></div></section>
+  <footer class="footer"><span data-i18n="footer">The layout and visual styles are reused from ManiLoop’s actual local workspace. This public view only reads a reviewed recording.</span><span class="mono" data-i18n="footerMark">MANILOOP · RECORDED WORKSPACE</span></footer>
+</main>
+</body>
+</html>

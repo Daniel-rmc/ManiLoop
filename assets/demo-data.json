@@ -1,5 +1,8 @@
 {
-  "task": "将盘子与小碗之间的黑碗放到盘子上",
+  "task": {
+    "en": "Pick up the black bowl between the plate and the ramekin and place it on the plate",
+    "zh": "将盘子与小碗之间的黑碗放到盘子上"
+  },
   "model": "GPT-6 Astra",
   "date": "2026-09-16",
   "context_mode": "paired",
@@ -23,8 +26,11 @@
     "success": true,
     "verified": true
   },
-  "outcome_note": "官方成功在第 46 次下降动作中触发，环境随即终止；本回合未额外执行松爪与退离。",
-  "report_url": "https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/research/2026-09-16-gpt6-success-episode.md",
+  "outcome_note": {
+    "en": "Official success was reached during downward action 46, and the environment stopped immediately. No additional gripper release or withdrawal was executed.",
+    "zh": "官方成功在第 46 次下降动作中触发，环境随即终止；本回合未额外执行松爪与退离。"
+  },
+  "report_url": "https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md",
   "episode": {
     "id": "20260916-172331-d3bc5ef2",
     "video": "assets/episodes/20260916-172331-d3bc5ef2/episode.mp4",
@@ -40,95 +46,127 @@
     {
       "step": 1,
       "stage": "before",
-      "title": "从官方初态开始",
+      "title": {
+        "en": "Start from the official initialization",
+        "zh": "从官方初态开始"
+      },
       "explanation": "The target bowl is between the plate and ramekin. Move toward it while maintaining clearance above the table.",
       "feedback": {
         "status": "timed_out",
         "position_error_m": 0.0016164698058661305
       },
       "external": "assets/episodes/20260916-172331-d3bc5ef2/01-external.jpg",
-      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/01-wrist.jpg"
+      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/01-wrist.jpg",
+      "explanation_zh": "目标碗位于盘子与小碗之间。向目标靠近，同时保持与桌面的安全间距。"
     },
     {
       "step": 7,
       "stage": "after",
-      "title": "张开夹爪接近目标",
+      "title": {
+        "en": "Open the gripper near the target",
+        "zh": "张开夹爪接近目标"
+      },
       "explanation": "The target bowl is approximately aligned beneath the gripper, and the last descent reached its target. Open the fingers before approaching the bowl for a grasp.",
       "feedback": {
         "status": "completed",
         "position_error_m": 0.0004816364373021016
       },
       "external": "assets/episodes/20260916-172331-d3bc5ef2/02-external.jpg",
-      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/02-wrist.jpg"
+      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/02-wrist.jpg",
+      "explanation_zh": "目标碗大致对齐在夹爪下方，上次下降已到位。在进一步接近碗进行抓取前，先张开夹指。"
     },
     {
       "step": 13,
       "stage": "after",
-      "title": "识别未抓住并重试",
+      "title": {
+        "en": "Detect a missed grasp and retry",
+        "zh": "识别未抓住并重试"
+      },
       "explanation": "The bowl stayed in place as the gripper lifted and appears smaller in the wrist view, indicating a missed grasp. Open the fingers to prepare for repositioning.",
       "feedback": {
         "status": "completed",
         "position_error_m": 0.00011148078335901178
       },
       "external": "assets/episodes/20260916-172331-d3bc5ef2/03-external.jpg",
-      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/03-wrist.jpg"
+      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/03-wrist.jpg",
+      "explanation_zh": "夹爪抬升时碗留在原地，在腕部画面中变小，说明没有抓住。张开夹指，准备重新调整位置。"
     },
     {
       "step": 30,
       "stage": "after",
-      "title": "松爪，准备再次调整",
+      "title": {
+        "en": "Release before another adjustment",
+        "zh": "松爪，准备再次调整"
+      },
       "explanation": "The bowl stayed on the table and became smaller in the wrist view during the lift, indicating a missed grasp. Open the fingers to prepare for repositioning.",
       "feedback": {
         "status": "completed",
         "position_error_m": 0.00011055948909471689
       },
       "external": "assets/episodes/20260916-172331-d3bc5ef2/04-external.jpg",
-      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/04-wrist.jpg"
+      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/04-wrist.jpg",
+      "explanation_zh": "抬升期间碗留在桌面上，在腕部画面中变小，说明没有抓住。张开夹指，准备重新调整位置。"
     },
     {
       "step": 37,
       "stage": "after",
-      "title": "闭合夹爪尝试夹持碗沿",
+      "title": {
+        "en": "Close the gripper around the bowl rim",
+        "zh": "闭合夹爪尝试夹持碗沿"
+      },
       "explanation": "The descent reached its target, and the bowl’s left rim appears between the open fingers. Close the gripper to attempt a rim grasp.",
       "feedback": {
         "status": "completed",
         "position_error_m": 0.0003704276716082853
       },
       "external": "assets/episodes/20260916-172331-d3bc5ef2/05-external.jpg",
-      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/05-wrist.jpg"
+      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/05-wrist.jpg",
+      "explanation_zh": "下降已到位，碗的左侧碗沿看起来位于张开的夹指之间。闭合夹爪，尝试夹住碗沿。"
     },
     {
       "step": 39,
       "stage": "after",
-      "title": "抬升并核对碗的随动",
+      "title": {
+        "en": "Lift and check whether the bowl follows",
+        "zh": "抬升并核对碗的随动"
+      },
       "explanation": "The bowl shifted slightly during the lift, but a secure grasp remains unclear in both views. Lift another 2.5 cm to check whether it follows the gripper before transporting it.",
       "feedback": {
         "status": "reached",
         "position_error_m": 0.0005960092801247784
       },
       "external": "assets/episodes/20260916-172331-d3bc5ef2/06-external.jpg",
-      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/06-wrist.jpg"
+      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/06-wrist.jpg",
+      "explanation_zh": "抬升时碗略有移动，但两个视角都还不能确认抓持可靠。再抬升 2.5 厘米，在搬运前检查碗是否随夹爪移动。"
     },
     {
       "step": 43,
       "stage": "after",
-      "title": "向盘子上方搬运",
+      "title": {
+        "en": "Transport toward the plate",
+        "zh": "向盘子上方搬运"
+      },
       "explanation": "The bowl remains steady relative to the gripper, and the plate moved closer beneath it. Make a small horizontal correction toward the plate before lowering.",
       "feedback": {
         "status": "timed_out",
         "position_error_m": 0.019534171483120488
       },
       "external": "assets/episodes/20260916-172331-d3bc5ef2/07-external.jpg",
-      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/07-wrist.jpg"
+      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/07-wrist.jpg",
+      "explanation_zh": "碗相对夹爪保持稳定，盘子已更接近碗下方。下降前，朝盘子方向进行一次小幅水平修正。"
     },
     {
       "step": 46,
       "stage": "final",
-      "title": "官方任务条件满足，自动终止",
+      "title": {
+        "en": "Official task condition reached; episode stopped",
+        "zh": "官方任务条件满足，自动终止"
+      },
       "explanation": "The bowl moved left toward the plate’s center and remains steady in the wrist view. Lower it 2 cm toward the plate, then reassess contact before releasing.",
       "feedback": {},
       "external": "assets/episodes/20260916-172331-d3bc5ef2/08-external.jpg",
-      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/08-wrist.jpg"
+      "wrist": "assets/episodes/20260916-172331-d3bc5ef2/08-wrist.jpg",
+      "explanation_zh": "碗已向左移近盘子中心，在腕部画面中保持稳定。向盘子下降 2 厘米，然后在释放前重新检查接触情况。"
     }
   ]
 }
