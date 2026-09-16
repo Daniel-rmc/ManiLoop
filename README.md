@@ -19,7 +19,7 @@ v0.1 提供 ARX X5 / Franka Panda、两个桌面布局、抓放 / 推物任务�
 | 项目 | 要求 |
 | --- | --- |
 | Python | **推荐 Python 3.12**；当前依赖要求至少 3.12 |
-| 操作系统 | 已在 macOS Apple Silicon 本机验证；Linux、Windows 提供启动步骤与 CI 配置，远程 CI 尚未运行 |
+| 操作系统 | macOS、Linux、Windows 均通过 Python 3.12 离线测试；渲染已验证 macOS 桌面与 Linux OSMesa，Windows 渲染尚未验证 |
 | 图形环境 | 能创建 OpenGL 渲染上下文；普通桌面环境即可，Linux 无显示器配置见下文 |
 | 模型服务 | 仅 GPT 控制需要网络及有效 API Key；服务须支持 **Responses API、图像输入、JSON Schema 结构化输出** |
 | 本地模型/GPU | 云端 API 模式无需本地权重；可选本地学习策略支持 CPU / Apple MPS / CUDA，见 [VLA 说明](docs/VLA.md) |

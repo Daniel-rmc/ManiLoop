@@ -1,4 +1,25 @@
-# ManiLoop v0.1 validation
+# ManiLoop validation
+
+## GitHub Actions — 2026-09-16
+
+Commit `27092ba` passed all four checks in
+[this workflow run](https://github.com/Daniel-rmc/ManiLoop/actions/runs/35047335420):
+
+| Check | Result |
+| --- | --- |
+| Ubuntu / Python 3.12 offline tests | Passed |
+| macOS / Python 3.12 offline tests | Passed |
+| Windows / Python 3.12 offline tests | Passed |
+| Linux OSMesa rendering, ARX X5 and Franka Panda | Passed |
+
+The same offline suite passed locally with **119 tests and 49 subtests**;
+7 optional LIBERO integration checks were skipped. Windows fixes explicitly
+specify UTF-8 when tests read logs and use short IDs for oversized input cases.
+No test coverage was removed. The optional LIBERO Linux workflow and Windows
+rendering have not been verified by this run. CI does not measure model task
+success; real-policy results are recorded separately below.
+
+## Framework baseline — 2026-09-15
 
 Validation date: 2026-09-15. Host: macOS Apple Silicon, Python 3.12.14.
 
@@ -46,12 +67,12 @@ are in the README and pyproject.toml.
 
 No paid model request, real VLA inference, online learning or real robot was used
 in this framework validation. Passing physics/controller tests does not establish
-an autonomous LLM success rate. The current VLA adapter validates only the interface.
+an autonomous LLM success rate. At this milestone, the VLA adapter validated only the interface; later real-policy
+results are recorded below.
 
 macOS rendering emits `ARB_clip_control unavailable`; RGB images are available,
-but depth precision may be lower on this backend. Linux/Windows test workflows and
-Linux OSMesa rendering are configured; their actual results must be checked after
-publishing the repository to GitHub.
+but depth precision may be lower on this backend. Subsequent cross-platform CI
+and Linux OSMesa rendering results are recorded above.
 
 ## LIBERO integration — 2026-09-15
 
@@ -76,7 +97,8 @@ robosuite 1.4.0, NumPy 1.23.5. Full runtime setup is in [LIBERO.md](LIBERO.md).
   upstream asset and output directories are ignored by Git.
 
 The optional Linux Actions workflow is provided but has not been run remotely.
-Windows LIBERO, trained VLA policies and cloud-model task success remain unverified.
+Windows LIBERO and cloud-model task success remain unverified. Trained-policy
+validation followed this integration milestone and is recorded below.
 This integration uses a declared ManiLoop observation/action/timing protocol and
 must not be presented as an unchanged reproduction of the LIBERO paper evaluation.
 

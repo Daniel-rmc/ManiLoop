@@ -10,15 +10,16 @@
 - M4：集成测试、安装说明和交付核对（完成）。
 - M5：本地真实策略验证（完成）：官方 SmolVLA、社区 ACT / Diffusion 均已真实运行；同一官方任务上 SmolVLA / Diffusion 成功，ACT 预算内未成功。
 - M6：Git 管理与公开仓库同步（完成）：[Daniel-rmc/ManiLoop](https://github.com/Daniel-rmc/ManiLoop)，主分支 `main`。
+- M6a：三平台离线测试与 Linux OSMesa 渲染均已在 GitHub Actions 实际通过。
 
-### 2026-09-16 · M6a · 首次跨平台 CI 修复（待远端复验）
+### 2026-09-16 · M6a · 首次跨平台 CI 修复（完成）
 - 目标：修复公开仓库首次 GitHub Actions 暴露的 Windows 差异，使同一离线测试套件可跨平台运行。
 - 证据：[首次运行](https://github.com/Daniel-rmc/ManiLoop/actions/runs/35046906364) 的 Linux、macOS 离线测试和 Linux OSMesa 双机器人渲染通过；Windows 出现 6 项失败、2 项错误。
 - 变化：测试读取中文日志和清单时显式指定 UTF-8；为无效／超大 TOML 输入设置简短参数名称，保留原有完整输入和安全断言。
-- 验证：本机 `python -m pytest -q` 为 119 项通过、7 项可选集成检查跳过、49 项子测试通过；`git diff --check` 通过。远端 Windows 结果待本次提交触发后核对。
+- 验证：本机 `python -m pytest -q` 为 119 项通过、7 项可选集成检查跳过、49 项子测试通过；`git diff --check` 通过。修复提交 `27092ba` 的 [GitHub Actions](https://github.com/Daniel-rmc/ManiLoop/actions/runs/35047335420) 四项检查全部通过：Windows、macOS、Linux 离线测试，以及 Linux OSMesa 的 ARX5 / Panda 渲染。
 - 难点与处理：Windows 默认文本编码不能解码中文记录；pytest 将超大参数生成的测试名称写入环境变量时超过 Windows 长度限制。修复测试的跨平台假设，不改变产品行为或减少覆盖。
 - 经验／决策：UTF-8 文件的读取端也应声明编码；大输入测试应提供短且可读的参数名称，避免将完整负载写入测试标识和日志。
-- 后续：核对四项远端检查，并将实际结果补入验证文档和当前状态。
+- 后续：README 环境要求与验证文档已同步实际检查结果。可选 LIBERO Linux 工作流和 Windows 渲染仍未验证；后续功能按独立提交、CI 和工作记录维护。
 
 ### 2026-09-16 · M6 · Git 管理与 GitHub 发布（完成）
 - 目标：建立可追踪提交并同步到 Daniel-rmc 的公开 ManiLoop 仓库，沿用 MIT 许可证与第三方来源声明。
