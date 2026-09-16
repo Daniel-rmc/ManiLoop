@@ -1,7 +1,7 @@
 """One entry point for interactive debugging, offline checks and batch experiments."""
 
 import argparse
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import json
 from pathlib import Path
 from maniloop.evaluation.benchmark import Experiment, load_suite, run_episode
@@ -48,6 +48,7 @@ def main(argv=None):
         p.add_argument("--observation-profile", choices=["llm_rgb512", "debug_rgb128"], default="llm_rgb512")
     batch.add_argument("--request-timeout-seconds", type=float, default=120)
     batch.add_argument("--context-mode", choices=["current", "paired"], default="current")
+    batch.add_argument("--record-episode", action="store_true", help="Record every real LIBERO control-step frame; requires controlled timing")
     batch.add_argument("--reasoning-effort", choices=["auto", "low", "medium", "high", "xhigh"], default="auto")
     batch.add_argument(
         "--suite", type=Path, help="Experiment matrix TOML (contains no credentials)"
@@ -56,7 +57,7 @@ def main(argv=None):
     batch.add_argument("--local-model", choices=["smolvla-libero", "act-libero", "diffusion-libero"], default="smolvla-libero")
     batch.add_argument("--device", choices=["auto", "cpu", "mps", "cuda"], default="auto")
     batch.add_argument("--seed", type=int, default=0)
-    batch.add_argument("--max-calls", type=int, default=30)
+    batch.add_argument("--max-calls", type=int, default=30, help="Decision budget; 0 disables this limit (simulation and wall-time limits remain)")
     batch.add_argument("--max-sim-seconds", type=float, default=120.0)
     batch.add_argument("--max-wall-seconds", type=float, default=600.0)
     batch.add_argument(
@@ -146,6 +147,7 @@ def main(argv=None):
                     llm_control=args.llm_control, observation_profile=args.observation_profile,
                     request_timeout_seconds=args.request_timeout_seconds, reasoning_effort=args.reasoning_effort,
                     context_mode=args.context_mode,
+                    record_episode=args.record_episode,
                     seed=args.seed,
                     max_calls=args.max_calls,
                     max_sim_seconds=args.max_sim_seconds,
@@ -153,6 +155,8 @@ def main(argv=None):
                 )
             ]
         )
+        if args.suite and args.record_episode:
+            cases = [replace(case, record_episode=True) for case in cases]
         connection = {
             "credential_source": "codex" if args.codex_login else "file" if args.provider_config else "manual",
             "config_path": str(args.provider_config) if args.provider_config else None,

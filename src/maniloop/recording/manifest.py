@@ -54,7 +54,7 @@ def describe_run(runner):
             else None
         ),
         "cameras_rendered": sim.render_enabled,
-        "max_decisions": runner.max_steps,
+        "max_decisions": runner.max_steps or None,
         "max_sim_seconds": runner.sim_budget,
         "max_wall_seconds": runner.wall_budget,
     }

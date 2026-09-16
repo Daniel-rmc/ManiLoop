@@ -225,6 +225,7 @@ def test_worker_horizon_includes_ten_warmup_steps():
     calls = []
     runtime = Runtime.__new__(Runtime)
     runtime.np = np
+    runtime.capture = None
     runtime.steps, runtime.done, runtime.success = 989, False, False
     runtime.sensors = lambda: {}
     runtime.env = SimpleNamespace(

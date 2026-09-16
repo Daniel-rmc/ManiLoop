@@ -10,7 +10,7 @@ v0.2 提供 ARX X5 / Franka Panda、两个桌面布局、抓放 / 推物任务�
 
 可选接入 **LIBERO 官方任务**：复用官方 Panda、场景、初始化和评分，使用独立运行环境。支持网页选择任务和批量实验，详见 [LIBERO 安装与使用](docs/LIBERO.md)。
 
-GPT-6 闭环操作演示现支持 Codex 登录、单步／连续执行、前后视觉反馈和离线回看，见 [演示使用说明](docs/GPT6_DEMO.md)。
+GPT-6 闭环操作演示现支持 Codex 登录、单步／连续执行、前后视觉反馈、不限决策次数和[完整 episode 录制](docs/EPISODE_RECORDING.md)，见 [演示使用说明](docs/GPT6_DEMO.md)。[展示页](https://daniel-rmc.github.io/ManiLoop/#demo)提供一条官方 LIBERO 成功录像：46 次决策、706 控制步，包含同一次尝试中的抓取重试。成功在下降时触发并立即终止，未额外验证松爪退离；这是一条开发演示，不是成功率评测，见[完整结果与判定边界](docs/research/2026-09-16-gpt6-success-episode.md)。
 
 可选安装本地学习策略：[SmolVLA / ACT / Diffusion 安装与实验](docs/VLA.md)。其中 SmolVLA 来自 LeRobot 官方；ACT / Diffusion 为社区视觉模仿基线。
 

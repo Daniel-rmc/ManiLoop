@@ -33,6 +33,7 @@ class Experiment:
     request_timeout_seconds: float = 120.0
     reasoning_effort: str = "auto"
     context_mode: str = "current"
+    record_episode: bool = False
     seed: int = 0
     max_calls: int = 30
     max_sim_seconds: float = 120.0
@@ -86,14 +87,18 @@ class Experiment:
             raise ValueError("Unknown timing mode")
         if self.context_mode not in ("current", "paired"):
             raise ValueError("Unknown sensor context mode")
+        if type(self.record_episode) is not bool:
+            raise ValueError("record_episode must be boolean")
+        if self.record_episode and (self.backend != "libero" or self.timing != "controlled"):
+            raise ValueError("Episode recording requires LIBERO with controlled timing")
         if (
             type(self.seed) is not int
             or self.seed < 0
             or type(self.max_calls) is not int
-            or not 1 <= self.max_calls <= (1000 if self.agent == "lerobot" else 100)
+            or not 0 <= self.max_calls <= (1000 if self.agent == "lerobot" else 100)
         ):
             raise ValueError(
-                "Seed must be nonnegative; max_calls must be 1–100 (local policy: 1–1000)"
+                "Seed must be nonnegative; max_calls must be 0 (unlimited) or 1–100 (local policy: 1–1000)"
             )
         if any(
             type(x) not in (int, float) or not math.isfinite(x) or x <= 0
@@ -148,6 +153,8 @@ def run_episode(
     case: Experiment, output: Path, connection: dict | None = None, render=True
 ):
     case.validate()
+    if case.record_episode and not render:
+        raise ValueError("Episode recording requires camera rendering")
     if case.agent in ("llm_cloud", "lerobot") and not render:
         raise ValueError(
             "LLM evaluation requires camera rendering; use OSMesa/EGL on headless Linux"
@@ -166,6 +173,7 @@ def run_episode(
         else case.observation_profile if case.agent == "llm_cloud" else "debug_rgb128",
     )
     runner = None
+    recording_active = False
     try:
         sim.reset(case.seed)
         runner = EpisodeRunner(sim, timing=case.timing, output=output, benchmark=True)
@@ -188,6 +196,7 @@ def run_episode(
                                     "reasoning_effort": case.reasoning_effort},
             },
         )
+        sim = runner.sim
         directory = runner.log_file.parent
         manifest = runner.manifest
         group = manifest["comparison_group"]
@@ -195,6 +204,9 @@ def run_episode(
         (directory / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+        if case.record_episode:
+            sim.start_recording(directory / "recording")
+            recording_active = True
         while runner.running:
             runner.advance()
             if case.timing == "realtime" or runner.future is not None:
@@ -212,6 +224,10 @@ def run_episode(
             sim.step(int(remaining / sim.timestep))
             runner._review_signature = None
             runner.update_review()
+        recording = None
+        if recording_active:
+            recording = sim.finish_recording(runner.termination_reason or runner.phase)
+            recording_active = False
         usage = {}
         usage_by_request = {}
         for index, line in enumerate(runner.log_file.read_text(encoding="utf-8").splitlines()):
@@ -241,6 +257,15 @@ def run_episode(
             "run_directory": str(directory),
             "is_mock": case.agent == "mock_vla",
         }
+        if recording is not None:
+            if recording["evaluation"] != result["evaluation"]:
+                raise RuntimeError("Recording and final episode evaluation differ")
+            result["recording"] = {
+                "directory": "recording", "metadata": "recording/episode.json",
+                "frame_count": recording["frame_count"],
+                "frames_sha256": recording["frames_sha256"],
+                "complete_control_steps": True, "evaluation_matches": True,
+            }
         if case.agent == "lerobot":
             final_images, _ = sim.render_images()
             for camera, data in final_images.items():
@@ -250,7 +275,11 @@ def run_episode(
         )
         return result
     finally:
-        if runner is not None:
-            runner.close()
-        else:
-            sim.close()
+        try:
+            if recording_active:
+                sim.finish_recording("exception")
+        finally:
+            if runner is not None:
+                runner.close()
+            else:
+                sim.close()

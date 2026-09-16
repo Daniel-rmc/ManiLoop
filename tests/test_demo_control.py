@@ -169,3 +169,33 @@ def test_review_does_not_invalidate_depth_followup(demo):
     demo.tick()
     demo.future.result(timeout=5)
     assert demo.policy.requests[0][3] == [result]
+
+
+def test_no_decision_cap_still_stops_at_independent_terminal_state(demo, monkeypatch):
+    demo.begin_episode('test', 0)
+    assert demo.manifest['policy']['max_decisions'] is None
+    for expected in range(1, 6):
+        if demo.paused:
+            demo.command('step', {})
+        advance_until(demo, lambda: demo.paused)
+        assert demo.api_calls == expected
+    requests = len(demo.policy.requests)
+    # Simulate the environment's independently evaluated terminal flag. The
+    # policy must receive no additional request or privileged success field.
+    monkeypatch.setattr(demo.sim, 'terminated', True)
+    monkeypatch.setattr(demo.sim, 'evaluation', lambda: {'success': True})
+    demo.advance()
+    assert not demo.running and demo.termination_reason == 'environment_terminated'
+    assert len(demo.policy.requests) == requests
+    for request in demo.policy.requests:
+        guard_sensor_tree(request)
+    summary = json.loads((demo.log_file.parent / 'review-summary.json').read_text(encoding='utf-8'))
+    assert summary['evaluation']['success'] is True
+
+
+def test_no_decision_cap_retains_wall_clock_boundary(demo):
+    demo.begin_episode('test', 0)
+    demo.started_wall -= demo.wall_budget + 1
+    demo.advance()
+    assert not demo.running and demo.termination_reason == 'wall_budget'
+    assert demo.api_calls == 0

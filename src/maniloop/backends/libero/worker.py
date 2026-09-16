@@ -14,6 +14,11 @@ import os
 from pathlib import Path
 import sys
 
+if __package__:
+    from .episode_capture import EpisodeCapture
+else:
+    from episode_capture import EpisodeCapture
+
 CAMERAS = {"external": "agentview", "wrist": "robot0_eye_in_hand"}
 SUITES = ("libero_spatial", "libero_object", "libero_goal", "libero_90", "libero_10")
 
@@ -136,9 +141,12 @@ class Runtime:
             "llm_action_adapter": "one OSC step per move; 10 steps per gripper; 1 zero-arm step per wait",
             "paper_comparable": False,
         }
+        self.capture = None
         self.reset(options.get("seed", 0))
 
     def reset(self, seed):
+        self.finish_recording("reset")
+        self.seed = seed
         self.env.seed(seed)
         self.env.reset()
         self.obs = self.env.set_init_state(self.states[self.init_id])
@@ -149,6 +157,32 @@ class Runtime:
         self.done = False
         self.success = bool(self.env.check_success())
         return self.sensors()
+
+    def start_recording(self, directory):
+        if not self.render or self.steps != 0 or self.done:
+            raise ValueError("Recording must begin at the rendered official episode initialization")
+        if self.capture is not None:
+            raise ValueError("An episode recording is already active")
+        # The worker records native OSC samples, not the parent adapter's
+        # move/gripper semantics. The run manifest owns that high-level mode.
+        recording_description = dict(self.description)
+        recording_description.pop("llm_action_adapter", None)
+        self.capture = EpisodeCapture(directory, description=recording_description,
+                                      seed=self.seed, initial_evaluation=self.evaluation())
+        self.capture_frame(None)
+        return {"recording": True, "frame_count": self.capture.count}
+
+    def capture_frame(self, action):
+        if self.capture is not None:
+            images = {label: self.obs[native + "_image"][::-1].copy() for label, native in CAMERAS.items()}
+            self.capture.append(step=self.steps, images=images, action=action, sensors=self.sensors())
+
+    def finish_recording(self, reason="episode_end"):
+        if self.capture is None:
+            return None
+        result = self.capture.finish(evaluation=self.evaluation(), reason=reason)
+        self.capture = None
+        return result
 
     def sensors(self):
         from robosuite.utils.transform_utils import quat2mat
@@ -214,6 +248,7 @@ class Runtime:
             self.steps += 1
             self.success |= bool(self.env.check_success())
             self.done = bool(done) or self.success or self.steps >= 990
+            self.capture_frame(action.tolist())
         return {"sensors": self.sensors(), "steps": self.steps, "terminated": self.done}
 
     def evaluation(self):
@@ -258,8 +293,13 @@ def main():
                     result = runtime.step(args["action"])
                 elif op == "evaluate":
                     result = runtime.evaluation()
+                elif op == "start_recording":
+                    result = runtime.start_recording(args["directory"])
+                elif op == "finish_recording":
+                    result = runtime.finish_recording(args.get("reason", "episode_end"))
                 elif op == "close":
                     if runtime:
+                        runtime.finish_recording("environment_closed")
                         runtime.env.close()
                     result = None
                 else:

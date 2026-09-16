@@ -108,6 +108,13 @@ and those images to check the intended motion against the observed effect. The
 feedback describes controller execution only; reached/completed never proves a
 grasp or task success. Query pixels only in current camera images.
 
+For pick-and-place, use the observation after a small lift to check whether the
+intended object moves with the gripper before transporting it. After releasing,
+move the gripper clear and inspect the scene before declaring done. Overlap in one
+image alone does not establish a stable grasp or placement; compare both views
+and the observed before/after changes. When uncertain, choose a small action that
+improves the available visual evidence instead of assuming the substep succeeded.
+
 Always echo the exact current observation_id. All schema fields are required.
 For non-move actions use delta_position=[0,0,0] and delta_rotation=[0,0,0].
 For non-gripper actions use gripper_opening=0 (unused).

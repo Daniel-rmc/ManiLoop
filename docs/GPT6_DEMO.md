@@ -4,6 +4,8 @@
 
 ## 启动与登录
 
+最新[成功 episode](research/2026-09-16-gpt6-success-episode.md)使用 paired、medium 和 `--max-calls 0`，46 次决策后通过官方评分；完整录像已导出。这与下方用于逐步诊断的网页预设不同，不能将单次成功理解为稳定成功率。
+
 先完成 [主环境](../README.md) 和 [LIBERO 环境](LIBERO.md) 安装。本入口不需要 VLA 权重，独立 API 聊天页仍按 [API_CHAT.md](API_CHAT.md) 使用。
 
 使用近期官方 Codex CLI，并在同一台电脑执行 `codex login`，通过 ChatGPT 登录。`codex login status` 只验证本地登录记录，不能证明访问令牌有效或模型可用。实际请求曾确认 0.144.1 被 GPT-6 拒绝，服务器要求更新客户端；本机使用应用自带 0.154.0-alpha.6.2。官方版本见 [Codex releases](https://github.com/openai/codex/releases)。
@@ -33,6 +35,10 @@ export MANILOOP_CODEX_BIN="/Applications/ChatGPT.app/Contents/Resources/codex"
 4. 「执行后暂停」会完成当前在途决策和动作，然后暂停，不再请求下一次决策。「停止」终止本轮，取消 Codex 子进程并丢弃迟到响应；「重新初始化」开始新的场景。
 5. 暂停或结束后点「回看最近实验」。每个运行目录也有独立 `replay.html`，可离线用浏览器打开。重启网页服务后会从相同输出目录恢复最近的已保存回放。它展示每次决策的前后图像、动作与反馈，以及分开展示的模型声明和官方评分。
 
+调用上限填 `0` 表示不按决策次数截断；检测到官方环境成功／终止后，调度器停止后续请求，评分仍不进入策略输入。环境自身的回合边界和墙钟预算继续生效。
+
+需要从初态到终止的完整操作录像时，使用批量入口的 `--record-episode`；它保存每个真实控制步，和上述决策前后帧回看分别记录。导出 MP4 与完整性验收见 [完整 episode 录制](EPISODE_RECORDING.md)。
+
 暂停时不推进物理，墙钟预算继续累计。人工暂停/继续会记录在事件与运行摘要中，不应将带人工干预的演示当作固定策略评测。手动点动和改任务必须先停止本轮。
 
 ## 两种视觉上下文
@@ -58,4 +64,4 @@ export MANILOOP_CODEX_BIN="/Applications/ChatGPT.app/Contents/Resources/codex"
 
 `--max-calls` 限制策略请求次数；Codex CLI 内部的网络重试由官方客户端管理，所以它不等于 HTTP 尝试次数。输出 schema 与客户端响应长度有限制，CLI 没有本接口可用的服务端 `max_output_tokens` 参数，不宣称它是硬 token 预算。
 
-原始 [改造计划](design/GPT6_SIM_DEMO_PLAN.md)保留设计过程；本轮实际结果见 [worknote 的 M13](worknotes/worknote.md)。未进行大规模实验或训练，三个初始化的复验仍需在最终配置冻结后另行安排。
+原始 [改造计划](design/GPT6_SIM_DEMO_PLAN.md)保留设计过程；首次联调与最新完整录像分别见 [worknote 的 M13 与 M15](worknotes/worknote.md)。未进行大规模实验或训练，多个初始化的复验仍需在最终配置冻结后另行安排。

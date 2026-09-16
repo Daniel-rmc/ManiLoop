@@ -1,7 +1,7 @@
 # ManiLoop：新电脑迁移与继续工作交接
 
 > 更新日期：2026-09-16。本文面向项目作者和接手的开发助手。
-> 最新状态：v0.2 已加入 Codex 登录、单步／暂停、前后图像与回放。GPT 诊断和小位移通过，首次完整抓放未成功；见 [当前演示说明](GPT6_DEMO.md)、[实测报告](research/2026-09-16-gpt6-demo-first-run.md) 和最新 worknote。下文原迁移基线保留为历史证据。
+> 最新状态：已加入 Codex 登录、单步／暂停、前后图像、回放及完整 episode 录制。新一轮 GPT-6 运行在 46 次决策、706 控制步后通过 LIBERO 官方成功判定，完整录像包含全部重试；成功触发后立即终止，未额外验收松爪退离。见 [当前演示说明](GPT6_DEMO.md)、[成功报告](research/2026-09-16-gpt6-success-episode.md) 和最新 worknote。[首次失败](research/2026-09-16-gpt6-demo-first-run.md)及下文原迁移基线保留为历史证据。
 > 仓库：<https://github.com/Daniel-rmc/ManiLoop>；默认分支：`main`。
 > 本次迁移核对时，已有代码基线为 `d3530ed`，本地工作区干净，GitHub 远端 `main` 与本地一致。本文和对应工作记录会在此基线上作为新的交接提交同步。
 >

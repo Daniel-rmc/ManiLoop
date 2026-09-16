@@ -123,7 +123,7 @@
             </div>
             <div class="configuration">
               <div><label class="field-label" for="model-select">LLM 模型</label><select id="model-select" class="input model-input"><option value="">跟随本地配置</option><option value="__custom__">自定义模型…</option></select></div>
-              <div><label class="field-label" for="max-steps">调用上限</label><input id="max-steps" class="input mono" type="number" value="40" min="1" max="100" step="1" required></div>
+              <div><label class="field-label" for="max-steps">调用上限（0 不限次数）</label><input id="max-steps" class="input mono" type="number" value="40" min="0" max="100" step="1" required></div>
             </div>
             <div id="custom-model-fields" class="custom-model" hidden><label class="field-label" for="model-input">自定义模型名称</label><input id="model-input" class="input model-input" type="text" placeholder="输入服务商支持的完整模型 ID" maxlength="120" spellcheck="false" autocapitalize="none"></div>
             <div class="model-tools"><p class="key-hint" id="model-catalog-note">刷新会请求当前服务商的模型列表。列出的模型仍需支持图像与结构化输出。</p><button id="refresh-models-button" type="button" class="button subtle">刷新模型列表</button></div>
@@ -757,7 +757,7 @@
       const maxSteps = Number(ui.maxSteps.value);
       if (!task) { showError(new Error('请先输入任务指令。')); ui.task.focus(); return; }
       if ($('agent-select').value === 'llm_cloud' && ui.modelSelect.value === '__custom__' && !model) { showError(new Error('请填写自定义模型名称。')); ui.model.focus(); return; }
-      if (!Number.isInteger(maxSteps) || maxSteps < 1 || maxSteps > Number(ui.maxSteps.max)) { showError(new Error('决策次数超出当前策略允许范围。')); return; }
+      if (!Number.isInteger(maxSteps) || maxSteps < 0 || maxSteps > Number(ui.maxSteps.max)) { showError(new Error('决策次数超出当前策略允许范围；0 表示不限次数。')); return; }
       const agent = $('agent-select').value;
       const body = {task, max_steps: maxSteps, agent, single_step: singleStep};
       if (agent === 'llm_cloud') Object.assign(body, selectedCredentials(), environmentSettings(), {

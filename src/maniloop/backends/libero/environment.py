@@ -4,6 +4,7 @@ import base64
 from collections import deque
 import copy
 import math
+from pathlib import Path
 import time
 import uuid
 import numpy as np
@@ -96,6 +97,7 @@ class LiberoEnvironment:
         if type(seed) is not int or seed < 0:
             raise ValueError("Seed must be nonnegative")
         self._sensors = self.worker.call("reset", seed=seed)
+        self._recording_active = False
         self._clear_episode()
 
     def set_llm_control(self, mode):
@@ -276,8 +278,26 @@ class LiberoEnvironment:
     def evaluation(self):
         return self.worker.call("evaluate")
 
+    def start_recording(self, directory):
+        """Capture one full episode from its initialization, for human review only."""
+        if self.simulation_time != 0 or self.busy:
+            raise ValueError("Reset the environment before starting episode recording")
+        result = self.worker.call("start_recording", directory=str(Path(directory).resolve()))
+        self._recording_active = True
+        return result
+
+    def finish_recording(self, reason="episode_end"):
+        """Persist the score separately; it never enters observe() or policy history."""
+        result = self.worker.call("finish_recording", reason=str(reason))
+        self._recording_active = False
+        return result
+
     def close(self):
-        self.worker.close()
+        try:
+            if getattr(self, "_recording_active", False):
+                self.finish_recording("environment_closed")
+        finally:
+            self.worker.close()
 
 
 class LiberoChunkExecutor:

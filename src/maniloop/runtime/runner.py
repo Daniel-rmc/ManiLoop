@@ -423,8 +423,8 @@ class EpisodeRunner:
                 if self.sim.backend != "libero" or not self.sim.render_enabled:
                     raise ValueError("本地模型需要 LIBERO 后端和相机渲染")
                 max_steps = int(payload.get("max_steps", 500))
-                if not 1 <= max_steps <= 1000:
-                    raise ValueError("本地策略决策上限必须在 1 至 1000 之间")
+                if not 0 <= max_steps <= 1000:
+                    raise ValueError("本地策略决策上限须为 0（不限次数）或 1 至 1000")
                 if self.sim.describe().get("observation_profile") != "lerobot_rgb256":
                     info = self.sim.describe()
                     replacement = create_environment(
@@ -476,8 +476,8 @@ class EpisodeRunner:
             override = override.strip() if override else None
             model = override or (config.model if config else None) or DEFAULT_MODEL
             max_steps = 1 if diagnostic else int(payload.get("max_steps", 30))
-            if not 1 <= max_steps <= 100:
-                raise ValueError("API调用上限必须在1至100之间")
+            if not 0 <= max_steps <= 100:
+                raise ValueError("API调用上限须为0（不限次数）或1至100")
             options = payload.get("request_options", {})
             if type(options) is not dict:
                 raise ValueError("请求设置必须是对象")
@@ -544,8 +544,8 @@ class EpisodeRunner:
 
     def begin_episode(self, task, max_steps):
         limit = 1000 if self.policy_kind == "lerobot" else 100
-        if not 1 <= max_steps <= limit:
-            raise ValueError(f"调用上限必须在1至{limit}之间")
+        if type(max_steps) is not int or not 0 <= max_steps <= limit:
+            raise ValueError(f"调用上限须为0（不限次数）或1至{limit}")
         if self.sim.terminated and not self.diagnostic_stage:
             self.sim.reset(self.seed)
             self._physics_remainder = 0.0
@@ -586,7 +586,7 @@ class EpisodeRunner:
             json.dumps(self.manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         self.event(
-            "start", "开始任务", task=task, model=self.model, max_calls=max_steps
+            "start", "开始任务", task=task, model=self.model, max_calls=max_steps or None
         )
 
     def advance(self, simulation_seconds=0.02):
@@ -867,7 +867,7 @@ class EpisodeRunner:
             and self.sim.settled
             and time.monotonic() >= self.next_request
         ):
-            if self.api_calls >= self.max_steps:
+            if self.max_steps > 0 and self.api_calls >= self.max_steps:
                 self.stop("达到决策调用上限，已保持当前位置", reason="decision_budget")
                 return
             if self.credential_source == "file":

@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f5f3eb">
   <meta name="description" content="ManiLoop 是一个开放的机器人仿真研究框架。让 GPT 与本地 VLA 读取相机和本体反馈，在 MuJoCo / LIBERO 中执行动作，保留可回看的实验记录与独立评分。">
   <meta property="og:title" content="ManiLoop — 让模型看见、行动，再观察。">
-  <meta property="og:description" content="GPT + VLA · MuJoCo + LIBERO。一个开放、可检查、保留失败记录的机器人操作研究框架。">
+  <meta property="og:description" content="GPT + VLA · MuJoCo + LIBERO。一个开放、可检查、保留完整执行记录的机器人操作研究框架。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://daniel-rmc.github.io/ManiLoop/">
   <title>ManiLoop — 让模型看见、行动，再观察。</title>
@@ -26,7 +26,7 @@
   <main id="main">
     <section class="hero page-width" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <div class="eyebrow"><span class="status-dot" aria-hidden="true"></span> OPEN ROBOTICS RESEARCH / v0.2.0</div>
+        <div class="eyebrow"><span class="status-dot" aria-hidden="true"></span> OPEN ROBOTICS RESEARCH / v0.2</div>
         <h1 id="hero-title">让模型看见、<br>行动，<br><span class="accent">再观察。</span></h1>
         <p class="hero-description">把大模型的判断，放进可检查的物理闭环。<br class="desktop-break">在 MuJoCo 仿真中连接视觉、动作与执行反馈，<br class="desktop-break">从一个抓放任务，开始研究机器人的下一步。</p>
         <div class="hero-actions"><a class="button button-dark" href="#demo">查看真实演示 <span aria-hidden="true">↘</span></a><a class="text-link" href="https://github.com/Daniel-rmc/ManiLoop">获取源码 <span aria-hidden="true">↗</span></a></div>
@@ -35,7 +35,7 @@
       <div class="hero-visual">
         <div class="visual-heading"><span><span class="square-marker" aria-hidden="true"></span> OBSERVATION / 01</span><span>LIBERO · PANDA</span></div>
         <div class="hero-image-frame">
-          <img id="hero-image" src="assets/frames/01-external.jpg" alt="真实 LIBERO 仿真记录：Panda 机械臂与桌面上的碗、盘子" width="512" height="512" fetchpriority="high">
+          <img id="hero-image" src="assets/episodes/20260916-172331-d3bc5ef2/01-external.jpg" alt="真实 LIBERO 仿真记录：Panda 机械臂与桌面上的碗、盘子" width="512" height="512" fetchpriority="high">
           <span class="image-corner corner-tl" aria-hidden="true"></span><span class="image-corner corner-tr" aria-hidden="true"></span><span class="image-corner corner-bl" aria-hidden="true"></span><span class="image-corner corner-br" aria-hidden="true"></span>
           <div class="image-overlay"><span>EXTERNAL CAMERA</span><span>512 × 512 / RGB</span></div>
         </div>
@@ -63,19 +63,26 @@
     </section>
     <section id="demo" class="demo-section section-space" aria-labelledby="demo-title">
       <div class="page-width">
-        <div class="section-heading"><p class="eyebrow">02 / FIELD RECORDING</p><div><h2 id="demo-title">公开过程，也公开失败。</h2><p class="section-intro">GPT-6 Astra 的第一次完整 LIBERO 抓放尝试。<br class="desktop-break">这里展示真实记录的精选帧，浏览不会调用模型或运行仿真。</p></div></div>
-        <div class="record-heading"><div><span class="record-tag">RECORDED DEMO</span><h3 id="record-task">把盘子与小碗之间的黑碗放到盘子上</h3></div><span class="record-date">2026.09.16</span></div>
-        <div class="record-layout">
+        <div class="section-heading"><p class="eyebrow">02 / FIELD RECORDING</p><div><h2 id="demo-title">从观察开始，把过程留下。</h2><p class="section-intro" id="demo-intro">真实执行记录与独立任务结果。浏览页面只播放已保存的媒体，不会调用模型或运行仿真。</p></div></div>
+        <div class="record-heading"><div><span class="record-tag" id="record-tag">RECORDED DEMO</span><h3 id="record-task">正在载入任务记录</h3><p class="record-model" id="record-model">模型与运行条件以记录为准</p></div><span class="record-date" id="record-date">—</span></div>
+        <figure class="episode-player" id="episode-player" hidden>
+          <div class="episode-heading"><span class="record-tag">COMPLETE EPISODE</span><span class="episode-meta" id="episode-meta"></span></div>
+          <video id="episode-video" controls playsinline preload="metadata" aria-label="完整机器人操作 episode" aria-describedby="episode-caption">你的浏览器不支持内嵌视频，可使用下方链接打开录像。</video>
+          <figcaption id="episode-caption">从初始化到独立评分终止的同一次连续操作。</figcaption>
+          <div class="episode-footer"><p id="episode-timing-note">按仿真时间播放；模型推理等待不占用仿真时间。</p><a class="text-link" id="episode-download" href="#" download>打开完整录像 <span aria-hidden="true">↗</span></a></div>
+        </figure>
+        <div class="selected-heading" id="selected-heading"><h4>精选决策帧</h4><p>以下为同一次运行的观察节点，用于阅读动作说明；不是连续录像。</p></div>
+        <div class="record-layout" id="record-layout">
           <div class="record-media">
             <div class="camera-grid">
-              <figure><div class="camera-label"><span>01 / EXTERNAL</span><span>RGB 512</span></div><img id="external-frame" src="assets/frames/01-external.jpg" alt="精选记录：外部相机画面" width="512" height="512" loading="lazy"></figure>
-              <figure><div class="camera-label"><span>02 / WRIST</span><span>RGB 512</span></div><img id="wrist-frame" src="assets/frames/01-wrist.jpg" alt="精选记录：腕部相机画面" width="512" height="512" loading="lazy"></figure>
+              <figure><div class="camera-label"><span>01 / EXTERNAL</span><span>RGB 512</span></div><img id="external-frame" src="assets/episodes/20260916-172331-d3bc5ef2/01-external.jpg" alt="精选记录：外部相机画面" width="512" height="512" loading="lazy"></figure>
+              <figure><div class="camera-label"><span>02 / WRIST</span><span>RGB 512</span></div><img id="wrist-frame" src="assets/episodes/20260916-172331-d3bc5ef2/01-wrist.jpg" alt="精选记录：腕部相机画面" width="512" height="512" loading="lazy"></figure>
             </div>
             <div class="playback-controls" id="playback-controls" hidden>
-              <div class="playback-buttons"><button type="button" id="previous-frame" class="icon-button" aria-label="上一帧" title="上一帧">←</button><button type="button" id="play-toggle" class="play-button" aria-label="播放精选记录" aria-pressed="false"><span id="play-icon" aria-hidden="true">▶</span><span id="play-label">播放记录</span></button><button type="button" id="next-frame" class="icon-button" aria-label="下一帧" title="下一帧">→</button></div>
-              <label class="visually-hidden" for="frame-slider">选择记录帧</label><input type="range" id="frame-slider" min="0" max="0" value="0" step="1" aria-valuetext="精选帧 1"><span class="frame-counter" id="frame-counter">01 / 08</span>
+              <div class="playback-buttons"><button type="button" id="previous-frame" class="icon-button" aria-label="上一帧" title="上一帧">←</button><button type="button" id="play-toggle" class="play-button" aria-label="播放精选记录" aria-pressed="false"><span id="play-icon" aria-hidden="true">▶</span><span id="play-label">播放精选帧</span></button><button type="button" id="next-frame" class="icon-button" aria-label="下一帧" title="下一帧">→</button></div>
+              <label class="visually-hidden" for="frame-slider">选择记录帧</label><input type="range" id="frame-slider" min="0" max="0" value="0" step="1" aria-valuetext="精选帧 1"><span class="frame-counter" id="frame-counter">— / —</span>
             </div>
-            <p class="playback-note" id="playback-note">精选过程帧 · 按原始顺序排列 · 非实时画面</p>
+            <p class="playback-note" id="playback-note">精选决策帧 · 按原始顺序排列 · 非连续录像</p>
             <noscript><p class="playback-note">启用 JavaScript 可逐帧浏览。完整结果也可在下方的实测报告中阅读。</p></noscript>
           </div>
           <aside class="record-detail" aria-label="当前记录说明">
@@ -86,14 +93,15 @@
             <p class="detail-caveat">以上为模型解释与控制反馈，不能据此认定物体已被稳定抓持。任务结果由独立评分报告。</p>
           </aside>
         </div>
-        <div class="run-metrics" aria-label="这一次运行的独立结果"><div><strong>24</strong><span>次模型决策</span></div><div><strong>389</strong><span>个官方控制步</span></div><div><strong>19.45<small>s</small></strong><span>仿真时间</span></div><div class="metric-result"><strong>未成功</strong><span>LIBERO 官方评分 · false</span></div></div>
-        <div class="result-context"><p><strong>spatial task 0 / init 0 / seed 0</strong> · current 双相机 · controlled 时序<br>出现了抓取重试和最终释放；在决策预算耗尽时，官方任务条件未满足。一次调试记录不代表整体成功率。</p><a class="text-link" href="https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/research/2026-09-16-gpt6-demo-first-run.md">阅读完整实测报告 <span aria-hidden="true">↗</span></a></div>
+        <div class="run-metrics" aria-label="这一次运行的独立结果"><div><strong id="metric-decisions">—</strong><span>次模型决策</span></div><div><strong id="metric-steps">—</strong><span>个官方控制步</span></div><div><strong><b id="metric-seconds">—</b><small>s</small></strong><span>仿真时间</span></div><div class="metric-result" id="metric-result"><strong id="metric-outcome">待载入</strong><span id="metric-evaluator">独立任务结果</span></div></div>
+        <div class="result-context"><p><strong id="record-conditions">运行条件载入中</strong><br><span id="record-result-note">任务是否完成由仿真器独立评分，以公开记录为准。</span> 单次演示不代表基准成功率。</p><a class="text-link" id="record-report" href="https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/VALIDATION.md">阅读实测报告 <span aria-hidden="true">↗</span></a></div>
+        <p class="record-history">每次尝试都保留原始结果。<a href="https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/research/2026-09-16-gpt6-demo-first-run.md">首轮探索与失败分析 ↗</a></p>
       </div>
     </section>
     <section class="evidence-section page-width section-space" aria-labelledby="evidence-title">
       <div class="section-heading"><p class="eyebrow">03 / WHAT WE KNOW</p><div><h2 id="evidence-title">把能力与证据对齐。</h2><p class="section-intro">这是可用于调试与研究的早期框架。<br class="desktop-break">接口通过、控制完成、任务成功，分别记录。</p></div></div>
       <div class="evidence-grid">
-        <article class="evidence-card"><div class="evidence-top"><span class="evidence-mark" aria-hidden="true">✓</span><span class="eyebrow">VERIFIED / 已实测</span></div><h3>工程闭环已跑通</h3><ul><li>GPT-6 真实文字与图像通信</li><li>双相机结构化动作输出</li><li>5 mm 上移动作与执行后暂停</li><li>14 项真实 LIBERO 集成检查</li></ul><p>183 项离线测试与 136 项子测试通过。接口检查不替代任务能力验证。</p></article>
+        <article class="evidence-card"><div class="evidence-top"><span class="evidence-mark" aria-hidden="true">✓</span><span class="eyebrow">VERIFIED / 已实测</span></div><h3>工程闭环已跑通</h3><ul><li>GPT-6 真实文字与图像通信</li><li>双相机结构化动作输出</li><li>5 mm 上移动作与执行后暂停</li><li>14 项真实 LIBERO 集成检查</li></ul><p>194 项离线测试与 136 项子测试通过。接口检查不替代任务能力验证。</p></article>
         <article class="evidence-card"><div class="evidence-top"><span class="evidence-mark evidence-mark-neutral" aria-hidden="true">~</span><span class="eyebrow">OBSERVED / 有限记录</span></div><h3>本地策略可以接入</h3><ul><li>SmolVLA：单任务验收成功</li><li>Diffusion Policy：单任务验收成功</li><li>ACT：500 步预算内未成功</li><li>独立 VLA 推理环境，固定检查点</li></ul><p>以上为单个任务与初始化的记录，不能推算 LIBERO 整体成功率。</p><a class="text-link" href="https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/VLA.md">本地模型说明 <span aria-hidden="true">↗</span></a></article>
         <article class="evidence-card evidence-card-open"><div class="evidence-top"><span class="evidence-mark evidence-mark-open" aria-hidden="true">↗</span><span class="eyebrow">OPEN / 待研究</span></div><h3>判断如何接受反馈？</h3><p class="research-question">加入动作前后的视觉证据，能否减少模型因“看起来重叠或邻近”而过早进入下一步的判断？</p><p>当前与配对上下文接口已实现；正式对照、新颖性与实验预算尚未确定，也尚无“配对更好”的结论。</p><a class="text-link" href="https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/research/README.md">研究记录 <span aria-hidden="true">↗</span></a></article>
       </div>

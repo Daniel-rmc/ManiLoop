@@ -1,8 +1,32 @@
 # ManiLoop validation
 
+## Complete GPT-6 success episode — 2026-09-16
+
+The recording and unlimited-decision changes pass **194 offline tests and 136
+subtests** locally; 15 optional integration checks are skipped without opt-in.
+A real LIBERO check runs the same eight native actions with recording disabled
+and enabled: joint/TCP trajectories are identical, and all nine dual-camera
+frames agree with the independent step count. No model is called by these tests.
+
+One new GPT-6 Astra episode, using official Codex login, paired RGB512 context,
+medium reasoning and no decision-count cap, passed **LIBERO `check_success`**
+on spatial task 0 / init 0 / seed 0. It made 46 requests and executed 706 native
+control steps (35.30 simulation seconds), then stopped automatically without a
+further request. Evaluator data remains outside policy inputs.
+
+The complete dual-camera MP4 independently decodes to **707 frames, 20 fps,
+1024×568, 35.35 seconds**: initialization plus every control step, including
+unsuccessful grasps within this same episode. All 1,414 source images and the
+frame index pass SHA-256 verification. Initial success is false and all three
+terminal evaluation records agree on true. Official success occurs during the
+final descent; no additional release/withdrawal follows termination. This is one
+development demonstration, not a success-rate estimate. See the
+[success report](research/2026-09-16-gpt6-success-episode.md) and
+[recording guide](EPISODE_RECORDING.md).
+
 ## v0.2 GPT simulation demo — 2026-09-16
 
-The current release passes **183 offline tests and 136 subtests** on the local
+The earlier v0.2.0 release passed **183 offline tests and 136 subtests** on the local
 macOS / Python 3.12 host; 14 optional LIBERO checks are skipped without opt-in.
 The **14 real LIBERO integration checks** passed separately in the isolated worker
 environment. The added portability checks retain symlink rejection coverage on
