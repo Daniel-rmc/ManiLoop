@@ -122,3 +122,5 @@ macOS Apple Silicon 的正式环境运行 `MANILOOP_TEST_LIBERO=1 python -m pyte
 - 网页入口已验证可调请求超时、推理强度、三种诊断、动作／相机配置和独立预算。诊断完成后手动调试可继续推进物理。
 
 以上未调用付费云端 API。FC 服务连通性、云端模型自主抓放成功率，以及更广泛的初始化／接触条件尚未验证。原始单步控制与目标跟踪的对照实验见 [设计与诊断记录](design/LLM_LOOP_V2.md)；工程进展见 [工作记录](worknotes/worknote.md)。
+
+本次实现提交 `3ff9985` 的 [GitHub Actions](https://github.com/Daniel-rmc/ManiLoop/actions/runs/35051694421) 四项均通过：Windows、macOS、Linux 离线测试和 Linux OSMesa 双机器人渲染。用户随后进行的 Astra / Sol 云端调用均未通过响应完整性检查，未执行动作；这是 API 接入失败记录，不是任务成功率评测。
