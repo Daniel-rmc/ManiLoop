@@ -12,8 +12,19 @@
 - M6：Git 管理与公开仓库同步（完成）：[Daniel-rmc/ManiLoop](https://github.com/Daniel-rmc/ManiLoop)，主分支 `main`。
 - M6a：三平台离线测试与 Linux OSMesa 渲染均已在 GitHub Actions 实际通过。
 - M8：Show-Harness 源码与论文工程分析已完成；语义动作策略仍为设计建议，尚未接入或实测。
+- M8a：补充模型、作者自建 harness 与厂商浏览器 agent 的调用边界；核实 GUMI 模拟完成信号不可直接进入传感器赛道。
 - M7b：独立 API 聊天页已完成，用户提供配置的 FC / Sol 文字通信真实通过；SDK 空错误对象误判已复现并修复。
 - M7：云端诊断完成；M7a 的分层请求诊断、目标控制、LLM 图像配置和网页交付已完成。用户随后的两次云端复测均在响应验证阶段停止；尚未得到可执行动作或任务成功。
+
+### 2026-09-16 · M8a · Show-Harness 的 agent 能力归属（完成）
+
+- 目标：回答主控制链是否复用了 Codex／Claude Code 等厂商 agent，并把可选入口与论文主框架分开。
+- 变化：在原 [分析报告](../research/SHOW_HARNESS_ANALYSIS.md) 第 3.4–3.8 节追加调用链、三类能力分工和 ManiLoop 适配建议；保留已有工程方案，新增研究目录索引。
+- 验证：静态追踪 launcher → VLMClient → requests POST /chat/completions，以及自建 GPTWebOperator → GUMI /api/step；独立复核上游固定提交 `137d5718c3b7af0150764d8f9beeb252c9f2794a`。主路径没有经过 Codex／Claude Code runtime；GUMI 文档确实提供外部 computer-use agent 入口，源码提到 Claude 浏览器扩展。仅文档变更，未运行上游或新增付费模型请求。
+- 文档检查：46 个引用定义、对应 31 个上游源码文件及行号、37 个仓库相对链接通过检查；JSON 示例、代码围栏、敏感路径扫描与 git diff --check 均通过。
+- 难点与发现：compact_model_state 过滤 sim_scene 几何字段，但保留 task_done/can_stop；单臂模拟后端 task_done 来自 scene.task_success()。过滤坐标不等于无评测真值泄漏，该结论仅适用于已核对的 GUMI 路径。
+- 经验／决策：模型服务、agent runtime、机器人解释器和辅助机制分别记录；策略页面状态与人类调试状态分离。直接请求模型 API 不会自动获得厂商 agent 的工具与运行循环。
+- 后续：原方案仍待实现；若增加外部 agent 适配器，使用独立实验组，并审查所有成功信号及派生门控。
 
 ### 2026-09-16 · M8 · Show-Harness 工程分析（完成）
 

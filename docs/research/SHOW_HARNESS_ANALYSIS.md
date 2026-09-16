@@ -19,6 +19,8 @@
 - 策略只读传感器与允许的标定信息。物体真值、任务成功谓词和奖励留在独立评估侧。
 - Show-Harness 的论文结果不能直接成为 ManiLoop／LIBERO 的预期成功率；本次没有运行其模型、真机或仿真闭环。
 
+**关于厂商 agent 的补充结论：主路径由作者自建 harness 直接调用模型 API；GUMI 另支持外部浏览器 agent。两者应分开评测，具体调用证据和信息边界见第 3.4–3.8 节。**
+
 ## 2. 阅读范围与证据等级
 
 | 标记 | 本文含义 | 可据此得出的结论 |
@@ -79,6 +81,92 @@ flowchart TD
 VLM 决策时钟与本地控制时钟分开：云端请求完成后，本地控制器完成一次有界运动，再生成下一轮观测。VLM 不承担电机伺服频率下的反馈控制。
 
 这与 ManiLoop 的 `tcp_target_servo_v2` 方向一致。现有 `PoseTarget` 只在开始时捕获一个目标，随后根据最新本体状态计算剩余误差，并检查位置、旋转和速度是否稳定。应继续复用它，避免把“向前 2 cm”误写成每个物理步都再次向前增加 2 cm。[现有目标执行器](../../src/maniloop/controllers/target.py)、[LIBERO 适配器](../../src/maniloop/backends/libero/environment.py)
+
+### 3.4 三个层次：模型、harness 与机器人执行器
+
+| 层次 | 做什么 | Show-Harness 主路径中的实现 |
+|---|---|---|
+| VLM | 识别图像、理解任务、产生子目标、判断下一步方向 | 云端模型 API，或本地微调 VLM 服务 |
+| Harness / agent runtime | 组织输入、调用模型、保存历史、推进阶段、处理异常、决定何时再次观察 | 仓库自己的 Python runner、roles 和 plugins |
+| 机器人执行器 | 把符号动作转换为坐标增量、目标位姿和夹爪命令，读取执行反馈 | 仓库的 interpreter 与机器人底层接口 |
+
+“agent”在这里指**模型与运行循环组合后的系统**，不是天然指某个厂商提供的应用。调用一个能推理的模型，也不会自动获得某个 agent 产品的工具、记忆、浏览器、权限管理和任务循环；这些能力必须在调用链中实际存在。
+
+### 3.5 主路径：作者自己的 harness，直接请求 VLM
+
+下面是依据源码整理的调用关系，不是论文图的复制：
+
+```mermaid
+flowchart TD
+    User[任务指令] --> Runner[Show-Harness 自建运行循环]
+    Sensors[相机和本体传感器] --> Runner
+    Runner --> Context[提示词 子目标 历史 执行反馈]
+    Context --> Client[VLMClient]
+    Client --> API[模型服务 /chat/completions]
+    API --> Decision[方向动作或子目标]
+    Decision --> Runner
+    Runner --> Interpreter[机器人专用动作解释器]
+    Interpreter --> Robot[本地机器人控制器]
+    Robot --> Sensors
+```
+
+可沿以下文件逐级核实：
+
+1. [`scripts/run_real.py`][agent-sh-entry] 组装会话、模型客户端、控制器和运行器。
+2. [`core/launch.py`][agent-sh-launch] 中 `make_vlm_client()` 创建 `VLMClient`，`make_runner()` 创建 `SubgoalPlanner`、`Controller` 和 `RealEpisodeRunner`。
+3. [`core/runners/real.py`][agent-sh-runner] 决定何时观察、何时请求模型、何时执行和切换阶段。
+4. [`core/vlm/vlm_client.py`][agent-sh-client] 中 `_post_chat()` 用 `requests.Session.post()` 请求 `base_url + "/chat/completions"`。
+5. [`interpreters/real_atomic_controller.py`][agent-sh-interpreter] 将选出的动作落到真实位姿和夹爪控制。
+
+这条已核对的主调用链没有插入 Codex CLI、Claude Code CLI 或它们的 agent runtime。配置项中的 `chatgpt` 是该仓库给模型后端起的名称，实际对应 API 参数；不能据此理解为正在操控 ChatGPT 应用。[后端配置][agent-sh-config]。
+
+**推理能力与循环管理也应分开：**模型可以在一次请求内推理出“先接近，再下降”；但保存阶段、再次拍照、发起下一次请求，以及判断请求是否过期，都是 harness 的程序逻辑。上游多个 role 也是围绕模型调用封装的角色，并不意味着背后调用了多个现成厂商 agent。
+
+### 3.6 可选路径：外部浏览器 agent 操作 GUMI
+
+GUMI 是作者提供的机器人网页操作面板。官方说明明确允许把操作提示交给一个 computer-use agent，让它循环截图、操作按钮/按键、检查步数。因此这条路径可以利用**外部 agent 自带的截图、页面操作和任务循环能力**。[GUMI 使用说明][agent-sh-gumi]。
+
+```text
+外部浏览器 agent（其模型 + 其运行循环）
+    → 观察并操作 GUMI 网页
+    → GUMI 将按钮/按键转换为语义动作
+    → Show-Harness 机器人解释器
+    → 机器人
+```
+
+源码 `gumi/gpt_operator/operator.py` 的开头提到了此前使用 Claude 浏览器扩展截图和点击的方式。这是外部 agent 使用的具体线索；**Claude 浏览器扩展不等于 Claude Code**，该注释也不是主实验通过 Claude Code/Codex 执行的证据。[GPT operator 源码][agent-sh-gpt-operator]。
+
+仓库还提供另一个容易混淆的入口：`gpt_web_operator.py`。它虽然叫 GPT Operator，但实际是作者自己实现的循环：通过 HTTP 读取相机图像和状态，调用同一个 `VLMClient` 得到结构化决定，然后向 GUMI 的 `/api/step` 发动作。它绕开浏览器点击，不是调用一个名为 Operator 的厂商成品 agent。[入口实现][agent-sh-gpt-entry]、[决策与 HTTP 执行][agent-sh-gpt-operator]。
+
+因此应分别记录三类配置：
+
+| 路径 | 谁管理 agent 循环 | 谁连接机器人 | 评测时应归因给谁 |
+|---|---|---|---|
+| 主路径：VLM API → Show-Harness | Show-Harness | Show-Harness interpreter | 模型 + Show-Harness 配置 |
+| GPT Web Operator → GUMI | Show-Harness 的 GPTWebOperator | GUMI + interpreter | 模型 + operator 配置 + GUMI |
+| 外部浏览器 agent → GUMI | 外部 agent 产品/框架 | GUMI + interpreter | 外部 agent 版本、模型、浏览器工具 + GUMI |
+
+**对用户疑问的直接回答：主路径主要对应“他们自己写了一个 harness 来适配 VLM 和 robot”；另外开放了“现成浏览器 agent 操作 robot”的可选入口。不能把这两种配置混为一谈。**
+
+### 3.7 GUMI 模拟演示不等于纯传感器评测
+
+`GPTWebOperator.compact_model_state()` 没有转发包含模拟物体坐标的 `sim_scene`，但保留了 `task_done`、`can_stop` 等字段。单臂网页后端在模拟场景中将 `task_done` 直接设为 `scene.task_success()`，再把这些状态写入模型提示。因此，这一路径虽然过滤了几何真值，仍然向模型提供了成功判定及其派生门控信号。[状态允许列表][agent-sh-gumi-state]、[完成状态来源][agent-sh-gumi-done]。
+
+真机分支的对应判断是“记录到至少一次放下”，这是操作启发式，不是可靠的目标完成评分。外部浏览器 agent 也可能读到网页显示的完成状态。这个发现仅针对已核对的 GUMI 入口，不能外推为论文主 runner 必然泄漏真值。
+
+ManiLoop 若复用这种交互方式，必须给策略和用户页面分别构造状态：策略只看到允许的传感信息；任务评分、隐藏状态和停止门控留在评测管理侧。否则比较的是获得额外反馈的 agent，而不是预定的传感器赛道。
+
+### 3.8 ManiLoop 如何支持这一区分
+
+建议将“模型服务”与“策略运行方式”分成两个配置维度：
+
+- `provider`：API 协议、地址、模型、请求参数。
+- `agent_runtime`：单次视觉动作、自建规划循环、外部 agent 适配器。
+- `action_interface`：数值 TCP、语义动作、原生连续动作块。
+- `assistance`：记忆、恢复、图像标注、人类介入等。
+
+首版继续走自建循环。未来若接外部 agent，可以提供受限的 `observe / act / finish` 接口，由 ManiLoop 统一执行和记录；工具调用后返回新的传感观测，禁止 agent 获取仿真对象真值。届时另建实验组，不以“同一个 GPT 模型”宣称两个系统完全等价。接入工具服务本身也不等于复用了厂商 agent，只有外部 runtime 真正运行才算。
+
 
 ## 4. 给 VLM 看什么，以及这些信息从哪里来
 
@@ -529,3 +617,15 @@ VLA／ACT／DP 可以在同一任务上列出结果，但维持各自训练匹�
 [sh-gumi]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/gumi/web_teleop/backend.py#L257-L265
 [sh-maniskill-oracle]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/scripts/trajectory/real2sim/maniskill/oracle.py
 [sh-license]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/LICENSE
+
+[agent-sh-client]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/core/vlm/vlm_client.py#L189-L268
+[agent-sh-config]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/configs/robot_franka.yaml
+[agent-sh-entry]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/scripts/run_real.py
+[agent-sh-gpt-entry]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/gumi/gpt_web_operator.py
+[agent-sh-gpt-operator]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/gumi/gpt_operator/operator.py
+[agent-sh-gumi]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/gumi/README.md
+[agent-sh-gumi-done]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/gumi/web_teleop/backend.py#L399-L402
+[agent-sh-gumi-state]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/gumi/gpt_operator/operator.py#L224-L248
+[agent-sh-interpreter]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/interpreters/real_atomic_controller.py
+[agent-sh-launch]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/core/launch.py
+[agent-sh-runner]: https://github.com/showlab/Show-Harness/blob/137d5718c3b7af0150764d8f9beeb252c9f2794a/core/runners/real.py
