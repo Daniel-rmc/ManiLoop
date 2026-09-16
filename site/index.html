@@ -13,7 +13,7 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css?v=recorded-skills-1">
   <script src="app.js?v=recorded-skills-1" defer></script>
-  <script src="showcase.js?v=recorded-skills-4" defer></script>
+  <script src="showcase.js?v=recorded-skills-5" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
@@ -45,7 +45,7 @@
           <div class="hero-decision-heading"><span data-showcase-i18n="action_note">MODEL ACTION NOTE · RECORDED</span><strong id="hero-decision-number">—</strong></div>
           <p id="hero-action-explanation"></p>
           <dl class="hero-action-fields"><div><dt data-showcase-i18n="command">Requested action</dt><dd id="hero-action-command">—</dd></div><div><dt data-showcase-i18n="feedback">Previous action feedback</dt><dd id="hero-action-feedback">—</dd></div></dl>
-          <p class="hero-note-hint" data-showcase-i18n="feedback_hint">The model receives this robot-state execution feedback. TCP error compares the measured TCP position with its commanded target, not an object. Action execution completion does not mean task success.</p>
+          <p class="hero-note-hint" data-showcase-i18n="feedback_hint">Feedback to the model uses only camera images and proprioception available on a real robot; no privileged simulator ground truth is provided. The controller computes TCP error from the model's previous command and the measured post-action TCP position, without object ground truth. Action execution completion does not mean task success.</p>
           <p class="hero-note-hint" data-showcase-i18n="pause_hint">Pause to read the model's saved action note. This page makes no model requests.</p>
         </div>
         <div class="hero-note"><span class="note-index">∥</span><p><span data-i18n="sensor_note">The policy sees images and robot state.</span><br><strong data-i18n="score_note">The evaluator stays separate.</strong></p></div>

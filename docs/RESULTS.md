@@ -36,7 +36,7 @@ Physics pauses during inference in every episode. GPT and local policies have di
 
 Object state, contact truth, reward and task-success signals are excluded from policy inputs. Independent evaluation is used to stop the episode and produce human-facing results.
 
-**Execution feedback is provided to GPT.** The controller derives it from permitted robot proprioception and the previously issued command: `position_error_m = ‖measured TCP position − commanded TCP target‖`. It is a target-tracking residual, not the distance to an object or knowledge of its true position. `reached` means the commanded end-effector target was reached; gripper `completed` means motion settled, with grasp explicitly unverified. The next observation's `last_feedback` and recent action history carry these fields. This feedback is allowed by ManiLoop's observation contract; comparisons must still disclose which policies receive it, alongside the controller and observation settings.
+**Execution feedback is provided to GPT.** Observations and feedback are based only on sensing available on a real robot: camera images and robot proprioception. No privileged simulator ground truth is passed to the model. The controller computes `position_error_m = ‖measured post-action TCP position − TCP target specified by the preceding model command‖` and returns it to the model. The model's own command and post-action proprioception suffice to derive this residual; it is not gripper-to-object distance and requires no object ground truth. `reached` means only that the commanded TCP target was reached; gripper `completed` means motion settled, with grasp unverified. These fields appear in the next observation's `last_feedback` and recent action history. Comparisons must disclose which policies receive this feedback, alongside the controller and observation settings.
 
 ### Complete GPT episode
 
@@ -115,7 +115,7 @@ CLI 墙钟从场景创建及策略加载之后开始，包含推理、通信、�
 
 策略输入不包含物体状态、接触真值、奖励或任务成功信号。独立评分只用于回合终止和人类可读的结果。
 
-**执行反馈会提供给 GPT。** 控制器用允许的机器人本体观测与上一条指令计算：`position_error_m = ‖实测 TCP 位置 − 指令 TCP 目标位置‖`。这是目标跟踪残差，不是夹爪到物体的距离，也不需要知道物体位置真值。`reached` 只表示指令末端目标到位；夹爪 `completed` 表示运动已稳定，并明确未验证抓取。下一次观测的 `last_feedback` 和近期动作历史携带这些字段。这属于 ManiLoop 观测约定允许的反馈；跨策略比较时，仍应披露各策略是否获得此反馈，以及控制器和观测设置。
+**执行反馈会提供给 GPT。** 观测与反馈仅基于真实机器人上也可获得的相机图像和本体状态，不向模型提供仿真器额外的真值信息。控制器计算 `position_error_m = ‖执行后的实测 TCP 位置 − 上一条模型指令确定的 TCP 目标位置‖`，再提供给模型。模型自身的指令和执行后的本体观测足以计算这项残差，无需物体真值，也不是夹爪到物体的距离。`reached` 只表示指令末端目标到位；夹爪 `completed` 表示运动已稳定，并明确未验证抓取。下一次观测的 `last_feedback` 和近期动作历史携带这些字段。跨策略比较时，仍应披露各策略是否获得此反馈，以及控制器和观测设置。
 
 ### GPT 完整回合录像
 
