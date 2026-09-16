@@ -1,0 +1,1268 @@
+{
+  "format": "maniloop_showcase_v1",
+  "episodes": [
+    {
+      "id": "20260916-172331-d3bc5ef2",
+      "label": {
+        "en": "Bowl onto plate",
+        "zh": "将碗放到盘子上"
+      },
+      "task": {
+        "en": "Pick up the black bowl between the plate and the ramekin and place it on the plate.",
+        "zh": "将盘子与小碗之间的黑碗放到盘子上。"
+      },
+      "model": "GPT-6 Astra",
+      "preview": {
+        "video": "assets/episodes/20260916-172331-d3bc5ef2/preview.mp4",
+        "poster": "assets/episodes/20260916-172331-d3bc5ef2/poster.jpg",
+        "width": 512,
+        "height": 512,
+        "duration_seconds": 35.35,
+        "fps": 20,
+        "frame_count": 707,
+        "sha256": "56b23978d550bb45f4e362c8aba1ecbf6ab2dab57752e307f4aa31a3f9e6b6ce"
+      },
+      "full_video": "assets/episodes/20260916-172331-d3bc5ef2/episode.mp4",
+      "workspace": "playground/",
+      "summary": {
+        "decisions": 46,
+        "control_steps": 706,
+        "simulation_seconds": 35.3,
+        "wall_seconds": 667.3306492079282,
+        "accepted_actions": 46
+      },
+      "evaluation": {
+        "source": "LIBERO check_success",
+        "success": true,
+        "verified": true
+      },
+      "outcome_note": {
+        "en": "Official success was reached during downward action 46, and the environment stopped immediately. No additional gripper release or withdrawal was executed.",
+        "zh": "官方成功在第 46 次下降动作中触发，环境随即终止；本回合未额外执行松爪与退离。"
+      },
+      "cues": [
+        {
+          "start_seconds": 0.0,
+          "decision": 1,
+          "explanation": {
+            "en": "The target bowl is between the plate and ramekin. Move toward it while maintaining clearance above the table.",
+            "zh": "目标碗位于盘子与小碗之间。朝它移动，同时保持高于桌面的安全高度。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.032,
+              0.038,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": null
+        },
+        {
+          "start_seconds": 1.0,
+          "decision": 2,
+          "explanation": {
+            "en": "The previous motion brought the TCP near its requested target. Continue toward the bowl between the plate and ramekin, lowering slightly while maintaining clearance.",
+            "zh": "上次运动使末端接近了请求目标。继续朝盘子与小碗之间的碗移动，略微下降并保持间隙。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.03,
+              0.038,
+              -0.012
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0016164698058661305
+          }
+        },
+        {
+          "start_seconds": 2.0,
+          "decision": 3,
+          "explanation": {
+            "en": "The previous motion closely followed the target. Continue toward the bowl between the plate and ramekin, lowering slightly while remaining above the objects.",
+            "zh": "上次运动基本跟随了目标。继续朝盘子与小碗之间的碗移动，略微下降，但仍保持在物体上方。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.024,
+              0.04,
+              -0.016
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.001929536040686547
+          }
+        },
+        {
+          "start_seconds": 3.0,
+          "decision": 4,
+          "explanation": {
+            "en": "The last motion closely matched the requested displacement. Move farther toward the bowl between the plate and ramekin and descend gradually while maintaining clearance.",
+            "zh": "上次运动与请求位移基本一致。继续朝盘子与小碗之间的碗移动，逐渐下降并保持间隙。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.015,
+              0.038,
+              -0.028
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0019792041315324395
+          }
+        },
+        {
+          "start_seconds": 4.0,
+          "decision": 5,
+          "explanation": {
+            "en": "The last motion reached its target, and the bowl remains below and offset from the gripper. Continue aligning above the bowl while descending gradually.",
+            "zh": "上次运动到达了目标，碗仍在夹爪下方且有一些偏移。继续在碗上方对齐，同时逐渐下降。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.015,
+              0.03,
+              -0.035
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0015955631886548365
+          }
+        },
+        {
+          "start_seconds": 5.0,
+          "decision": 6,
+          "explanation": {
+            "en": "The last motion reached its target. The intended bowl remains below and slightly offset from the gripper; continue aligning above it while descending gradually.",
+            "zh": "上次运动到达了目标。目标碗仍在夹爪下方并略有偏移；继续对齐并逐渐下降。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.012,
+              0.027,
+              -0.04
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.001617127120473339
+          }
+        },
+        {
+          "start_seconds": 6.0,
+          "decision": 7,
+          "explanation": {
+            "en": "The target bowl is approximately aligned beneath the gripper, and the last descent reached its target. Open the fingers before approaching the bowl for a grasp.",
+            "zh": "目标碗大致位于夹爪正下方，上次下降已到达目标。先张开夹指，再接近碗进行抓取。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 1
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.001614843618184685
+          }
+        },
+        {
+          "start_seconds": 6.6000000000000005,
+          "decision": 8,
+          "explanation": {
+            "en": "The fingers are open and aligned above the bowl between the plate and ramekin. Lower toward the bowl to approach grasping height.",
+            "zh": "夹指已经张开，并对准盘子与小碗之间的碗。向下接近抓取高度。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.05
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.0004816364373021016
+          }
+        },
+        {
+          "start_seconds": 7.2,
+          "decision": 9,
+          "explanation": {
+            "en": "The last descent reached its target, and the open fingers remain above the intended bowl. Lower another small step toward grasping height.",
+            "zh": "上次下降到达了目标，张开的夹指仍在目标碗上方。再小幅下降，接近抓取高度。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.04
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0005803339307229312
+          }
+        },
+        {
+          "start_seconds": 7.75,
+          "decision": 10,
+          "explanation": {
+            "en": "The last descent reached its target, and the bowl remains aligned between the open fingers. Lower slightly to bring the fingers alongside the bowl for grasping.",
+            "zh": "上次下降到达了目标，碗仍位于张开的夹指之间。略微下降，使夹指靠近碗的侧面以便抓取。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.025
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0007146502838331259
+          }
+        },
+        {
+          "start_seconds": 8.75,
+          "decision": 11,
+          "explanation": {
+            "en": "The bowl appears between the open fingers. The last descent stalled, so close the fingers at the current height to attempt a grasp.",
+            "zh": "碗看起来位于张开的夹指之间。上次下降受阻，因此在当前高度闭合夹指尝试抓取。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.020297968230825233
+          }
+        },
+        {
+          "start_seconds": 9.75,
+          "decision": 12,
+          "explanation": {
+            "en": "The fingers closed nearly fully, but the grasp is unverified. Lift slightly to check whether the bowl moves with the gripper.",
+            "zh": "夹指几乎完全闭合，但尚未验证抓取。小幅抬升，检查碗是否随夹爪一起移动。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.03
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0011113029273434425
+          }
+        },
+        {
+          "start_seconds": 10.25,
+          "decision": 13,
+          "explanation": {
+            "en": "The bowl stayed in place as the gripper lifted and appears smaller in the wrist view, indicating a missed grasp. Open the fingers to prepare for repositioning.",
+            "zh": "夹爪抬升时碗留在原地，在腕部视图中变小，说明没有抓住。张开夹指，准备重新定位。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 1
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0008775492197241492
+          }
+        },
+        {
+          "start_seconds": 11.05,
+          "decision": 14,
+          "explanation": {
+            "en": "The bowl remains on the table after the missed grasp. With the fingers open, shift toward its center to correct the offset visible in the wrist view before descending again.",
+            "zh": "抓取失败后碗仍在桌面上。保持夹指张开，向碗中心移动，修正腕部视图中可见的偏移，再次下降。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.035,
+              -0.025,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.00011148078335901178
+          }
+        },
+        {
+          "start_seconds": 12.05,
+          "decision": 15,
+          "explanation": {
+            "en": "The repositioning brought the bowl beneath the open gripper. Lower 2 cm to approach the bowl for another grasp attempt.",
+            "zh": "重新定位后，碗位于张开的夹爪下方。下降 2 厘米，再次接近碗尝试抓取。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.02
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.002416556222346526
+          }
+        },
+        {
+          "start_seconds": 12.55,
+          "decision": 16,
+          "explanation": {
+            "en": "The descent reached its target, and the bowl remains centered between the open fingers. Lower another 1.5 cm to bring the fingers farther alongside the bowl before closing.",
+            "zh": "下降到达了目标，碗仍位于张开的夹指中央。再下降 1.5 厘米，使夹指更多地贴近碗侧，再闭合。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.015
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0008478938225127561
+          }
+        },
+        {
+          "start_seconds": 13.55,
+          "decision": 17,
+          "explanation": {
+            "en": "The descent stalled with the bowl visible between the open fingers. Close the gripper at this height to attempt the corrected grasp.",
+            "zh": "下降受阻，碗仍可见于张开的夹指之间。在此高度闭合夹爪，尝试修正后的抓取。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.008374421091980997
+          }
+        },
+        {
+          "start_seconds": 14.4,
+          "decision": 18,
+          "explanation": {
+            "en": "The fingers closed and the bowl shifted, but a grasp is not yet verified. Lift 3 cm to check whether the bowl rises with the gripper.",
+            "zh": "夹指闭合且碗发生了移动，但尚未验证抓取。抬升 3 厘米，检查碗是否随夹爪上升。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.03
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.0015036416324630264
+          }
+        },
+        {
+          "start_seconds": 14.9,
+          "decision": 19,
+          "explanation": {
+            "en": "The bowl stayed on the table and appears smaller in the wrist view after the lift, indicating another missed grasp. Open the fingers to prepare for a corrected approach.",
+            "zh": "抬升后碗仍留在桌面，在腕部视图中变小，说明再次没有抓住。张开夹指，准备修正接近方式。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 1
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.000509754446341363
+          }
+        },
+        {
+          "start_seconds": 15.700000000000001,
+          "decision": 20,
+          "explanation": {
+            "en": "The bowl remains offset from the open fingers in the wrist view. Shift toward its center at the current height to correct the missed grasp.",
+            "zh": "腕部视图中，碗相对张开的夹指仍有偏移。在当前高度朝碗中心移动，修正抓取位置。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              -0.025,
+              -0.02,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.00011781496961054315
+          }
+        },
+        {
+          "start_seconds": 16.7,
+          "decision": 21,
+          "explanation": {
+            "en": "The last shift brought the bowl closer to alignment between the open fingers. Lower 2 cm with a small centering correction to position the fingers alongside the bowl.",
+            "zh": "上次平移使碗更接近张开的夹指之间。下降 2 厘米并稍作居中修正，使夹指位于碗的两侧。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.008,
+              0,
+              -0.02
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.002755028534032916
+          }
+        },
+        {
+          "start_seconds": 17.2,
+          "decision": 22,
+          "explanation": {
+            "en": "The descent completed, and the bowl appears aligned between the open fingers in both views. Close the gripper to attempt a grasp at this corrected position.",
+            "zh": "下降完成，两路视图中的碗看起来都位于张开的夹指之间。在修正后的位置闭合夹爪，尝试抓取。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.001136355754900824
+          }
+        },
+        {
+          "start_seconds": 18.0,
+          "decision": 23,
+          "explanation": {
+            "en": "The fingers have closed, but the images do not verify a grasp. Lift 3 cm to check whether the bowl moves with the gripper.",
+            "zh": "夹指已经闭合，但图像尚不能验证抓取。抬升 3 厘米，检查碗是否随夹爪移动。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.03
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.00021934646695727857
+          }
+        },
+        {
+          "start_seconds": 18.5,
+          "decision": 24,
+          "explanation": {
+            "en": "The bowl stayed on the table and became smaller in the wrist view during the lift, indicating a missed grasp. Open the fingers to prepare for a corrected approach.",
+            "zh": "抬升时碗留在桌面，在腕部视图中变小，说明没有抓住。张开夹指，准备修正接近方式。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 1
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0005691265723802002
+          }
+        },
+        {
+          "start_seconds": 19.3,
+          "decision": 25,
+          "explanation": {
+            "en": "The bowl remains on the table after the missed grasp. Shift the open gripper toward the bowl’s center along negative world X before lowering again.",
+            "zh": "抓取失败后碗仍在桌面。再次下降前，沿世界坐标负 X 方向将张开的夹爪移向碗中心。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              -0.04,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 9.565625669895987e-05
+          }
+        },
+        {
+          "start_seconds": 20.3,
+          "decision": 26,
+          "explanation": {
+            "en": "The shift moved the bowl’s near rim between the open fingers, but they remain above it. Lower 3.5 cm to approach the rim for a grasp.",
+            "zh": "平移使碗的近侧边缘位于张开的夹指之间，但夹指仍在上方。下降 3.5 厘米，接近碗沿以便抓取。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.035
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.002659486049003955
+          }
+        },
+        {
+          "start_seconds": 20.85,
+          "decision": 27,
+          "explanation": {
+            "en": "The descent brought the open fingers closer to the bowl, but they still appear above its rim. Lower another 2.5 cm to position them for a grasp.",
+            "zh": "下降使张开的夹指更接近碗，但它们看起来仍高于碗沿。再下降 2.5 厘米，准备抓取。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.025
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0012259555289440575
+          }
+        },
+        {
+          "start_seconds": 21.85,
+          "decision": 28,
+          "explanation": {
+            "en": "The descent stalled after about 7 mm, and the fingers appear alongside the bowl’s near rim. Close the gripper to attempt a grasp without pushing farther down.",
+            "zh": "下降约 7 毫米后受阻，夹指看起来已位于碗的近侧边缘两旁。不要继续下压，闭合夹爪尝试抓取。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.018748968684788966
+          }
+        },
+        {
+          "start_seconds": 22.85,
+          "decision": 29,
+          "explanation": {
+            "en": "The fingers closed and the bowl shifted, but a secure grasp is unverified. Lift 3 cm to check whether the bowl follows the gripper.",
+            "zh": "夹指闭合且碗发生了移动，但尚未验证可靠抓持。抬升 3 厘米，检查碗是否跟随夹爪。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.03
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.008812373946632679
+          }
+        },
+        {
+          "start_seconds": 23.35,
+          "decision": 30,
+          "explanation": {
+            "en": "The bowl stayed on the table and became smaller in the wrist view during the lift, indicating a missed grasp. Open the fingers to prepare for repositioning.",
+            "zh": "抬升时碗留在桌面，在腕部视图中变小，说明没有抓住。张开夹指，准备重新定位。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 1
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0005702520235031745
+          }
+        },
+        {
+          "start_seconds": 24.150000000000002,
+          "decision": 31,
+          "explanation": {
+            "en": "The bowl remains on the table after the missed grasp. Shift toward its left rim in the wrist view to position the open fingers for a rim grasp.",
+            "zh": "抓取失败后碗仍在桌面。朝腕部视图中的左侧碗沿移动，使张开的夹指准备夹住碗沿。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0.04,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.00011055948909471689
+          }
+        },
+        {
+          "start_seconds": 24.8,
+          "decision": 32,
+          "explanation": {
+            "en": "The last shift moved the bowl farther right of the open fingers in the wrist view. Move in negative world Y to bring its near rim toward the gripper before descending.",
+            "zh": "上次平移使碗在腕部视图中更加偏向夹指右侧。沿世界坐标负 Y 方向移动，使近侧碗沿更靠近夹爪，再下降。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              -0.05,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.001731139233842994
+          }
+        },
+        {
+          "start_seconds": 25.700000000000003,
+          "decision": 33,
+          "explanation": {
+            "en": "The bowl remains on the table, with the open fingers offset toward its near edge. Shift toward its left side rim for a better-aligned rim grasp before lowering.",
+            "zh": "碗仍在桌面，张开的夹指偏向其近侧边缘。朝左侧碗沿移动，先改善夹沿对齐，再下降。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.025,
+              0.025,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0016728958868432325
+          }
+        },
+        {
+          "start_seconds": 26.700000000000003,
+          "decision": 34,
+          "explanation": {
+            "en": "The repositioning moved the bowl’s left rim between the open fingers in the wrist view. Lower 2 cm to approach that rim for another grasp attempt.",
+            "zh": "重新定位使碗的左侧边缘位于腕部视图中张开的夹指之间。下降 2 厘米，接近该处碗沿再次尝试抓取。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.02
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0024241575885267496
+          }
+        },
+        {
+          "start_seconds": 27.200000000000003,
+          "decision": 35,
+          "explanation": {
+            "en": "The last descent reached its target, and the open fingers remain aligned around the bowl’s left rim. Lower another 2 cm to bring the fingers into grasping position.",
+            "zh": "上次下降到达了目标，张开的夹指仍围绕碗的左侧边缘对齐。再下降 2 厘米，使夹指进入抓取位置。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.02
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0009848485105374153
+          }
+        },
+        {
+          "start_seconds": 27.700000000000003,
+          "decision": 36,
+          "explanation": {
+            "en": "The last descent reached its target, and the bowl’s left rim remains between the open fingers in the wrist view. Lower 1.5 cm to approach the rim for grasping.",
+            "zh": "上次下降到达了目标，碗的左侧边缘仍位于腕部视图中张开的夹指之间。下降 1.5 厘米，接近碗沿以便抓取。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.015
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0005613728069023952
+          }
+        },
+        {
+          "start_seconds": 28.150000000000002,
+          "decision": 37,
+          "explanation": {
+            "en": "The descent reached its target, and the bowl’s left rim appears between the open fingers. Close the gripper to attempt a rim grasp.",
+            "zh": "下降到达了目标，碗的左侧边缘看起来位于张开的夹指之间。闭合夹爪，尝试夹住碗沿。"
+          },
+          "action": {
+            "kind": "gripper",
+            "delta_position": [
+              0,
+              0,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0004027431965996231
+          }
+        },
+        {
+          "start_seconds": 28.75,
+          "decision": 38,
+          "explanation": {
+            "en": "The fingers have closed near the bowl’s rim, but the grasp is unverified. Lift 3 cm to check whether the bowl moves with the gripper.",
+            "zh": "夹指在碗沿附近闭合，但尚未验证抓取。抬升 3 厘米，检查碗是否随夹爪移动。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.03
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "completed",
+            "position_error_m": 0.0003704276716082853
+          }
+        },
+        {
+          "start_seconds": 29.25,
+          "decision": 39,
+          "explanation": {
+            "en": "The bowl shifted slightly during the lift, but a secure grasp remains unclear in both views. Lift another 2.5 cm to check whether it follows the gripper before transporting it.",
+            "zh": "抬升过程中碗略有移动，但两路视图仍不能确认可靠抓持。再抬升 2.5 厘米，先检查碗是否跟随，再搬运。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              0.025
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0005921240970068868
+          }
+        },
+        {
+          "start_seconds": 29.75,
+          "decision": 40,
+          "explanation": {
+            "en": "The bowl rose with the gripper in the external view and stayed fixed in the wrist view during the lift. Move it toward the plate while maintaining height.",
+            "zh": "外部视图显示碗随夹爪上升，腕部视图中相对位置保持不变。保持高度，将碗移向盘子。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.04,
+              0.03,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0005960092801247784
+          }
+        },
+        {
+          "start_seconds": 30.75,
+          "decision": 41,
+          "explanation": {
+            "en": "The bowl moved with the gripper and remains steady in the wrist view. Continue toward the plate at the current height, accounting for the previous move’s overshoot.",
+            "zh": "碗随夹爪移动，在腕部视图中保持稳定。考虑到上次运动越过目标，继续在当前高度朝盘子移动。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.045,
+              0.02,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.006014107343957635
+          }
+        },
+        {
+          "start_seconds": 31.75,
+          "decision": 42,
+          "explanation": {
+            "en": "The bowl stayed fixed relative to the gripper while the plate moved closer in the wrist view. Make a smaller correction toward the plate at the current height because the last move overshot its target.",
+            "zh": "碗相对夹爪保持固定，盘子在腕部视图中更近了。上次运动越过目标，因此保持高度，向盘子做更小的修正。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.025,
+              0.025,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.010622822545413264
+          }
+        },
+        {
+          "start_seconds": 32.75,
+          "decision": 43,
+          "explanation": {
+            "en": "The bowl remains steady relative to the gripper, and the plate moved closer beneath it. Make a small horizontal correction toward the plate before lowering.",
+            "zh": "碗相对夹爪保持稳定，盘子逐渐靠近其下方。下降前，朝盘子做一个小幅水平修正。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0.025,
+              0.015,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.0011528244953206742
+          }
+        },
+        {
+          "start_seconds": 33.75,
+          "decision": 44,
+          "explanation": {
+            "en": "The bowl remains held above the plate, but the last horizontal move stalled and drifted downward. Lower 2.5 cm to approach the plate and reassess alignment.",
+            "zh": "碗仍被夹持在盘子上方，但上次水平运动受阻并向下漂移。下降 2.5 厘米接近盘子，重新检查对齐。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.025
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.019534171483120488
+          }
+        },
+        {
+          "start_seconds": 34.25,
+          "decision": 45,
+          "explanation": {
+            "en": "The bowl followed the descent and remains steady in the wrist view, but appears right of the plate’s center. Shift it 3 cm left before lowering further.",
+            "zh": "碗随下降移动，并在腕部视图中保持稳定，但看起来位于盘子中心右侧。继续下降前，先向左平移 3 厘米。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              -0.03,
+              0
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "reached",
+            "position_error_m": 0.0008883781837411208
+          }
+        },
+        {
+          "start_seconds": 35.25,
+          "decision": 46,
+          "explanation": {
+            "en": "The bowl moved left toward the plate’s center and remains steady in the wrist view. Lower it 2 cm toward the plate, then reassess contact before releasing.",
+            "zh": "碗向左移向了盘子中心，在腕部视图中保持稳定。向盘子下降 2 厘米，释放前重新检查接触。"
+          },
+          "action": {
+            "kind": "move",
+            "delta_position": [
+              0,
+              0,
+              -0.02
+            ],
+            "delta_rotation": [
+              0,
+              0,
+              0
+            ],
+            "gripper_opening": 0
+          },
+          "previous_feedback": {
+            "status": "timed_out",
+            "position_error_m": 0.005943371396113473
+          }
+        }
+      ],
+      "context": {
+        "suite": "libero_spatial",
+        "task_id": 0,
+        "init_state_id": 0,
+        "seed": 0
+      },
+      "conditions": {
+        "context_mode": "paired",
+        "reasoning_effort": "medium",
+        "llm_control": "tcp_target_servo_v2",
+        "observation_profile": "llm_rgb512",
+        "timing": "controlled",
+        "max_calls": 0,
+        "max_sim_seconds": 120.0,
+        "max_wall_seconds": 3600.0
+      },
+      "recording": {
+        "frame_count": 707,
+        "fps": 20,
+        "video_duration_seconds": 35.35,
+        "frames_sha256": "67d116df5ecbd4c1237f4fed8e92bc7a43bfdf3e31da057017b548d876d40816",
+        "full_video_sha256": "45f3748fcce85839a2a41b94aa6f739ebf3da30273e5904aed3dc167d68ab27f",
+        "initial_success": false,
+        "terminated": true,
+        "interpolated": false,
+        "cut": false
+      },
+      "report_url": "https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md"
+    }
+  ]
+}
