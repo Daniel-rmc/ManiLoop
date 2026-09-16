@@ -298,8 +298,12 @@ Compress-Archive -Path runs,artifacts,arx5_demo/artifacts -DestinationPath ../ma
 
 ```bash
 git config --local user.name "Daniel-rmc"
-git config --local user.email "ruanminchi@qq.com"
+git config --local user.email "2459944653@qq.com"
 ```
+
+以上命令需要在新电脑的仓库中实际执行；仅修改本文不会更新 Git 配置，仓库级配置也不会随 clone／pull 传到另一台电脑。可用 `git config --local --get user.email` 核对。修改配置只影响后续提交，已有提交保留当时的作者邮箱。
+
+GitHub 根据提交邮箱与账号的关联识别贡献者，作者名称相同并不足够。发现旧提交未关联时，可在自己的 GitHub 邮箱设置中添加对应旧邮箱，保留提交历史；若决定重写已发布提交，需要先明确对其他克隆的影响，不能用一次普通配置修改代替。参见 [GitHub 提交邮箱说明](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address)。
 
 已有 checkout 且工作区干净时更新：
 
