@@ -246,6 +246,34 @@ class PolicyTests(unittest.TestCase):
         self.assertTrue(wire_requests[0]["text"]["format"]["strict"])
         self.assertEqual(self.policy.last_response_id, "resp_sdk_offline")
 
+    def test_sdk_added_defaults_do_not_turn_empty_gateway_error_into_failure(self):
+        try:
+            import httpx2 as transport_http
+        except ImportError:
+            import httpx as transport_http
+        gateway_error = {"code": "", "message": ""}
+        def serve(request):
+            return transport_http.Response(200, json={
+                "id": "response-gateway", "object": "response", "created_at": 0,
+                "model": "provider-model", "status": "completed", "error": dict(gateway_error),
+                "incomplete_details": {"reason": ""}, "output": [{
+                    "id": "message-gateway", "type": "message", "role": "assistant", "status": "completed",
+                    "content": [{"type": "output_text", "text": json.dumps(action()), "annotations": []}],
+                }], "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+            })
+        client = SDKOpenAI(api_key="offline-sdk-test", max_retries=0,
+            http_client=transport_http.Client(transport=transport_http.MockTransport(serve)))
+        self.addCleanup(client.close)
+        self.policy.client = client
+        self.assertEqual(self.decide(), action())
+        # Only defaults absent from the wire are ignored. Supplied extra fields,
+        # nonempty errors and unfinished output must remain rejected.
+        for changes in ({"message": "failed"}, {"misalignment": {"reason": "blocked"}}, {"unknown": None}):
+            gateway_error.clear()
+            gateway_error.update({"code": "", "message": "", **changes})
+            with self.subTest(changes=changes), self.assertRaises(PolicyError):
+                self.decide()
+
     def test_installed_sdk_uses_selected_endpoint_without_network(self):
         try:
             import httpx2 as transport_http

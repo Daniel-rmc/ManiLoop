@@ -299,15 +299,15 @@ def _make(
     return CredentialConfig(key, endpoint, model, provider, str(path), digest, choices)
 
 
-def _check_transport(config: dict):
-    if config.get("wire_api", "responses") != "responses":
+def _check_transport(config: dict, allowed_transports=("responses",)):
+    if config.get("wire_api", "responses") not in allowed_transports:
         raise ConfigError(
             "当前供应商没有使用 Responses API；本 Demo 需要支持图像和结构化输出的 Responses API 配置。"
         )
 
 
 def _from_codex(
-    config: dict, auth: dict, path: Path | str, *, api_key=None, allow_missing_key=False
+    config: dict, auth: dict, path: Path | str, *, api_key=None, allow_missing_key=False, allowed_transports=("responses",)
 ) -> CredentialConfig:
     if not isinstance(config, dict) or not isinstance(auth, dict):
         raise ConfigError("Codex 配置结构无效。")
@@ -322,7 +322,7 @@ def _from_codex(
         raise ConfigError(
             "未找到当前 Codex 供应商的配置，请重新选择 CC Switch 供应商。"
         )
-    _check_transport(selected)
+    _check_transport(selected, allowed_transports)
     base_url = selected.get("base_url", config.get("base_url"))
     if provider != "openai" and not base_url:
         raise ConfigError("当前 Codex 供应商缺少 API 地址，请检查配置。")
@@ -346,9 +346,9 @@ def _from_codex(
 
 
 def _from_json(
-    config: dict, path: Path, *, api_key=None, allow_missing_key=False
+    config: dict, path: Path, *, api_key=None, allow_missing_key=False, allowed_transports=("responses",)
 ) -> CredentialConfig:
-    _check_transport(config)
+    _check_transport(config, allowed_transports)
     env = config.get("env", {})
     if not isinstance(env, dict):
         raise ConfigError("本地配置的环境变量映射无效。")
@@ -372,7 +372,7 @@ def _from_json(
 
 
 def _from_cc_database(
-    path: Path, *, api_key=None, allow_missing_key=False
+    path: Path, *, api_key=None, allow_missing_key=False, allowed_transports=("responses",)
 ) -> CredentialConfig:
     """Read only the active Codex row, in a single SQLite snapshot."""
     if not path.is_file():
@@ -410,7 +410,7 @@ def _from_cc_database(
         if isinstance(config, str):
             config = _parse_toml(config)
         result = _from_codex(
-            config, auth, path, api_key=api_key, allow_missing_key=allow_missing_key
+            config, auth, path, api_key=api_key, allow_missing_key=allow_missing_key, allowed_transports=allowed_transports
         )
         display_name = rows[0][1] if len(rows[0]) > 1 else None
         return _make(
@@ -435,6 +435,7 @@ def load_local_config(
     *,
     api_key: str | None = None,
     allow_missing_key: bool = False,
+    allowed_transports: tuple[str, ...] = ("responses",),
 ) -> CredentialConfig:
     """Reload the active local configuration; callers retain it only in memory."""
     api_key = _api_key_override(api_key)
@@ -443,7 +444,7 @@ def load_local_config(
     selected = _path(path if path and path.strip() else discover_configs()[0]["path"])
     if selected.suffix.lower() in {".db", ".sqlite", ".sqlite3"}:
         return _from_cc_database(
-            selected, api_key=api_key, allow_missing_key=allow_missing_key
+            selected, api_key=api_key, allow_missing_key=allow_missing_key, allowed_transports=allowed_transports
         )
     if selected.suffix.lower() == ".toml" or selected.name == "auth.json":
         config_path = (
@@ -469,14 +470,14 @@ def load_local_config(
             _parse_json(auth_raw) if auth_raw is not None else {},
             selected,
             api_key=api_key,
-            allow_missing_key=allow_missing_key,
+            allow_missing_key=allow_missing_key, allowed_transports=allowed_transports,
         )
     if selected.suffix.lower() == ".json":
         return _from_json(
             _parse_json(_read_stable([(selected, False)])[0]),
             selected,
             api_key=api_key,
-            allow_missing_key=allow_missing_key,
+            allow_missing_key=allow_missing_key, allowed_transports=allowed_transports,
         )
     raise ConfigError(
         "请选择 config.toml、auth.json、API JSON 配置或 CC Switch 数据库文件。"
@@ -489,6 +490,7 @@ def load_toml_config(
     api_key: str | None = None,
     name: str = "config.toml",
     allow_missing_key: bool = False,
+    allowed_transports: tuple[str, ...] = ("responses",),
 ) -> CredentialConfig:
     """Read uploaded or pasted TOML entirely in memory, without sibling auth files."""
     if not isinstance(content, str):
@@ -504,5 +506,5 @@ def load_toml_config(
         {},
         label,
         api_key=_api_key_override(api_key),
-        allow_missing_key=allow_missing_key,
+        allow_missing_key=allow_missing_key, allowed_transports=allowed_transports,
     )

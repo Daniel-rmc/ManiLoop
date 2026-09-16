@@ -124,3 +124,9 @@ macOS Apple Silicon 的正式环境运行 `MANILOOP_TEST_LIBERO=1 python -m pyte
 以上未调用付费云端 API。FC 服务连通性、云端模型自主抓放成功率，以及更广泛的初始化／接触条件尚未验证。原始单步控制与目标跟踪的对照实验见 [设计与诊断记录](design/LLM_LOOP_V2.md)；工程进展见 [工作记录](worknotes/worknote.md)。
 
 本次实现提交 `3ff9985` 的 [GitHub Actions](https://github.com/Daniel-rmc/ManiLoop/actions/runs/35051694421) 四项均通过：Windows、macOS、Linux 离线测试和 Linux OSMesa 双机器人渲染。用户随后进行的 Astra / Sol 云端调用均未通过响应完整性检查，未执行动作；这是 API 接入失败记录，不是任务成功率评测。
+
+## 2026-09-16：独立 API 聊天与 FC 响应兼容
+
+`python -m pytest -q`：142 项通过、13 项可选集成检查跳过、58 项子测试通过。新检查覆盖实际 SDK 的两种文字协议、错误响应、上下文隔离与 HTTP 页面；模型输出及 Key 均无持久化。网页经本机模拟服务验证完整回复、部分回复和协议切换。
+
+用户配置的 FC / `gpt-5.6-sol` / Responses 真实聊天通过；算术测试返回「连接成功，17 + 25 = 42」，HTTP 200、status=completed、9.842 秒、供应商报告 4543 tokens。发现并修复 SDK 新增默认字段造成的空 error 误判，离线回归先失败、修复后通过。真实图像及机器人动作仍待复测。

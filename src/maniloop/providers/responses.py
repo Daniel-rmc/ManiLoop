@@ -140,7 +140,10 @@ def _empty_response_detail(value: Any, fields: set[str]) -> bool:
     if value is None:
         return True
     if hasattr(value, "model_dump"):
-        value = value.model_dump()
+        # SDK versions may add optional fields absent from the provider JSON.
+        # Validate what the provider actually sent, preserving supplied unknown
+        # fields and populated errors rather than mistaking SDK defaults for them.
+        value = value.model_dump(exclude_unset=True)
     elif isinstance(value, object) and hasattr(value, "__dict__"):
         value = vars(value)
     return (

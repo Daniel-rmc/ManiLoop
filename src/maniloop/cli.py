@@ -13,6 +13,9 @@ def main(argv=None):
         prog="maniloop", description="MuJoCo × LLM manipulation experiments"
     )
     commands = parser.add_subparsers(dest="command", required=True)
+    chat = commands.add_parser("chat", help="Text-only API connection workbench (no simulation)")
+    chat.add_argument("--port", type=int, default=8769)
+    chat.add_argument("--model", default=None)
     listing = commands.add_parser("list", help="List bundled components")
     demo = commands.add_parser("demo", help="Local web debugging")
     smoke = commands.add_parser("smoke", help="Render cameras without a model request")
@@ -63,7 +66,10 @@ def main(argv=None):
         "--no-render", action="store_true", help="Only for offline mock adapter checks"
     )
     args = parser.parse_args(argv)
-    if args.command == "list" and args.backend == "libero":
+    if args.command == "chat":
+        from maniloop.ui.server import serve_chat
+        serve_chat(args)
+    elif args.command == "list" and args.backend == "libero":
         from maniloop.backends.libero.transport import list_tasks
 
         print(json.dumps(list_tasks(args.libero_suite), ensure_ascii=False, indent=2))

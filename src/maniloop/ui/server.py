@@ -13,11 +13,13 @@ from maniloop.providers.credentials import (
 )
 from maniloop.providers.catalog import ModelCatalogError
 from maniloop.providers.responses import DEFAULT_MODEL
+from maniloop.providers.chat import ChatService
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def handler_for(demo):
+def handler_for(demo=None, chat=None):
+    chat = chat or ChatService()
     class Handler(BaseHTTPRequestHandler):
         server_version = "ManiLoop/0.1"
 
@@ -58,7 +60,13 @@ def handler_for(demo):
                     403, {"error": "Only the local demo origin is allowed"}
                 )
             path = urlparse(self.path).path
-            if path == "/":
+            if path == "/chat" or (path == "/" and demo is None):
+                self.send(200, (ROOT / "ui" / "chat.html").read_bytes(), "text/html; charset=utf-8")
+            elif path == "/api/chat/options":
+                self.json(200, chat.options())
+            elif demo is None:
+                self.json(404, {"error": "Not found"})
+            elif path == "/":
                 self.send(
                     200,
                     (ROOT / "ui" / "index.html").read_bytes(),
@@ -119,6 +127,7 @@ def handler_for(demo):
                 )
             name = urlparse(self.path).path.removeprefix("/api/")
             if name not in [
+                "chat/send", "chat/preview", "chat/models",
                 "start",
                 "diagnose",
                 "stop",
@@ -139,6 +148,16 @@ def handler_for(demo):
                     raise ValueError("请求格式无效，请重新读取配置后再试") from None
                 if not isinstance(payload, dict):
                     raise ValueError("Expected JSON object")
+                if name.startswith("chat/"):
+                    try:
+                        return self.json(200, chat.handle(name.split("/")[1], payload))
+                    except (ConfigError, ModelCatalogError, ValueError):
+                        # These exception types have sanitized messages.
+                        raise
+                    except Exception:
+                        return self.json(500, {"ok": False, "error": "聊天服务出错，请检查配置后重试"})
+                if demo is None:
+                    return self.json(404, {"error": "Not found"})
                 if name in ["config-preview", "models"]:
                     try:
                         return self.json(200, demo.connection_request(name, payload))
@@ -160,7 +179,7 @@ def handler_for(demo):
                     else 240
                 )
                 self.json(200 if result["ok"] else 400, result)
-            except (ValueError, queue.Empty) as exc:
+            except (ValueError, ModelCatalogError, queue.Empty) as exc:
                 self.json(400, {"ok": False, "error": str(exc)})
 
     return Handler
@@ -195,3 +214,19 @@ def serve(args):
         server.shutdown()
         server.server_close()
         demo.close()
+
+
+def serve_chat(args):
+    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_for(chat=ChatService(args.model)))
+    server.daemon_threads = True
+    stopping = threading.Event()
+    signal.signal(signal.SIGINT, lambda *_: stopping.set())
+    signal.signal(signal.SIGTERM, lambda *_: stopping.set())
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    print(f"ManiLoop API chat: http://127.0.0.1:{args.port}/chat", flush=True)
+    try:
+        while not stopping.wait(0.2):
+            pass
+    finally:
+        server.shutdown()
+        server.server_close()

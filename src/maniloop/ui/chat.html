@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ManiLoop · API 聊天测试</title>
+<style>
+:root{color-scheme:dark;--bg:#0c1016;--panel:#141b25;--line:#2a3544;--text:#e7edf5;--muted:#98a7bb;--accent:#ffad72;--green:#8bd4ad;--red:#ff9c9c}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:wait}button,a{touch-action:manipulation}a{color:var(--accent)}[hidden]{display:none!important}.shell{max-width:1400px;margin:auto;padding:28px 32px}header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:20px;gap:12px}.brand{font-size:21px;font-weight:650;letter-spacing:-.4px}.brand span{font-weight:400;color:var(--muted);font-size:14px;margin-left:10px}.tag{font-size:11px;letter-spacing:1px;color:var(--green)}.intro{margin:24px 0}.intro h1{font-size:27px;letter-spacing:-.5px;margin:0 0 7px}.intro p{margin:0;color:var(--muted)}main{display:grid;grid-template-columns:350px minmax(0,1fr);gap:22px;align-items:start}.panel{border:1px solid var(--line);border-radius:13px;background:var(--panel);overflow:hidden}.panel-title{padding:15px 19px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-weight:600}.number{color:var(--accent);font:12px ui-monospace,monospace;margin-right:9px}.settings{padding:19px}label{display:block;font-size:12px;color:#c9d4e2;margin:0 0 6px}input,select,textarea{display:block;width:100%;border:1px solid var(--line);border-radius:7px;background:#0d141e;color:var(--text);padding:9px 11px;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--accent)}textarea{resize:vertical;min-height:82px}input[type=file]{font-size:12px;padding:8px}.field{margin-bottom:16px}.hint{font-size:11px;color:var(--muted);margin:6px 0;line-height:1.7}.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}.button{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#202d3e;border-radius:7px;color:var(--text);padding:9px 13px;min-height:37px;text-decoration:none;font-size:12px}.button:hover:not(:disabled){border-color:#65758b}.button.primary{background:var(--accent);border-color:var(--accent);color:#25180c;font-weight:650}.button.small{padding:5px 10px;min-height:30px}.actions{display:flex;gap:8px;flex-wrap:wrap}.preview{font-size:12px;color:var(--muted);word-break:break-word;margin:12px 0;padding:11px;background:#0d141e;border-radius:7px;white-space:pre-wrap}.error{color:var(--red)}.ok{color:var(--green)}details{border-top:1px solid var(--line);padding-top:12px}summary{cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:12px}.conversation{min-height:610px;display:flex;flex-direction:column}.chat-log{height:450px;overflow:auto;padding:24px;scroll-behavior:smooth}.empty{max-width:400px;margin:88px auto;text-align:center;color:var(--muted)}.empty .symbol{color:var(--accent);font:32px ui-monospace,monospace}.empty h2{color:var(--text);font-size:18px;margin-bottom:6px}.message{margin:0 0 22px}.message header{font-size:11px;border:0;padding:0;margin:0 0 7px;color:var(--muted);justify-content:flex-start;gap:9px}.message .body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;background:#192432;border:1px solid var(--line);border-radius:10px;padding:13px 16px}.message.user{margin-left:12%}.message.user .body{background:#283042}.message.assistant{margin-right:7%}.message.system .body{font-size:12px;color:var(--red);background:#2c1d26;border-color:#563442}.message details{margin-top:9px;border:0;padding:0}.message pre{white-space:pre-wrap;word-break:break-word;font-size:11px;max-height:300px;overflow:auto;background:#0d141e;padding:12px;border-radius:7px}.result-meta{color:var(--muted);font-size:11px;margin-top:8px}.composer{padding:17px 20px;border-top:1px solid var(--line);background:#111923}.composer textarea{min-height:85px}.composer-bottom{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-top:12px}.status{font-size:12px;color:var(--muted);min-height:20px}.live-dot{width:7px;height:7px;background:var(--green);border-radius:100%;display:inline-block;margin-right:7px}.footnote{color:var(--muted);font-size:11px;margin-top:15px}.suggestions{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.suggestions button{background:transparent}.subtle{background:transparent}.advanced .field:first-child{margin-top:15px}@media(min-width:1000px){.conversation{position:sticky;top:20px}.chat-log{height:calc(100vh - 390px);min-height:390px;max-height:650px}}@media(max-width:850px){.shell{padding:20px 16px}main{grid-template-columns:1fr}.intro h1{font-size:23px}.chat-log{height:400px}.conversation{min-height:570px}.tag{display:none}.brand span{font-size:12px}.settings{padding:16px}}
+</style>
+</head>
+<body><div class="shell">
+<header><div class="brand">ManiLoop<span>API 聊天测试</span></div><span class="tag">TEXT ONLY · CONNECTION CHECK</span></header>
+<section class="intro"><h1>通过对话，验证模型连接。</h1><p>配置你的模型服务，发送一条消息，查看实际回复与请求结果。</p></section>
+<main><aside class="panel"><div class="panel-title"><span><span class="number">01</span>连接配置</span><span class="hint">仅保留在本页</span></div>
+<div class="settings" id="settings">
+<div class="field"><label for="source">配置方式</label><select id="source"><option value="manual">手动填写 API 地址和 Key</option><option value="upload">选择 config.toml + Key</option><option value="file">读取本地配置 / CC Switch</option></select></div>
+<div id="manual-fields"><div class="field"><label for="base-url">API 地址（Base URL）</label><input id="base-url" type="url" value="https://api.openai.com/v1" autocomplete="off" spellcheck="false"><p class="hint">填写服务商提供的基础地址，不要附加 /responses 或 /chat/completions。</p></div></div>
+<div id="upload-fields" hidden><div class="field"><label for="config-upload">选择 config.toml</label><input id="config-upload" type="file" accept=".toml,text/plain"></div><div class="field"><label for="config-toml">或粘贴 TOML 内容</label><textarea id="config-toml" rows="5" spellcheck="false" autocomplete="off" placeholder="model = &quot;你的模型名称&quot;"></textarea></div></div>
+<div id="file-fields" hidden><div class="field"><label for="config-list">已发现的配置</label><select id="config-list"><option value="">正在读取路径…</option></select></div><div class="field"><label for="config-path">本地文件路径</label><input id="config-path" autocomplete="off" spellcheck="false"><p class="hint">读取 CC Switch 当前 Codex 供应商；每次发送都会重新读取。</p></div></div>
+<div class="field"><label for="api-key">API Key</label><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="输入密钥；配置已有 Key 时可留空"><p class="hint">不会写入浏览器存储、聊天记录或仓库。</p></div>
+<div class="actions"><button class="button" id="preview" type="button">读取并检查配置</button><button class="button subtle" id="forget" type="button">清除配置</button></div>
+<div class="preview" id="preview-result" role="status">尚未检查。读取配置不会调用模型。</div>
+<div class="field"><label for="model">模型名称</label><input id="model" list="models" autocomplete="off" spellcheck="false" placeholder="留空跟随配置；或填写模型 ID"><datalist id="models"></datalist><button class="button small subtle" id="load-models" type="button" style="margin-top:8px">获取服务商模型列表</button></div>
+<div class="field"><label for="protocol">API 协议</label><select id="protocol"><option value="responses">Responses（与机器人当前接口一致）</option><option value="chat_completions">Chat Completions（兼容服务）</option></select><p class="hint">按服务商文档选择。不自动切换协议或重试。</p></div>
+<details class="advanced"><summary>请求设置</summary><div class="pair"><div class="field"><label for="timeout">超时（秒）</label><input id="timeout" type="number" min="1" max="600" value="120"></div><div class="field"><label for="tokens">输出上限（token）</label><input id="tokens" type="number" min="256" max="32768" value="4096"></div></div><div class="field"><label for="reasoning">推理强度</label><select id="reasoning"><option value="auto">模型默认</option><option>low</option><option>medium</option><option>high</option><option>xhigh</option></select></div></details>
+</div></aside>
+<section class="panel conversation" aria-label="聊天测试"><div class="panel-title"><span><span class="number">02</span>对话</span><button id="clear" type="button" class="button small subtle">清空对话</button></div>
+<div class="chat-log" id="chat-log" aria-live="polite"><div class="empty" id="empty"><div class="symbol">↔</div><h2>从一条简单的消息开始</h2><p>先检查文字回复是否完整。聊天页只发送文字，不包含相机图像或机器人动作。</p></div></div>
+<form class="composer" id="chat-form"><div class="suggestions"><button class="button small" id="hello" type="button">打个招呼</button><button class="button small" id="check" type="button">验证内容</button></div><label for="message">消息</label><textarea id="message" maxlength="24000" placeholder="例如：请用中文回复“连接成功”，然后计算 17 + 25。" required></textarea><div class="composer-bottom"><span class="status" id="status" role="status">等待发送 · ⌘ / Ctrl + Enter</span><button class="button primary" id="send" type="submit">发送消息 ↗</button></div></form></section>
+</main><p class="footnote">每次发送会调用一次所选模型，可能产生费用。聊天成功只验证文字通信；图像和机器人动作格式需另行测试。更换配置会开始新的对话。</p>
+</div>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+let history = [], connectionId = null, busy = false, timer = null;
+function resetConversation() { history = []; connectionId = null; $('chat-log').replaceChildren(); $('status').textContent = '新对话 · 等待发送'; }
+function setBusy(value) { busy = value; document.querySelectorAll('#settings input,#settings select,#settings textarea,#settings button,#clear,#send,#hello,#check').forEach(e => e.disabled = value); $('send').textContent = value ? '正在等待回复…' : '发送消息 ↗'; }
+function credentials() {
+  const body = {credential_source: $('source').value, model: $('model').value.trim()};
+  if ($('api-key').value.trim()) body.api_key = $('api-key').value.trim();
+  if (body.credential_source === 'manual') body.base_url = $('base-url').value.trim();
+  if (body.credential_source === 'file') body.config_path = $('config-path').value.trim();
+  if (body.credential_source === 'upload') body.config_toml = $('config-toml').value;
+  return body;
+}
+async function request(path, body, timeout = 45000) {
+  const controller = new AbortController(), id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch('/api/chat/' + path, {method: body ? 'POST' : 'GET', headers: body ? {'Content-Type':'application/json'} : {}, body: body ? JSON.stringify(body) : undefined, signal:controller.signal});
+    const result = await response.json();
+    if (!response.ok || result.ok === false) throw new Error(result.error || '本地服务请求失败');
+    return result;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('本地等待超时，服务端可能仍在处理，请等待后再发送。');
+    throw e;
+  } finally { clearTimeout(id); }
+}
+function showConfig(config) {
+  $('preview-result').className = 'preview' + (config.key_configured ? ' ok' : '');
+  $('preview-result').textContent = `服务商：${config.provider}\n地址：${config.base_url}\n配置模型：${config.model || '未指定'}\n密钥：${config.key_configured ? '已配置（已隐藏）' : '未配置，请填写 Key'}`;
+}
+function displayError(e) { $('preview-result').className = 'preview error'; $('preview-result').textContent = e.message || '请求失败'; }
+function bubble(role, text) {
+  if ($('empty')) $('empty').remove();
+  const node = document.createElement('article'); node.className = 'message ' + role;
+  const label = document.createElement('header'); label.textContent = {user:'你',assistant:'模型回复',system:'请求提示'}[role];
+  const body = document.createElement('div'); body.className = 'body'; body.textContent = text;
+  node.append(label, body); $('chat-log').append(node); return node;
+}
+function showResult(result) {
+  const message = result.reply || result.refusal || '没有收到回复正文。';
+  const node = bubble(result.complete ? 'assistant' : 'system', message);
+  const meta = document.createElement('div'); meta.className = 'result-meta';
+  meta.textContent = `${result.complete ? '完整回复' : result.transport_ok ? '收到响应，但回复不完整或格式异常' : '请求失败'} · ${result.latency_seconds}s · HTTP ${result.http_status ?? '—'} · ${result.usage?.total_tokens ?? '未知'} tokens`;
+  node.append(meta);
+  const details = document.createElement('details'), title = document.createElement('summary'), pre = document.createElement('pre');
+  title.textContent = '查看请求结果与失败原因';
+  const {reply, connection_id, ...metadata} = result; pre.textContent = JSON.stringify(metadata,null,2);
+  details.append(title,pre); details.open = !result.complete; node.append(details);
+  $('status').textContent = result.complete ? '已收到完整回复，可以继续对话' : '本次未通过 · 查看上方失败原因';
+}
+$('source').onchange = () => {
+  for (const name of ['manual','upload','file']) $(name + '-fields').hidden = $('source').value !== name;
+  $('api-key').value = ''; resetConversation(); $('preview-result').textContent = '配置已改变，请重新检查。';
+};
+$('config-list').onchange = () => { $('config-path').value = $('config-list').value; resetConversation(); };
+$('base-url').onchange = () => { $('api-key').value = ''; resetConversation(); };
+for (const id of ['api-key','model','protocol','config-path','config-toml']) $(id).addEventListener('change',resetConversation);
+$('config-upload').onchange = async () => {
+  const file = $('config-upload').files[0]; if (!file) return;
+  if (file.size > 1024*1024) { displayError(new Error('配置文件超过 1 MB')); return; }
+  $('config-toml').value = await file.text(); $('api-key').value = ''; resetConversation();
+};
+$('preview').onclick = async () => { if (busy) return; setBusy(true); try { showConfig((await request('preview',credentials())).config); } catch(e) { displayError(e); } finally { setBusy(false); } };
+$('load-models').onclick = async () => {
+  if (busy) return; setBusy(true);
+  try { const r = await request('models',credentials()); showConfig(r.config); $('models').replaceChildren(); for (const name of r.models) { const o=document.createElement('option'); o.value=name; $('models').append(o); } $('status').textContent = `已读取 ${r.models.length} 个模型，可在模型输入框选择或输入。`; }
+  catch(e) { displayError(e); } finally { setBusy(false); }
+};
+$('forget').onclick = () => { $('api-key').value=''; $('config-toml').value=''; $('config-upload').value=''; $('model').value=''; $('base-url').value=''; $('config-path').value=''; $('preview-result').textContent='已清除本页填写的配置。'; resetConversation(); };
+$('clear').onclick = resetConversation;
+$('hello').onclick = () => { $('message').value = '你好，请用中文简短介绍你能做什么。'; $('message').focus(); };
+$('check').onclick = () => { $('message').value = '请用中文回复“连接成功”，然后计算 17 + 25。'; $('message').focus(); };
+$('message').onkeydown = e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); $('chat-form').requestSubmit(); } };
+$('chat-form').onsubmit = async e => {
+  e.preventDefault(); if (busy) return;
+  const content=$('message').value.trim(); if (!content) return;
+  const timeout=Number($('timeout').value), tokens=Number($('tokens').value);
+  if (!Number.isFinite(timeout) || timeout<1 || timeout>600 || !Number.isInteger(tokens) || tokens<256 || tokens>32768) { displayError(new Error('超时须为 1–600 秒，输出上限为 256–32768 token。')); return; }
+  const userMessage={role:'user',content}; const messages=[...history,userMessage];
+  const payload={...credentials(), protocol:$('protocol').value, messages, connection_id:connectionId, request_options:{timeout_seconds:timeout,max_output_tokens:tokens,reasoning_effort:$('reasoning').value}};
+  bubble('user',content); $('message').value=''; setBusy(true);
+  const started=Date.now(); timer=setInterval(() => $('status').textContent=`正在等待回复 · ${Math.floor((Date.now()-started)/1000)} 秒`,1000); $('status').textContent='正在发送…';
+  try {
+    const result=await request('send',payload,(timeout+15)*1000); clearInterval(timer); showResult(result);
+    if (result.complete) { history=[...messages,{role:'assistant',content:result.reply}]; connectionId=result.connection_id; }
+  } catch(e) { clearInterval(timer); bubble('system',e.message); $('status').textContent='发送失败；可以调整配置后再试'; }
+  finally { delete payload.api_key; delete payload.config_toml; clearInterval(timer); setBusy(false); $('chat-log').scrollTop=$('chat-log').scrollHeight; }
+};
+request('options').then(r => {
+  $('config-list').replaceChildren();
+  for (const c of r.configs) { const o=document.createElement('option');o.value=c.path;o.textContent=c.label; $('config-list').append(o); }
+  const custom=document.createElement('option');custom.value='';custom.textContent='自定义路径…';$('config-list').append(custom);
+  $('config-path').value=r.configs[0]?.path||'';
+  $('model').placeholder=`留空跟随配置（默认 ${r.default_model}）`;
+}).catch(displayError);
+</script></body></html>
