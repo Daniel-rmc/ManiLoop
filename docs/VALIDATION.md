@@ -24,6 +24,16 @@ development demonstration, not a success-rate estimate. See the
 [success report](research/2026-09-16-gpt6-success-episode.md) and
 [recording guide](EPISODE_RECORDING.md).
 
+Commit `9878d5c` passed Ubuntu, macOS and Windows / Python 3.12 tests plus
+Linux OSMesa rendering for both robots in [this CI run](https://github.com/Daniel-rmc/ManiLoop/actions/runs/35081452540).
+The [Pages deployment](https://github.com/Daniel-rmc/ManiLoop/actions/runs/35081463372)
+of site commit `c2df569` succeeded. The public root and all 39 public files
+return HTTP 200 and match the reviewed local bytes, including the MP4.
+Real Chrome playback was observed at 17.166 seconds and then at its 35.35-second
+end; the verified result and final-decision limitation are visible. New-video
+mobile layout, console and additional public browser interaction were not
+rechecked after the user resumed browser control.
+
 ## v0.2 GPT simulation demo — 2026-09-16
 
 The earlier v0.2.0 release passed **183 offline tests and 136 subtests** on the local
