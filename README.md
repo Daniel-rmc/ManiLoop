@@ -2,6 +2,8 @@
 
 A MuJoCo-based platform for studying and benchmarking LLM-driven robot manipulation.
 
+[项目展示页](https://daniel-rmc.github.io/ManiLoop/) · [GPT-6 演示说明](docs/GPT6_DEMO.md) · [实际验证记录](docs/VALIDATION.md)
+
 ManiLoop 是用于评测机器人操作策略的 MuJoCo 仿真平台。评测对象是「模型 + 观测表示 + 动作接口 + 控制器」的完整配置，实验按这些条件分组，研究不同具身体、任务与交互方式下的闭环表现。
 
 v0.2 提供 ARX X5 / Franka Panda、两个桌面布局、抓放 / 推物任务、云端 LLM API 闭环、命令行批量实验与网页调试。同时提供模拟动作块检查，以及独立 LeRobot 推理接口，支持 LIBERO 数据训练的 SmolVLA、ACT、Diffusion 检查点。默认采用受控时序：模型推理时暂停物理，动作执行后重新观察；实时模式单独记录和比较。

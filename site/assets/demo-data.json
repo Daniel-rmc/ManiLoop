@@ -1,0 +1,111 @@
+{
+  "task": "将盘子与小碗之间的黑碗放到盘子上",
+  "model": "GPT-6 Astra",
+  "date": "2026-09-16",
+  "context_mode": "current",
+  "summary": {
+    "decisions": 24,
+    "control_steps": 389,
+    "simulation_seconds": 19.45,
+    "success": false,
+    "termination_reason": "decision_budget"
+  },
+  "frames": [
+    {
+      "step": 1,
+      "stage": "before",
+      "title": "从官方初态开始",
+      "explanation": "目标是盘子与银色小碗之间的黑碗；先向该碗上方靠近并略微下降，保留安全高度。",
+      "feedback": {
+        "status": "reached",
+        "position_error_m": 0.001988132890554593
+      },
+      "external": "assets/frames/01-external.jpg",
+      "wrist": "assets/frames/01-wrist.jpg"
+    },
+    {
+      "step": 6,
+      "stage": "after",
+      "title": "接近并张开夹爪",
+      "explanation": "夹爪已接近目标黑碗上方，目前仅半开；先完全张开，为下降抓取留出空间。",
+      "feedback": {
+        "status": "completed",
+        "position_error_m": 0.0006658956096895851
+      },
+      "external": "assets/frames/02-external.jpg",
+      "wrist": "assets/frames/02-wrist.jpg"
+    },
+    {
+      "step": 11,
+      "stage": "after",
+      "title": "第一次闭合后抬升",
+      "explanation": "夹爪已闭合，但尚不能确认夹住黑碗；先竖直抬升，观察碗是否随夹爪离开桌面。",
+      "feedback": {
+        "status": "reached",
+        "position_error_m": 0.0006424986412631082
+      },
+      "external": "assets/frames/03-external.jpg",
+      "wrist": "assets/frames/03-wrist.jpg"
+    },
+    {
+      "step": 12,
+      "stage": "after",
+      "title": "判断抓取不可靠，张开重试",
+      "explanation": "抬升后黑碗仍在夹爪下方，夹爪几乎完全闭合，未见可靠抓取；先张开夹爪，准备重新对准碗沿。",
+      "feedback": {
+        "status": "completed",
+        "position_error_m": 0.00014546909607358015
+      },
+      "external": "assets/frames/04-external.jpg",
+      "wrist": "assets/frames/04-wrist.jpg"
+    },
+    {
+      "step": 17,
+      "stage": "after",
+      "title": "再次对齐碗沿并抬升",
+      "explanation": "夹爪闭合后仍有一定开度，可能已夹住黑碗碗沿；先竖直抬升，观察黑碗是否随夹爪离开桌面。",
+      "feedback": {
+        "status": "reached",
+        "position_error_m": 0.0005561602918821806
+      },
+      "external": "assets/frames/05-external.jpg",
+      "wrist": "assets/frames/05-wrist.jpg"
+    },
+    {
+      "step": 21,
+      "stage": "after",
+      "title": "向盘子方向移动",
+      "explanation": "腕部画面中黑碗仍紧邻夹爪，盘心在碗心上方略偏右；保持高度向盘心小幅移动，逐步对齐并观察碗是否随动。",
+      "feedback": {
+        "status": "timed_out",
+        "position_error_m": 0.007134406283027838
+      },
+      "external": "assets/frames/06-external.jpg",
+      "wrist": "assets/frames/06-wrist.jpg"
+    },
+    {
+      "step": 24,
+      "stage": "after",
+      "title": "释放物体",
+      "explanation": "黑碗与盘子在外部画面中重叠，末次下降约1.8厘米；保持当前姿态张开夹爪，尝试将黑碗放到盘子上。",
+      "feedback": {
+        "status": "completed",
+        "position_error_m": 0.000566415476734266
+      },
+      "external": "assets/frames/07-external.jpg",
+      "wrist": "assets/frames/07-wrist.jpg"
+    },
+    {
+      "step": 24,
+      "stage": "final",
+      "title": "预算结束：官方任务未成功",
+      "explanation": "黑碗与盘子在外部画面中重叠，末次下降约1.8厘米；保持当前姿态张开夹爪，尝试将黑碗放到盘子上。",
+      "feedback": {
+        "status": "completed",
+        "position_error_m": 0.000566415476734266
+      },
+      "external": "assets/frames/08-external.jpg",
+      "wrist": "assets/frames/08-wrist.jpg"
+    }
+  ]
+}

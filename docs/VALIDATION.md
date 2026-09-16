@@ -1,5 +1,27 @@
 # ManiLoop validation
 
+## v0.2 GPT simulation demo — 2026-09-16
+
+The current release passes **183 offline tests and 136 subtests** on the local
+macOS / Python 3.12 host; 14 optional LIBERO checks are skipped without opt-in.
+The **14 real LIBERO integration checks** passed separately in the isolated worker
+environment. The added portability checks retain symlink rejection coverage on
+Windows, including hosts that do not grant permission to create real symlinks.
+
+GPT-6 Astra was invoked through the official Codex CLI's ChatGPT login. Text,
+single-image interpretation, dual-image structured action, and a 5 mm upward
+motion passed. The first full task attempt used spatial task 0 / init 0 / seed 0,
+24 decisions and 389 control steps; **official success was false** at the decision
+budget. This is one development run, not a benchmark success rate. See the
+[first-run report](research/2026-09-16-gpt6-demo-first-run.md) and
+[demo guide](GPT6_DEMO.md).
+
+Commit `35713b8` passed all four checks in the
+[current release workflow](https://github.com/Daniel-rmc/ManiLoop/actions/runs/35076094827):
+Ubuntu, macOS and Windows / Python 3.12 offline tests, plus Linux OSMesa rendering
+for both ARX X5 and Franka Panda. These checks do not measure model task success.
+
+
 ## GitHub Actions — 2026-09-16
 
 Commit `27092ba` passed all four checks in
