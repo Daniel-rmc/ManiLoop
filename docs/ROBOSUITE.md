@@ -61,6 +61,14 @@ TCP 位置和姿态使用一致的末端 site，姿态取 `robot0_eef_quat_site`
 外部相机为 `agentview`，腕部相机为 `robot0_eye_in_hand`；支持 128 / 512 像素，
 每次观察显式渲染当前状态，再按 OpenGL 原始图像翻转一次，输出顶左像素原点。
 渲染不推进物理，不依赖上次控制步的图像缓存。没有深度查询。
+
+离屏运行显式选择 `renderer="mujoco"`，同时保持 `has_renderer=False`。
+这是渲染资源生命周期配置，不是更换物理引擎或打开原生窗口。robosuite 1.5.2
+的默认 `mjviewer` 路径在硬重置时可能留下旧的离屏上下文；其延迟析构可能在
+新上下文中释放同编号的 OpenGL 资源，造成花屏或相机串帧。当前配置使用上游
+在重建仿真前销毁旧资源的路径，不依赖禁用垃圾回收，也不修改上游安装文件。
+manifest 中的 `renderer` / `render_lifecycle` 字段记录这一设置。
+
 物体真值、接触列表、奖励和成功信号不进入策略输入。
 
 评分单独调用上游 `_check_success()`。首次成功或 1000 个控制步后终止；
@@ -84,6 +92,9 @@ MANILOOP_TEST_ROBOSUITE=1 python -m pytest \
 普通 `pytest` 会跳过需要可选环境和图形设备的真实仿真检查。
 真实检查覆盖五个任务的重置、双相机、动作步进、评分分离，
 以及 Lift 的目标平移 / 旋转、夹爪保持、取消和 512 像素相机。
+另有五个任务 × 两种分辨率的渲染生命周期回归：反复重置，分别在首个动作前后
+强制垃圾回收，确认物理状态不变时两路图像逐像素不变、相机不串帧。
+该检查专门覆盖“初始画面正常、第一次动作后损坏”的延迟资源释放故障。
 
 独立的 Lift 物理诊断必须用 robosuite 环境运行：
 
@@ -104,6 +115,9 @@ MANILOOP_TEST_ROBOSUITE=1 python -m pytest \
 macOS 已验证普通 Python 的离屏渲染，不要照搬 Linux 的 EGL 设置。
 `robosuite_models` / mink 警告不影响本版 Panda 任务；不需要安装额外机器人包。
 图像正常但操作失败：先看目标执行反馈与原生任务成功规则，不把 `accepted` 当作到达。
+旧开发版本出现“动作后花屏 / 画面乱跳”：更新代码并重启 ManiLoop 服务，
+使仿真 worker 使用上述生命周期配置。只刷新网页不会替换仍在运行的旧 worker。
+不要用增大控制阻尼、降低画质或反复重置来掩盖这个渲染故障。
 
 上游项目：[robosuite](https://github.com/ARISE-Initiative/robosuite)。
 控制器说明：[官方文档](https://robosuite.ai/docs/modules/controllers.html)。

@@ -184,3 +184,59 @@ finally:
     result = subprocess.run([python, '-c', code, str(root / 'src/maniloop/backends/robosuite')],
                             cwd=root, text=True, capture_output=True, timeout=90)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize('task', TASKS)
+@pytest.mark.parametrize('profile', ['debug_rgb128', 'llm_rgb512'])
+def test_gc_after_reset_keeps_active_render_resources(profile, task):
+    """No physics step is needed to expose the old delayed-GL-destructor bug."""
+    import subprocess
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    python = os.environ.get('MANILOOP_ROBOSUITE_PYTHON') or str(
+        root / '.venv-robosuite' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python'))
+    code = '''
+import gc, sys, base64, io
+import numpy as np
+from PIL import Image
+sys.path.insert(0, sys.argv[1])
+from worker import Runtime
+# Deferring collection makes this timing-dependent failure deterministic.
+was_enabled = gc.isenabled()
+gc.disable()
+r = None
+def check_collection(runtime, stage):
+    before = runtime.observe()
+    qpos, qvel = runtime.env.sim.data.qpos.copy(), runtime.env.sim.data.qvel.copy()
+    clock = runtime.env.sim.data.time
+    gc.collect()
+    after = runtime.observe()
+    assert np.array_equal(qpos, runtime.env.sim.data.qpos), stage
+    assert np.array_equal(qvel, runtime.env.sim.data.qvel), stage
+    assert runtime.env.sim.data.time == clock, stage
+    for camera in ('external', 'wrist'):
+        a = np.asarray(Image.open(io.BytesIO(base64.b64decode(before['images'][camera]))))
+        b = np.asarray(Image.open(io.BytesIO(base64.b64decode(after['images'][camera]))))
+        mae = float(np.abs(a.astype(float) - b).mean())
+        assert np.array_equal(a, b), f'{stage}: GC changed {camera} with frozen physics; MAE={mae}'
+    assert after['images']['external'] != after['images']['wrist'], stage
+try:
+    r = Runtime(dict(task=sys.argv[3], render=True, seed=0, observation_profile=sys.argv[2]))
+    reference = r.observe()['images']
+    for cycle in range(4):
+        if cycle:
+            r.reset(0)
+            assert r.observe()['images'] == reference, 'same-seed reset changed initial RGB'
+        check_collection(r, f'reset-{cycle}')
+        r.step([0., 0., .1, 0., 0., 0., 0.])
+        check_collection(r, f'first-action-{cycle}')
+finally:
+    if r is not None:
+        r.close()
+    if was_enabled:
+        gc.enable()
+'''
+    result = subprocess.run(
+        [python, '-c', code, str(root / 'src/maniloop/backends/robosuite'), profile, task],
+        cwd=root, text=True, capture_output=True, timeout=120)
+    assert result.returncode == 0, result.stdout + result.stderr

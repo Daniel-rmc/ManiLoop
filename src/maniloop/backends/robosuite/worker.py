@@ -36,7 +36,12 @@ class Runtime:
         self.config = load_composite_controller_config(robot="Panda")
         # Explicit integration protocol, not an upstream-default claim.
         self.config["body_parts"]["right"]["input_ref_frame"] = "world"
+        # In robosuite 1.5.2 only renderer="mujoco" frees the existing MjSim
+        # before a hard reset replaces it. The mjviewer default can leave an
+        # old offscreen context for GC to destroy while the NEW context is
+        # current, deleting that new context's GL resources. No viewer is used.
         self.kwargs = dict(env_name=self.task, robots="Panda", controller_configs=self.config,
+                           renderer="mujoco",
                            has_renderer=False, has_offscreen_renderer=self.render,
                            use_camera_obs=self.render, use_object_obs=False,
                            camera_names=list(CAMERAS.values()), camera_heights=self.size,
@@ -54,6 +59,7 @@ class Runtime:
             "controller_config": self.config, "controller_overrides": {"input_ref_frame": "world"},
             "protocol": f"maniloop_robosuite_{self.profile}_v1",
             "observation_profile": self.profile, "evaluator": "robosuite_check_success",
+            "renderer": "mujoco", "render_lifecycle": "destroy_before_hard_reset_v1",
             "upstream_revision": f"pypi:{ROBOSUITE_VERSION}",
             "upstream_source_sha256": digest.hexdigest(), "runtime_dependencies": dependencies,
             "camera_preprocessing": f"{self.size}x{self.size}; snapshot render; vertical flip; JPEG quality 90; RGB",
