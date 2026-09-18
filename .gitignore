@@ -51,3 +51,10 @@ artifacts/
 /docs/design/
 /docs/research/
 /docs/experiments/
+
+.venv-robosuite/
+
+.venv-robocasa/
+
+# Local handoff notes; not public project documentation.
+/docs/TASK_EXPANSION_PROGRESS.md

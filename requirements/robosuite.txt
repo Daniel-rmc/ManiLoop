@@ -1,0 +1,11 @@
+# Optional Python 3.11 worker; do not install in the main or LIBERO runtime.
+# MuJoCo >=3.10 changed mj_fullM; this integration uses a known 3.3.x API.
+robosuite==1.5.2
+mujoco==3.3.7
+numpy==1.26.4
+numba==0.61.2
+scipy==1.15.3
+opencv-python==4.11.0.86
+Pillow==11.3.0
+# robosuite camera utilities import the optional HDF5 helper.
+h5py==3.14.0
