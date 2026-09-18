@@ -206,3 +206,16 @@ python -m maniloop smoke
 ## 许可证
 
 ManiLoop 采用 [MIT 许可证](LICENSE)。ARX X5 资产保留 MIT，Panda 资产保留 Apache-2.0。LIBERO、LeRobot 和下载的检查点分别保留自己的许可证。详见[第三方声明](THIRD_PARTY_NOTICES.md)。
+
+## 可选 robosuite 操作任务
+
+使用独立环境接入 Panda 的 Lift、Stack、PickPlaceCan、Door、NutAssemblySquare，
+不改变已有 LIBERO。复用当前工作台的手动控制、模型入口与决策回看。
+安装、控制协议和限制见 [robosuite 指南](docs/ROBOSUITE.md)。
+
+```bash
+python scripts/setup_robosuite.py
+python -m maniloop demo --backend robosuite --task Lift --port 8870
+```
+
+任务已接入不代表模型已完成任务。现有 LIBERO 权重仍只用于 LIBERO；此后端尚不包含 RoboCasa。

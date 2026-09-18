@@ -65,7 +65,7 @@
           <div class="panel-header"><div class="panel-title">实验环境</div><span id="active-environment" class="small">加载中</span></div>
           <div class="task-body" style="padding-top:16px">
             <div class="configuration" style="grid-template-columns:1fr 1fr">
-              <label class="field-label">环境后端<select id="backend-select" class="input"><option value="mujoco">ManiLoop 桌面任务</option><option value="libero">LIBERO 官方任务</option></select></label>
+              <label class="field-label">环境后端<select id="backend-select" class="input"><option value="mujoco">ManiLoop 桌面任务</option><option value="libero">LIBERO 官方任务</option><option value="robosuite">robosuite 操作任务</option></select></label>
               <label class="field-label">机器人<select id="robot-select" class="input"><option value="arx5">ARX X5</option><option value="panda">Franka Panda</option></select></label>
               <label class="field-label">布局<select id="layout-select" class="input"><option value="tabletop_a">桌面 A</option><option value="tabletop_b">桌面 B</option></select></label>
               <label class="field-label">任务<select id="task-select" class="input"><option value="pick_place">抓放</option><option value="push">推物</option></select></label>
@@ -76,6 +76,10 @@
               <label class="field-label">官方任务<select id="libero-task" class="input"><option value="0">0 · 正在读取任务目录</option></select></label>
               <label class="field-label">初始化编号<input id="libero-init" class="input" type="number" min="0" step="1" value="0"></label>
               <p class="key-hint">保留官方 Panda、任务与评分。仅 RGB 与本体感知；不提供深度查询。适配实验单独比较。</p>
+            </div>
+            <div id="robosuite-options" hidden>
+              <label class="field-label">robosuite 任务<select id="robosuite-task" class="input"><option value="Lift">Lift · 抓起方块</option></select></label>
+              <p class="key-hint">Panda · world-frame OSC。保留上游任务和评分；仅 RGB 与本体感知。LIBERO 权重与逐控制步录像暂不支持本后端。</p>
             </div>
             <button id="apply-environment" type="button" class="button">应用并重置场景</button>
             <button id="demo-preset" type="button" class="button subtle" style="margin-left:6px">加载 GPT-6 抓放演示</button>
@@ -131,8 +135,8 @@
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                 <div><label class="field-label" for="request-timeout">请求超时（秒）</label><input id="request-timeout" class="input" type="number" min="1" max="600" value="120"></div>
                 <div><label class="field-label" for="reasoning-effort">推理强度</label><select id="reasoning-effort" class="input"><option value="auto">模型默认</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="xhigh">xhigh</option></select></div>
-                <div><label class="field-label" for="llm-control">LIBERO 动作执行</label><select id="llm-control" class="input"><option value="tcp_target_servo_v2">目标跟踪（推荐）</option><option value="osc_step">原生单步（基线）</option></select></div>
-                <div><label class="field-label" for="llm-resolution">LIBERO 相机</label><select id="llm-resolution" class="input"><option value="llm_rgb512">512 × 512（LLM）</option><option value="debug_rgb128">128 × 128（基线）</option></select></div>
+                <div><label class="field-label" for="llm-control">外部任务动作执行</label><select id="llm-control" class="input"><option value="tcp_target_servo_v2">目标跟踪（推荐）</option><option value="osc_step">原生单步（基线）</option></select></div>
+                <div><label class="field-label" for="llm-resolution">外部任务相机</label><select id="llm-resolution" class="input"><option value="llm_rgb512">512 × 512（LLM）</option><option value="debug_rgb128">128 × 128（基线）</option></select></div>
                 <div><label class="field-label" for="wall-budget">实验总时限（秒）</label><input id="wall-budget" class="input" type="number" min="1" value="600"></div>
                 <div><label class="field-label" for="sim-budget">仿真时限（秒）</label><input id="sim-budget" class="input" type="number" min="1" value="120"></div>
                 <div style="grid-column:1/-1"><label class="field-label" for="context-mode">视觉反馈</label><select id="context-mode" class="input"><option value="current">当前双相机 · 基线</option><option value="paired">前后双相机 · 对照上次动作</option></select><p class="key-hint">前后模式增加上次动作前的画面与本体状态，供模型比较执行变化。独立评分仅供人类查看。</p></div>
@@ -415,11 +419,11 @@
       const cloud = $('agent-select').value === 'llm_cloud';
       const ready = !!(connected && state && state.ready);
       const configLocked = pending || configBusy || running || inFlight;
-      ['backend-select','libero-suite','libero-task','libero-init','robot-select','layout-select','task-select','timing-select','apply-environment','demo-preset','agent-select','local-model'].forEach(id => { $(id).disabled = configLocked || !ready; });
+      ['backend-select','robosuite-task','libero-suite','libero-task','libero-init','robot-select','layout-select','task-select','timing-select','apply-environment','demo-preset','agent-select','local-model'].forEach(id => { $(id).disabled = configLocked || !ready; });
       ui.start.disabled = pending || configBusy || !ready || running || inFlight || moving;
       ['request-timeout','reasoning-effort','llm-control','llm-resolution','wall-budget','sim-budget','reset-before-start','context-mode'].forEach(id => { $(id).disabled = configLocked; });
       ['text','vision','action'].forEach(stage => { $('diagnose-' + stage).disabled = pending || configBusy || !ready || running || inFlight || moving; });
-      ui.stop.disabled = pending || !connected || !running;
+      ui.stop.disabled = pending || !connected || (!running && !moving);
       ui.step.disabled = !cloud || pending || configBusy || !ready || inFlight || moving || (running && !paused);
       ui.pause.disabled = !cloud || pending || !connected || !running || paused || pauseRequested;
       ui.resume.disabled = !cloud || pending || !connected || !running || !paused;
@@ -436,7 +440,7 @@
       ui.baseUrl.disabled = configLocked || ui.source.value !== 'manual';
       ui.maxSteps.disabled = pending || running;
       $('scene-seed').disabled = pending || running;
-      if ($('backend-select').value === 'libero') ['robot-select','layout-select','task-select'].forEach(id => { $(id).disabled = true; });
+      if ($('backend-select').value !== 'mujoco') ['robot-select','layout-select','task-select'].forEach(id => { $(id).disabled = true; });
       $('jog-step').disabled = pending || running;
       ui.start.querySelector('span').textContent = paused ? '实验已暂停' : running ? '执行中' : pending ? '正在处理…' : '连续执行';
     }
@@ -455,16 +459,17 @@
           $('libero-suite').value = data.environment.suite;
           $('libero-init').value = data.environment.init_state_id;
           loadLiberoTasks(data.environment.task_id);
+        } else if (data.backend === 'robosuite') {
+          loadRobosuiteTasks(data.environment.task);
         }
         updateBackendFields();
         $('robot-select').value = data.robot;
-        $('layout-select').value = data.scene;
-        $('task-select').value = data.task_id;
+        if (data.backend === 'mujoco') { $('layout-select').value = data.scene; $('task-select').value = data.task_id; }
         $('timing-select').value = data.timing;
         ui.task.value = data.task_instruction;
       }
       $('active-environment').textContent = `${data.backend || 'mujoco'} · ${data.robot} · ${data.scene} · ${data.timing}`;
-      const world = data.backend === 'libero';
+      const world = ['libero', 'robosuite'].includes(data.backend);
       $('frame-label').textContent = world ? '世界坐标系 · m' : '机器人基座坐标系 · m';
       $('frame-metric').textContent = world ? 'WORLD FRAME · METERS' : 'BASE FRAME · METERS';
       $('manual-frame').textContent = world ? '沿世界坐标轴移动末端' : '沿基座坐标轴移动末端';
@@ -477,7 +482,7 @@
       $('tcp-position').textContent = xyz && xyz.length >= 3 ? xyz.slice(0, 3).map(value => number(value, 3)).join(' / ') : '— / — / —';
       $('gripper-opening').textContent = numeric(data.gripper_opening) ? String(Math.round(data.gripper_opening * 100)) : '—';
       $('step-value').textContent = Number.isInteger(data.api_calls) ? String(data.api_calls) : '0';
-      $('evaluation-status').textContent = data.evaluation && data.evaluation.success ? '独立评估：所选任务已完成 ✓' : `独立评估：${data.backend === 'libero' ? 'LIBERO 官方' : data.task_id === 'push' ? '推物' : '抓放'}任务尚未完成`;
+      $('evaluation-status').textContent = data.evaluation && data.evaluation.success ? '独立评估：所选任务已完成 ✓' : `独立评估：${data.backend === 'libero' ? 'LIBERO 官方' : data.backend === 'robosuite' ? ('robosuite ' + data.task_id) : data.task_id === 'push' ? '推物' : '抓放'}任务尚未完成`;
       const latency = data.api_latency ?? data.last_api_latency_s ?? data.api_latency_s ?? data.last_api_duration_s ?? data.api_duration_s ?? (data.last_feedback && data.last_feedback.api_latency_s);
       $('api-latency').textContent = number(latency, 1);
       const simTime = numeric(data.sim_time) ? Math.max(0, data.sim_time) : 0;
@@ -658,10 +663,17 @@
     ui.baseUrl.addEventListener('input', () => { fetchedModels = []; updateModelChoices(); });
     let taskCatalogSequence = 0;
     function updateBackendFields() {
-      const libero = $('backend-select').value === 'libero';
-      $('libero-options').hidden = !libero;
-      ['layout-select','task-select'].forEach(id => { $(id).closest('label').hidden = libero; });
-      if (libero) $('robot-select').value = 'panda';
+      const backend = $('backend-select').value;
+      $('libero-options').hidden = backend !== 'libero';
+      $('robosuite-options').hidden = backend !== 'robosuite';
+      ['layout-select','task-select'].forEach(id => { $(id).closest('label').hidden = backend !== 'mujoco'; });
+      if (backend !== 'mujoco') $('robot-select').value = 'panda';
+      const localOption = $('agent-select').querySelector('option[value="lerobot"]');
+      if (localOption) localOption.disabled = backend !== 'libero';
+      if (backend !== 'libero' && $('agent-select').value === 'lerobot') {
+        $('agent-select').value = 'llm_cloud';
+        $('agent-select').dispatchEvent(new Event('change'));
+      }
     }
     async function loadLiberoTasks(selected = 0) {
       const sequence = ++taskCatalogSequence;
@@ -677,9 +689,24 @@
         $('libero-task').value = String(selected);
       } catch (error) { if (sequence === taskCatalogSequence) showError(error); }
     }
+    async function loadRobosuiteTasks(selected = 'Lift') {
+      const sequence = ++taskCatalogSequence;
+      try {
+        const response = await fetch('/api/robosuite-tasks');
+        const data = await response.json();
+        if (sequence !== taskCatalogSequence) return;
+        if (!response.ok) throw new Error(data.error || '任务目录读取失败');
+        $('robosuite-task').replaceChildren(...data.tasks.map(task => {
+          const option = document.createElement('option');
+          option.value = task.id; option.textContent = `${task.id} · ${task.display_name}`; return option;
+        }));
+        $('robosuite-task').value = selected;
+      } catch (error) { if (sequence === taskCatalogSequence) showError(error); }
+    }
     $('backend-select').addEventListener('change', () => {
       updateBackendFields(); updateControls();
       if ($('backend-select').value === 'libero') loadLiberoTasks();
+      if ($('backend-select').value === 'robosuite') loadRobosuiteTasks();
     });
     $('libero-suite').addEventListener('change', () => loadLiberoTasks());
     $('apply-environment').addEventListener('click', async () => {
@@ -688,7 +715,7 @@
         libero_suite: $('libero-suite').value, libero_task_id: Number($('libero-task').value),
         init_state_id: Number($('libero-init').value),
         robot: $('robot-select').value, scene: $('layout-select').value,
-        task_id: $('task-select').value, timing: $('timing-select').value,
+        task_id: $('backend-select').value === 'robosuite' ? $('robosuite-task').value : $('task-select').value, timing: $('timing-select').value,
         seed: Number($('scene-seed').value), ...environmentSettings()
       }, '实验环境已重置。');
       await refreshState();

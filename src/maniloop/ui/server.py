@@ -93,6 +93,9 @@ def handler_for(demo=None, chat=None):
                         "manual_base_url": manual_base,
                     },
                 )
+            elif path == "/api/robosuite-tasks":
+                from maniloop.backends.robosuite.catalog import list_tasks
+                self.json(200, {"tasks": list_tasks()})
             elif path == "/api/libero-tasks":
                 from maniloop.backends.libero.transport import list_tasks
 
@@ -199,7 +202,7 @@ def handler_for(demo=None, chat=None):
 
 def serve(args):
     sim = create_environment(**options_from_args(args))
-    if sim.backend == "libero":
+    if sim.backend in ("libero", "robosuite"):
         sim.set_llm_control(getattr(args, "llm_control", "osc_step"))
     demo = Demo(sim, args.model, timing=args.timing, output=args.output)
     if args.output:

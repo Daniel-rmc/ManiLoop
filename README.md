@@ -206,3 +206,17 @@ These checks do not make model requests. Offline tests cover macOS, Linux, and W
 ## License
 
 ManiLoop is [MIT licensed](LICENSE). ARX X5 assets retain MIT; Panda assets retain Apache-2.0. LIBERO, LeRobot, and downloaded checkpoints retain their own licenses. See [third-party notices](THIRD_PARTY_NOTICES.md).
+
+## Optional robosuite tasks
+
+Add Panda Lift, Stack, PickPlaceCan, Door, and NutAssemblySquare in an isolated
+robosuite runtime, without changing LIBERO. Use the existing workspace for manual
+control, model connections, and decision review. See [setup and limitations](docs/ROBOSUITE.md).
+
+```bash
+python scripts/setup_robosuite.py
+python -m maniloop demo --backend robosuite --task Lift --port 8870
+```
+
+These are integrated environments, not model-success claims. Existing LIBERO-trained
+local checkpoint presets remain LIBERO-only; RoboCasa is not included in this backend.
