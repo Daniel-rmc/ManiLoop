@@ -1,0 +1,20 @@
+# Simulation-only runtime; upstream training extras are intentionally not installed.
+# Core versions match RoboCasa 1.0.1 setup.py, not the standalone robosuite runtime.
+numpy==2.2.5
+numba==0.61.2
+scipy==1.15.3
+mujoco==3.3.1
+Pillow==11.3.0
+opencv-python==4.11.0.86
+PyYAML==6.0.2
+h5py==3.14.0
+lxml==6.0.2
+imageio==2.37.0
+gymnasium==1.2.0
+qpsolvers[quadprog]==4.8.1
+pynput==1.8.1
+termcolor==3.1.0
+tqdm==4.67.1
+pygame==2.6.1
+hidapi==0.14.0.post4
+pytest==8.4.2
