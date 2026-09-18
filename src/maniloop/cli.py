@@ -40,6 +40,8 @@ def main(argv=None):
         p.add_argument(
             "--timing", choices=["controlled", "realtime"], default="controlled"
         )
+        p.add_argument("--observation-max-age-seconds", type=float, default=None,
+                       help="Realtime observation age limit; 0 disables only the time limit (default: 60 seconds)")
         p.add_argument("--model", default=None)
         p.add_argument("--codex-login", action="store_true", help="Use the official Codex CLI's ChatGPT login; no API key")
     demo.add_argument("--port", type=int, default=8765)
@@ -148,6 +150,7 @@ def main(argv=None):
                     local_model=args.local_model,
                     device=args.device,
                     timing=args.timing,
+                    observation_max_age_seconds=args.observation_max_age_seconds,
                     llm_control=args.llm_control, observation_profile=args.observation_profile,
                     request_timeout_seconds=args.request_timeout_seconds, reasoning_effort=args.reasoning_effort,
                     context_mode=args.context_mode,

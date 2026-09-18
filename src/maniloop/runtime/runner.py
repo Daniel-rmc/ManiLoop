@@ -6,6 +6,7 @@ from copy import deepcopy
 from maniloop.core.observations import paired_sensors, guard_sensor_tree
 from maniloop.core.actions import Action, ActionChunk
 from maniloop.backends.base import Environment
+from maniloop.runtime.settings import validate_observation_max_age, effective_observation_max_age
 from maniloop.agents.mock_vla import MockVLAAgent
 from maniloop.representations.sensors import SensorRepresentation
 import argparse
@@ -51,9 +52,13 @@ class EpisodeRunner:
         timing="controlled",
         output=None,
         benchmark=False,
+        observation_max_age_seconds=None,
     ):
         if timing not in ("controlled", "realtime"):
             raise ValueError("Unknown timing mode")
+        configured_age = (float(os.environ.get("ARX_OBSERVATION_MAX_AGE", "60"))
+                          if observation_max_age_seconds is None else observation_max_age_seconds)
+        self.max_age = validate_observation_max_age(configured_age)
         self.sim = sim
         self.timing = timing
         self.output = Path(output) if output else None
@@ -127,7 +132,6 @@ class EpisodeRunner:
         self.future_token = -1
         self.log_file = None
         self.next_request = 0.0
-        self.max_age = float(os.environ.get("ARX_OBSERVATION_MAX_AGE", "60"))
         self.event("info", f"{sim.robot_name} 场景已准备；输入任务后开始闭环")
 
     def event(self, kind, message, **details):
@@ -349,6 +353,7 @@ class EpisodeRunner:
         elif name == "configure":
             if self.running or self.future is not None:
                 raise ValueError("请先停止任务并等待请求结束")
+            max_age = validate_observation_max_age(payload.get("observation_max_age_seconds", self.max_age))
             backend = payload.get("backend", self.sim.backend)
             replacement = create_environment(
                 backend=backend,
@@ -371,6 +376,7 @@ class EpisodeRunner:
             self.sim.close()
             self.sim = replacement
             self.timing = timing
+            self.max_age = max_age
             if self.sim.backend in ("libero", "robosuite"):
                 self.sim.set_llm_control(payload.get("llm_control", "osc_step"))
             self.chunk = None
@@ -411,6 +417,7 @@ class EpisodeRunner:
                 raise ValueError("上下文模式或单步设置无效")
             if single_step and (diagnostic or payload.get("agent", "llm_cloud") != "llm_cloud"):
                 raise ValueError("单步仅用于 LLM 操作演示")
+            self.max_age = validate_observation_max_age(payload.get("observation_max_age_seconds", self.max_age))
             self.context_mode = context_mode
             self.single_step = single_step
             self.diagnostic_stage = diagnostic
@@ -769,7 +776,7 @@ class EpisodeRunner:
                 )
                 valid, reason = self.sim.validate_snapshot(
                     self.pending_observation,
-                    self.max_age if self.timing == "realtime" else float("inf"),
+                    effective_observation_max_age(self.timing, self.max_age),
                 )
                 if not valid:
                     self.event("rejected", reason)
@@ -873,12 +880,19 @@ class EpisodeRunner:
                     http_status=getattr(exc, "http_status", None),
                     latency_seconds=self.api_latency,
                     usage=self.policy.last_usage if type(self.policy.last_usage) is dict and self.policy.last_usage else None)
+        # A rejected/instantaneous action may leave the environment settled in
+        # this same tick. Commit its after-snapshot BEFORE starting a new request;
+        # otherwise next tick's transition recording invalidates the in-flight ID.
+        if (self.transition_before is not None and self.future is None
+                and not self.sim.busy and self.sim.settled):
+            self.finish_transition()
         if (
             self.running
             and not self.paused
             and not self.pause_requested
             and self.future is None
             and self.chunk is None
+            and self.transition_before is None
             and self.sim.settled
             and time.monotonic() >= self.next_request
         ):
@@ -904,7 +918,7 @@ class EpisodeRunner:
             if self.geometry and self.pending_observation:
                 valid, _ = self.sim.validate_snapshot(
                     self.pending_observation,
-                    self.max_age if self.timing == "realtime" else float("inf"),
+                    effective_observation_max_age(self.timing, self.max_age),
                 )
                 if not valid:
                     self.geometry = []
@@ -980,6 +994,9 @@ class EpisodeRunner:
             "pending_request": self.future is not None,
             "diagnostic_result": self.diagnostic_result,
             "diagnostic_stage": self.diagnostic_stage,
+            "observation_max_age_seconds": self.max_age,
+            "effective_observation_max_age_seconds": (
+                self.max_age if self.timing == "realtime" and self.max_age > 0 else None),
             "max_wall_seconds": self.wall_budget,
             "max_sim_seconds": self.sim_budget,
             "motion_busy": self.sim.busy or self.chunk is not None,

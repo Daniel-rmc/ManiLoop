@@ -145,9 +145,10 @@ class RobosuiteEnvironment:
             self._snapshot is None
             or observation.get("observation_id") != self._snapshot["observation_id"]
         ):
-            return False, "Observation belongs to an old reset or decision"
-        if time.monotonic() - self._snapshot["timestamp_monotonic"] > max_age:
-            return False, "Observation expired"
+            return False, "Observation belongs to an old reset or decision（观测版本已失效，不是时间超限）"
+        age = time.monotonic() - self._snapshot["timestamp_monotonic"]
+        if age > max_age:
+            return False, f"Observation expired（观测已等待 {age:.1f} 秒，时间上限 {max_age:g} 秒）"
         return True, "valid"
 
     def depth_query(self, action):

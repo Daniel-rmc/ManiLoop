@@ -270,3 +270,51 @@ def test_real_rgb_observation_produces_rgb_only_api_schema(monkeypatch):
     finally:
         policy.close()
         env.close()
+
+
+@pytest.mark.parametrize('profile', ['debug_rgb128', 'llm_rgb512'])
+def test_rejected_then_valid_action_preserves_request_snapshot(profile, tmp_path):
+    """Reproduce zero-step rejection on real physics; no provider or model used."""
+    from concurrent.futures import Future
+    from maniloop.runtime.runner import EpisodeRunner
+    class Pool:
+        def __init__(self): self.requests = []
+        def submit(self, fn, task, observation, images, history, geometry):
+            future = Future()
+            self.requests.append((future, observation))
+            return future
+        def shutdown(self, **kwargs):
+            for future, _ in self.requests: future.cancel()
+    class Policy:
+        last_latency, last_usage = 0.0, {}
+        request_options = {'transport': 'offline_fixture'}
+        def decide(self, *args): raise AssertionError('No model calls allowed')
+    env = RobosuiteEnvironment(task='PickPlaceCan', observation_profile=profile)
+    runner = EpisodeRunner(env, output=tmp_path)
+    runner.pool.shutdown(wait=True)
+    runner.pool = pool = Pool()
+    runner.policy = Policy()
+    runner.context_mode = 'paired'
+    try:
+        runner.begin_episode('offline observation lifecycle check', 3)
+        runner.tick()
+        first, snapshot = pool.requests[0]
+        first.set_result(dict(kind='move', observation_id=snapshot['observation_id'],
+                              delta_position=[.06, 0, 0], delta_rotation=[0, 0, 0],
+                              explanation='Out-of-range fixture'))
+        runner.tick()
+        if len(pool.requests) == 1: runner.tick()
+        second, snapshot = pool.requests[1]
+        runner.tick()
+        assert env.validate_snapshot(snapshot, float('inf'))[0]
+        assert env.simulation_time == 0 and env.evaluation()['control_steps'] == 0
+        second.set_result(dict(kind='wait', observation_id=snapshot['observation_id'],
+                               explanation='Valid fixture after rejection'))
+        runner.tick()
+        assert env.feedback['status'] == 'accepted'
+        env.step()
+        assert env.simulation_time == .05 and env.evaluation()['control_steps'] == 1
+        env.reset(0)
+        assert not env.validate_snapshot(snapshot, float('inf'))[0]
+    finally:
+        runner.close()

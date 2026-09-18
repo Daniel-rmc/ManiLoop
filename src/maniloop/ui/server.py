@@ -201,10 +201,15 @@ def handler_for(demo=None, chat=None):
 
 
 def serve(args):
+    from maniloop.runtime.settings import validate_observation_max_age
+    configured_age = getattr(args, "observation_max_age_seconds", None)
+    if configured_age is not None:
+        validate_observation_max_age(configured_age)
     sim = create_environment(**options_from_args(args))
     if sim.backend in ("libero", "robosuite"):
         sim.set_llm_control(getattr(args, "llm_control", "osc_step"))
-    demo = Demo(sim, args.model, timing=args.timing, output=args.output)
+    demo = Demo(sim, args.model, timing=args.timing, output=args.output,
+                observation_max_age_seconds=getattr(args, "observation_max_age_seconds", None))
     if args.output:
         from maniloop.recording.replay import load_latest_replay
         demo.replay_html = load_latest_replay(args.output)

@@ -13,6 +13,7 @@ import mujoco
 from maniloop import __version__
 from maniloop.backends.factory import create_environment
 from maniloop.runtime.runner import EpisodeRunner
+from maniloop.runtime.settings import validate_observation_max_age
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,7 @@ class Experiment:
     local_model: str = "smolvla-libero"
     device: str = "auto"
     timing: str = "controlled"
+    observation_max_age_seconds: float | None = None
     llm_control: str = "tcp_target_servo_v2"
     observation_profile: str = "llm_rgb512"
     request_timeout_seconds: float = 120.0
@@ -92,6 +94,8 @@ class Experiment:
             raise ValueError("Unknown reasoning effort")
         if self.timing not in ("controlled", "realtime"):
             raise ValueError("Unknown timing mode")
+        if self.observation_max_age_seconds is not None:
+            validate_observation_max_age(self.observation_max_age_seconds)
         if self.context_mode not in ("current", "paired"):
             raise ValueError("Unknown sensor context mode")
         if type(self.record_episode) is not bool:
@@ -133,6 +137,7 @@ def load_suite(path: Path) -> list[Experiment]:
         "local_model",
         "device",
         "timing",
+        "observation_max_age_seconds",
         "llm_control",
         "observation_profile",
         "context_mode",
@@ -183,7 +188,8 @@ def run_episode(
     recording_active = False
     try:
         sim.reset(case.seed)
-        runner = EpisodeRunner(sim, timing=case.timing, output=output, benchmark=True)
+        runner = EpisodeRunner(sim, timing=case.timing, output=output, benchmark=True,
+                               observation_max_age_seconds=case.observation_max_age_seconds)
         runner.seed = case.seed
         runner.sim_budget = case.max_sim_seconds
         runner.wall_budget = case.max_wall_seconds

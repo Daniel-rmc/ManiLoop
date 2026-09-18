@@ -139,6 +139,7 @@
                 <div><label class="field-label" for="llm-resolution">外部任务相机</label><select id="llm-resolution" class="input"><option value="llm_rgb512">512 × 512（LLM）</option><option value="debug_rgb128">128 × 128（基线）</option></select></div>
                 <div><label class="field-label" for="wall-budget">实验总时限（秒）</label><input id="wall-budget" class="input" type="number" min="1" value="600"></div>
                 <div><label class="field-label" for="sim-budget">仿真时限（秒）</label><input id="sim-budget" class="input" type="number" min="1" value="120"></div>
+                <div style="grid-column:1/-1"><label class="field-label" for="observation-max-age">观测有效期（秒，仅实时模式）</label><input id="observation-max-age" class="input" type="number" min="0" step="any" value="60" required><p class="key-hint">可设 300、600 等；0 表示不限制时间。受控时序始终不限观测等待时间。重置、停止或新决策产生的观测版本变更仍会使旧指令失效；本设置与 API 请求超时、目标执行时限独立。</p></div>
                 <div style="grid-column:1/-1"><label class="field-label" for="context-mode">视觉反馈</label><select id="context-mode" class="input"><option value="current">当前双相机 · 基线</option><option value="paired">前后双相机 · 对照上次动作</option></select><p class="key-hint">前后模式增加上次动作前的画面与本体状态，供模型比较执行变化。独立评分仅供人类查看。</p></div>
               </div>
               <label class="key-hint" style="display:block;margin-top:10px"><input id="reset-before-start" type="checkbox" checked> 开始新实验时重置场景</label>
@@ -252,7 +253,9 @@
       return {timeout_seconds: Number($('request-timeout').value), reasoning_effort: $('reasoning-effort').value};
     }
     function environmentSettings() {
-      return {llm_control: $('llm-control').value, observation_profile: $('llm-resolution').value};
+      const maxAge = Number($('observation-max-age').value);
+      if ($('observation-max-age').value.trim() === '' || !Number.isFinite(maxAge) || maxAge < 0) throw new Error('观测有效期必须为非负有限秒数；0 表示不限时间');
+      return {llm_control: $('llm-control').value, observation_profile: $('llm-resolution').value, observation_max_age_seconds: maxAge};
     }
     function selectedModel() { return ui.modelSelect.value === '__custom__' ? ui.model.value.trim() : ui.modelSelect.value; }
     function selectedCredentials() {
@@ -421,7 +424,7 @@
       const configLocked = pending || configBusy || running || inFlight;
       ['backend-select','robosuite-task','libero-suite','libero-task','libero-init','robot-select','layout-select','task-select','timing-select','apply-environment','demo-preset','agent-select','local-model'].forEach(id => { $(id).disabled = configLocked || !ready; });
       ui.start.disabled = pending || configBusy || !ready || running || inFlight || moving;
-      ['request-timeout','reasoning-effort','llm-control','llm-resolution','wall-budget','sim-budget','reset-before-start','context-mode'].forEach(id => { $(id).disabled = configLocked; });
+      ['request-timeout','reasoning-effort','llm-control','llm-resolution','wall-budget','sim-budget','reset-before-start','context-mode','observation-max-age'].forEach(id => { $(id).disabled = configLocked; });
       ['text','vision','action'].forEach(stage => { $('diagnose-' + stage).disabled = pending || configBusy || !ready || running || inFlight || moving; });
       ui.stop.disabled = pending || !connected || (!running && !moving);
       ui.step.disabled = !cloud || pending || configBusy || !ready || inFlight || moving || (running && !paused);
@@ -454,6 +457,7 @@
       if (!state) {
         if (data.credential_source === 'codex') ui.source.value = 'codex';
         $('context-mode').value = data.context_mode || 'current';
+        $('observation-max-age').value = String(data.observation_max_age_seconds ?? 60);
         $('backend-select').value = data.backend || 'mujoco';
         if (data.backend === 'libero') {
           $('libero-suite').value = data.environment.suite;
@@ -710,13 +714,15 @@
     });
     $('libero-suite').addEventListener('change', () => loadLiberoTasks());
     $('apply-environment').addEventListener('click', async () => {
+      let settings;
+      try { settings = environmentSettings(); } catch (error) { showError(error); return; }
       const result = await perform('/api/configure', {
         backend: $('backend-select').value,
         libero_suite: $('libero-suite').value, libero_task_id: Number($('libero-task').value),
         init_state_id: Number($('libero-init').value),
         robot: $('robot-select').value, scene: $('layout-select').value,
         task_id: $('backend-select').value === 'robosuite' ? $('robosuite-task').value : $('task-select').value, timing: $('timing-select').value,
-        seed: Number($('scene-seed').value), ...environmentSettings()
+        seed: Number($('scene-seed').value), ...settings
       }, '实验环境已重置。');
       await refreshState();
       if (result && result.task_instruction) ui.task.value = result.task_instruction;

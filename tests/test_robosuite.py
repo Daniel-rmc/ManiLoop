@@ -246,3 +246,136 @@ def test_worker_horizon_and_success_stop_without_extra_step():
     assert runtime.success
     runtime.step([0.0] * 7)
     assert len(calls) == 2
+
+
+@pytest.mark.parametrize('context', ['current', 'paired'])
+def test_rejected_action_does_not_invalidate_next_inflight_snapshot(env, tmp_path, context):
+    from concurrent.futures import Future
+    class DeferredPool:
+        def __init__(self):
+            self.requests = []
+        def submit(self, fn, task, observation, images, history, geometry):
+            future = Future()
+            self.requests.append((future, copy.deepcopy(observation), copy.deepcopy(history)))
+            return future
+        def shutdown(self, **kwargs):
+            for future, _, _ in self.requests:
+                future.cancel()
+    class LocalPolicy:
+        last_latency, last_usage = 0.0, {}
+        request_options = {'transport': 'offline_fixture'}
+        def decide(self, *args):
+            raise AssertionError('Deferred fixture never calls a model')
+    runner = EpisodeRunner(env, output=tmp_path)
+    runner.pool.shutdown(wait=True)
+    runner.pool = pool = DeferredPool()
+    runner.policy = LocalPolicy()
+    runner.context_mode = context
+    try:
+        runner.begin_episode('offline snapshot lifecycle check', 3)
+        runner.tick()
+        first, observation, _ = pool.requests[0]
+        first.set_result(dict(kind='move', observation_id=observation['observation_id'],
+                              delta_position=[.06, 0, 0], delta_rotation=[0, 0, 0],
+                              explanation='Deliberately exceed the limit; fixture only'))
+        runner.tick()
+        # Allow either immediate or next-tick scheduling, but never a stale snapshot.
+        if len(pool.requests) == 1:
+            runner.tick()
+        assert len(pool.requests) == 2
+        second, snapshot, history = pool.requests[1]
+        runner.tick()  # in-flight response is still pending
+        assert env.validate_snapshot(snapshot, float('inf'))[0], env.feedback
+        assert runner.transition_before is None
+        assert any(row.get('feedback', {}).get('status') == 'rejected' for row in history)
+        transitions = [i for i, row in enumerate(runner.events) if row['type'] == 'transition']
+        requests = [i for i, row in enumerate(runner.events) if row['type'] == 'request']
+        assert transitions[-1] < requests[-1]
+        assert not env.worker.actions and env.simulation_time == 0
+        second.set_result(dict(kind='wait', observation_id=snapshot['observation_id'],
+                               explanation='Valid follow-up; fixture only'))
+        runner.tick()
+        assert env.feedback['status'] == 'accepted', env.feedback
+        env.step()
+        assert len(env.worker.actions) == 1
+    finally:
+        runner.close()
+
+
+@pytest.mark.parametrize('timing,limit,valid', [
+    ('controlled', .01, True), ('realtime', 60, False),
+    ('realtime', 300, True), ('realtime', 0, True),
+])
+def test_observation_age_settings_do_not_disable_snapshot_identity(env, tmp_path, timing, limit, valid):
+    from maniloop.runtime.settings import effective_observation_max_age
+    runner = EpisodeRunner(env, output=tmp_path, timing=timing, observation_max_age_seconds=limit)
+    try:
+        packet, _ = env.observe()
+        env._snapshot['timestamp_monotonic'] -= 90
+        allowed = effective_observation_max_age(runner.timing, runner.max_age)
+        assert env.validate_snapshot(packet, allowed)[0] is valid
+        runner.publish(render=False)
+        assert runner.state['observation_max_age_seconds'] == limit
+        effective = limit if timing == 'realtime' and limit else None
+        assert runner.state['effective_observation_max_age_seconds'] == effective
+        env.reset(0)
+        assert not env.validate_snapshot(packet, allowed)[0]
+        packet, _ = env.observe()
+        env.hold()
+        assert not env.validate_snapshot(packet, float('inf'))[0]
+    finally:
+        runner.close()
+
+
+@pytest.mark.parametrize('value', [-1, True, '300', float('nan'), float('inf')])
+def test_invalid_observation_age_fails_before_start(env, tmp_path, value):
+    from maniloop.runtime.settings import validate_observation_max_age
+    with pytest.raises(ValueError, match='观测有效期'):
+        validate_observation_max_age(value)
+    with pytest.raises(ValueError, match='观测有效期'):
+        Experiment(backend='robosuite', task='Lift', observation_max_age_seconds=value).validate()
+    runner = EpisodeRunner(env, output=tmp_path)
+    try:
+        with pytest.raises(ValueError, match='观测有效期'):
+            runner.command('start', dict(task='offline fixture', agent='mock_vla',
+                                        observation_max_age_seconds=value))
+        assert not runner.running and runner.api_calls == 0
+    finally:
+        runner.close()
+
+
+def test_age_setting_roundtrips_experiment_toml(tmp_path):
+    path = tmp_path / 'suite.toml'
+    path.write_text('[experiment]\nbackend="robosuite"\ntask="Lift"\n'
+                    '[matrix]\nobservation_max_age_seconds=[0,300]\nseed=[0]\n')
+    cases = load_suite(path)
+    assert [case.observation_max_age_seconds for case in cases] == [0, 300]
+
+
+def test_workspace_age_setting_reaches_manifest_without_model_request(env, monkeypatch, tmp_path):
+    import maniloop.runtime.runner as runtime
+    monkeypatch.setattr(runtime, 'create_environment',
+                        lambda **kwargs: adapter.RobosuiteEnvironment(render=False))
+    runner = EpisodeRunner(env, output=tmp_path)
+    try:
+        runner.command('configure', dict(backend='robosuite', task_id='Lift',
+                                        observation_max_age_seconds=300, timing='realtime'))
+        assert runner.max_age == 300
+        runner.command('start', dict(task='offline configuration check', agent='mock_vla',
+                                    observation_max_age_seconds=0))
+        assert runner.max_age == 0 and runner.api_calls == 0
+        policy = runner.manifest['policy']
+        assert policy['configured_observation_max_age_seconds'] == 0
+        assert policy['observation_max_age'] is None
+        assert policy['snapshot_identity_validation'] == 'always'
+    finally:
+        runner.close()
+
+
+def test_cli_passes_observation_age_to_demo(monkeypatch):
+    from maniloop.cli import main
+    import maniloop.ui.server as server
+    seen = []
+    monkeypatch.setattr(server, 'serve', lambda args: seen.append(args.observation_max_age_seconds))
+    main(['demo', '--backend', 'robosuite', '--task', 'Lift', '--observation-max-age-seconds', '300'])
+    assert seen == [300]

@@ -47,7 +47,9 @@ def describe_run(runner):
         "feedback_protocol": "sensor_transition_v1" if runner.context_mode == "paired" else "action_feedback_v1",
         "initial_cadence": "single_step" if runner.single_step else "continuous",
         "human_pause_budget": "wall_clock_includes_pauses",
-        "observation_max_age": runner.max_age if runner.timing == "realtime" else None,
+        "observation_max_age": runner.max_age if runner.timing == "realtime" and runner.max_age > 0 else None,
+        "configured_observation_max_age_seconds": runner.max_age,
+        "snapshot_identity_validation": "always",
         "endpoint": (
             runner.credentials["base_url"]
             if runner.policy_kind == "llm_cloud"

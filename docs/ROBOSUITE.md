@@ -137,3 +137,28 @@ RGB-only 观测不提供 `query_depth`，并用 enum 约束上述两个字段；
 保留浏览器中选择的 TOML / API Key，先点击“3 · 动作格式诊断”。该入口只请求
 一个 wait 格式动作，不执行机器人操作。诊断成功后再使用单步验证真实控制。
 诊断失败不代表仿真场景损坏；记录脱敏错误，不公开 TOML 中的凭据或服务响应原文。
+
+## 观测有效期与旧观测拒绝
+
+工作台新增“观测有效期（秒，仅实时模式）”，在开始实验或应用场景配置时生效。
+默认 60 秒（兼容既有 `ARX_OBSERVATION_MAX_AGE` 环境变量）；可设 300、600 等。
+设为 **0** 仅关闭观测的墙钟时间限制，不关闭重置 / 停止 / 决策版本检查，
+也不关闭画面变化检查。受控时序在推理期间冻结物理，始终不因等待时长拒绝观测。
+API 请求超时、实验总时限和目标伺服执行时限是不同设置，不受这个参数影响。
+
+```bash
+python -m maniloop demo --backend robosuite --task Lift --port 8870 \
+  --observation-max-age-seconds 300
+```
+
+批量实验的 TOML 可以在 `[experiment]` 中设置
+`observation_max_age_seconds = 300`，也可将它作为 `[matrix]` 的实验轴。
+这是 ManiLoop 实验参数，不是供应商连接 TOML 的 API 参数。
+记录同时保存配置值与实际生效的时间限制；不限时间时有效限制写为 null。
+
+`Observation expired` 表示等待超时，可通过有效期参数调整。
+`Observation belongs to an old reset or decision` 表示观测版本失效，
+不是“超时设得太小”，不能通过放大秒数来恢复旧指令。
+运行器会在发起新请求之前完成上一动作的后观测记录，避免被拒绝的动作
+在新请求已经发出后再覆盖观测编号。旧错误场景已有延迟响应回归，
+包含 current / paired 模式及真实 robosuite 的 128 / 512 像素验证。
