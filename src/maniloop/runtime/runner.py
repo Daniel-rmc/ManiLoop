@@ -353,7 +353,7 @@ class EpisodeRunner:
             replacement = create_environment(
                 backend=backend,
                 render=self.sim.render_enabled,
-                robot=payload.get("robot", "panda" if backend == "libero" else "arx5"),
+                robot=payload.get("robot", "panda" if backend in ("libero", "robosuite") else "arx5"),
                 scene=payload.get("scene", "tabletop_a"),
                 task=payload.get("task_id", "pick_place"),
                 libero_suite=payload.get("libero_suite", "libero_spatial"),
@@ -371,7 +371,7 @@ class EpisodeRunner:
             self.sim.close()
             self.sim = replacement
             self.timing = timing
-            if self.sim.backend == "libero":
+            if self.sim.backend in ("libero", "robosuite"):
                 self.sim.set_llm_control(payload.get("llm_control", "osc_step"))
             self.chunk = None
             self._physics_remainder = 0.0
@@ -454,7 +454,7 @@ class EpisodeRunner:
                 self.begin_episode(task, max_steps)
                 return
             if payload.get("agent") == "mock_vla":
-                if self.sim.backend == "libero":
+                if self.sim.backend in ("libero", "robosuite"):
                     self.sim.set_llm_control("osc_step")
                 self.close_policy()
                 self.policy = MockVLAAgent()
@@ -508,6 +508,21 @@ class EpisodeRunner:
                     self.sim = replacement
                     self.sim.reset(self.seed)
                     self.event("info", "相机配置已切换，场景从所选初始化重新开始")
+                self.sim.set_llm_control(mode)
+            if not diagnostic and self.sim.backend == "robosuite":
+                info = self.sim.describe()
+                profile = payload.get("observation_profile", info["observation_profile"])
+                mode = payload.get("llm_control", self.sim.llm_control)
+                if mode not in ("osc_step", "tcp_target_servo_v2"):
+                    raise ValueError("未知 LLM 控制模式")
+                if profile != info["observation_profile"]:
+                    replacement = create_environment(backend="robosuite", task=info["task"],
+                        render=self.sim.render_enabled, observation_profile=profile)
+                    self.sim.close()
+                    self.sim = replacement
+                    self.sim.reset(self.seed)
+                    self._physics_remainder = 0.0
+                    self.event("info", "相机配置已切换，robosuite 场景重新开始")
                 self.sim.set_llm_control(mode)
             if not diagnostic and payload.get("reset_on_start", False):
                 self.sim.reset(self.seed)
@@ -653,7 +668,7 @@ class EpisodeRunner:
                 if self.chunk.completed:
                     self.chunk = None
                     self.phase = "executing"
-                    if self.sim.backend == "libero":
+                    if self.sim.backend in ("libero", "robosuite"):
                         break
             self.sim.step()
             if self.running and self.sim.terminated:

@@ -21,7 +21,7 @@ def main(argv=None):
     smoke = commands.add_parser("smoke", help="Render cameras without a model request")
     batch = commands.add_parser("benchmark", help="Fixed-policy episode or TOML matrix")
     for p in (listing, demo, smoke, batch):
-        p.add_argument("--backend", choices=["mujoco", "libero"], default="mujoco")
+        p.add_argument("--backend", choices=["mujoco", "libero", "robosuite"], default="mujoco")
         p.add_argument("--libero-suite", default="libero_spatial")
         p.add_argument("--libero-task-id", type=int, default=0)
         p.add_argument("--init-state-id", type=int, default=0)
@@ -30,7 +30,7 @@ def main(argv=None):
         p.add_argument(
             "--scene", choices=["tabletop_a", "tabletop_b"], default="tabletop_a"
         )
-        p.add_argument("--task", choices=["pick_place", "push"], default="pick_place")
+        p.add_argument("--task", default="pick_place", help="Task ID; validated by the selected backend")
         p.add_argument(
             "--output",
             type=Path,
@@ -76,6 +76,10 @@ def main(argv=None):
         from maniloop.backends.libero.transport import list_tasks
 
         print(json.dumps(list_tasks(args.libero_suite), ensure_ascii=False, indent=2))
+    elif args.command == "list" and args.backend == "robosuite":
+        from maniloop.backends.robosuite.catalog import list_tasks
+        print(json.dumps({"backend": "robosuite", "tasks": list_tasks(),
+                          "setup": "python scripts/setup_robosuite.py"}, ensure_ascii=False, indent=2))
     elif args.command == "list":
         print(
             json.dumps(
@@ -97,7 +101,7 @@ def main(argv=None):
     elif args.command == "smoke":
         sim = create_environment(**options_from_args(args))
         try:
-            sim.step(2 if args.backend == "libero" else 500)
+            sim.step(2 if args.backend in ("libero", "robosuite") else 500)
             observation, images = sim.observe()
             destination = (
                 args.output

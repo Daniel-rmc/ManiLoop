@@ -35,6 +35,12 @@ def create_environment(
             root=libero_root,
             observation_profile=observation_profile,
         )
+    if backend == "robosuite":
+        if robot not in (None, "panda"):
+            raise ValueError("Initial robosuite integration supports Panda only")
+        from .robosuite import RobosuiteEnvironment
+        return RobosuiteEnvironment(task=task, render=render,
+                                   observation_profile=observation_profile)
     raise ValueError("Unknown environment backend")
 
 

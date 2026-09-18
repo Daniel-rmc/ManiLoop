@@ -64,6 +64,18 @@ def describe_run(runner):
         policy["controller_config"] = info["controller_config"]
         policy["runtime_dependencies"] = info["runtime_dependencies"]
         policy["camera_preprocessing"] = info["camera_preprocessing"]
+    if sim.backend == "robosuite":
+        info = sim.describe()
+        policy["representation"] = info["protocol"]
+        policy["action_interface"] = (
+            "robosuite_osc_chunk_v1" if runner.policy_kind == "mock_vla"
+            else "robosuite_tcp_target_servo_v1" if info.get("llm_control") == "tcp_target_servo_v2"
+            else "robosuite_tcp_to_osc_v1")
+        for key in ("controller_config", "runtime_dependencies", "camera_preprocessing",
+                    "upstream_revision", "upstream_source_sha256", "controller_overrides"):
+            policy[key] = info[key]
+        if info.get("llm_control") == "tcp_target_servo_v2":
+            policy["target_controller"] = info["target_controller"]
     if runner.policy_kind == "lerobot":
         policy["learned_policy"] = runner.policy.metadata
         policy["action_interface"] = "lerobot_select_action_osc_20hz_v1"

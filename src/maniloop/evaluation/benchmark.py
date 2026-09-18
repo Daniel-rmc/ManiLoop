@@ -40,7 +40,7 @@ class Experiment:
     max_wall_seconds: float = 600.0
 
     def validate(self):
-        if self.backend not in ("mujoco", "libero"):
+        if self.backend not in ("mujoco", "libero", "robosuite"):
             raise ValueError("Unknown backend")
         if self.backend == "mujoco":
             if self.robot not in (None, "arx5", "panda") or self.scene not in (
@@ -50,6 +50,13 @@ class Experiment:
                 raise ValueError("Unknown robot or scene")
             if self.task not in ("pick_place", "push"):
                 raise ValueError("Unknown task")
+        elif self.backend == "robosuite":
+            from maniloop.backends.robosuite.catalog import validate_task
+            validate_task(self.task)
+            if self.robot not in (None, "panda"):
+                raise ValueError("robosuite requires Panda")
+            if self.scene != "tabletop_a":
+                raise ValueError("robosuite uses the upstream task scene, not a custom tabletop layout")
         else:
             from maniloop.backends.libero.transport import SUITES
 
