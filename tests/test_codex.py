@@ -12,7 +12,7 @@ from maniloop.providers.codex import (
     CodexPolicy, DISABLED_CODE_MODE_NOTICE, DISABLED_FEATURES, codex_environment, codex_version, login_status,
     resolve_codex_executable,
 )
-from maniloop.providers.responses import ACTION_SCHEMA, PolicyError
+from maniloop.providers.responses import action_schema_for, PolicyError
 
 
 def fake_path(*parts):
@@ -124,7 +124,7 @@ class CodexTests(unittest.TestCase):
                              {"sensor-0.jpg", "sensor-1.jpg", "response-schema.json"})
             self.assertEqual((directory / "sensor-0.jpg").read_bytes(), self.images["external"])
             self.assertEqual((directory / "sensor-1.jpg").read_bytes(), self.images["wrist"])
-            self.assertEqual(json.loads((directory / "response-schema.json").read_text(encoding="utf-8")), ACTION_SCHEMA)
+            self.assertEqual(json.loads((directory / "response-schema.json").read_text(encoding="utf-8")), action_schema_for(self.observation, self.images))
             self.assertEqual(timeout, 120)
             return events(json.dumps(action())), ""
 

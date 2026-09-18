@@ -121,3 +121,19 @@ macOS 已验证普通 Python 的离屏渲染，不要照搬 Linux 的 EGL 设置
 
 上游项目：[robosuite](https://github.com/ARISE-Initiative/robosuite)。
 控制器说明：[官方文档](https://robosuite.ai/docs/modules/controllers.html)。
+
+## API 动作中的 camera / pixel 报错
+
+`Unused camera/pixel fields must be empty and [0,0].` 是本地动作响应校验错误，
+不是 TOML 解析或 API Key 认证报错。`camera` 和 `pixel` 只用于 `query_depth`，
+不是用来说明模型看了哪张图，也不是抓取目标在图像中的位置。
+对于 move / gripper / wait / done，这两个输出字段必须为 `""` 和 `[0, 0]`。
+
+Responses 请求现在按本次观测声明的能力生成 Schema：robosuite / LIBERO 的
+RGB-only 观测不提供 `query_depth`，并用 enum 约束上述两个字段；内置任务在明确
+提供外部相机深度时保留查询能力。切换后端不会修改全局 Schema。
+兼容服务若未遵守 Schema，本地校验仍拒绝非法输出，不删除校验、不自动重试付费请求。
+
+保留浏览器中选择的 TOML / API Key，先点击“3 · 动作格式诊断”。该入口只请求
+一个 wait 格式动作，不执行机器人操作。诊断成功后再使用单步验证真实控制。
+诊断失败不代表仿真场景损坏；记录脱敏错误，不公开 TOML 中的凭据或服务响应原文。

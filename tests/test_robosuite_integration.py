@@ -240,3 +240,33 @@ finally:
         [python, '-c', code, str(root / 'src/maniloop/backends/robosuite'), profile, task],
         cwd=root, text=True, capture_output=True, timeout=120)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_real_rgb_observation_produces_rgb_only_api_schema(monkeypatch):
+    """Real cameras plus a fake SDK response: not a live provider/model test."""
+    import json
+    from unittest.mock import MagicMock
+    from maniloop.providers import responses
+    client = MagicMock()
+    monkeypatch.setattr(responses, 'OpenAI', lambda **_: client)
+    env = RobosuiteEnvironment(task='PickPlaceCan', observation_profile='llm_rgb512')
+    policy = responses.GPTPolicy(api_key='offline-integration-key')
+    try:
+        observation, images = env.observe()
+        SensorRepresentation().encode(observation)
+        answer = dict(observation_id=observation['observation_id'], kind='wait',
+                      delta_position=[0, 0, 0], delta_rotation=[0, 0, 0],
+                      gripper_opening=0, camera='', pixel=[0, 0], explanation='Offline fixture only.')
+        client.responses.create.return_value = dict(id='fixture-response', status='completed',
+            error=None, incomplete_details=None, output=[dict(type='message', role='assistant',
+            status='completed', content=[dict(type='output_text', text=json.dumps(answer))])])
+        result = policy.diagnose('action', env.instruction, observation, images)
+        schema = client.responses.create.call_args.kwargs['text']['format']['schema']
+        assert 'query_depth' not in schema['properties']['kind']['enum']
+        assert schema['properties']['camera']['enum'] == ['']
+        assert schema['properties']['pixel']['items']['enum'] == [0]
+        assert result['executed'] is False and env.simulation_time == 0
+        client.responses.create.assert_called_once()
+    finally:
+        policy.close()
+        env.close()

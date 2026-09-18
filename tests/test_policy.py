@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 from openai import APITimeoutError, AuthenticationError, OpenAI as SDKOpenAI
 
 from arx5_demo.policy import ACTION_SCHEMA, DEFAULT_MODEL, GPTPolicy, PolicyError
+from maniloop.providers.responses import action_schema_for
 
 
 def action(**changes):
@@ -61,7 +62,7 @@ class PolicyTests(unittest.TestCase):
         request = self.client.responses.create.call_args.kwargs
         self.assertEqual(request["model"], DEFAULT_MODEL)
         self.assertFalse(request["store"])
-        self.assertEqual(request["text"]["format"], {"type": "json_schema", "name": "robot_action", "strict": True, "schema": ACTION_SCHEMA})
+        self.assertEqual(request["text"]["format"], {"type": "json_schema", "name": "robot_action", "strict": True, "schema": action_schema_for(self.observation, self.images)})
         content = request["input"][0]["content"]
         self.assertEqual(json.loads(content[0]["text"])["observation"], self.observation)
         image_parts = [c for c in content if c["type"] == "input_image"]
@@ -185,6 +186,7 @@ class PolicyTests(unittest.TestCase):
         self.assertNotIn('offline-test-key',str(error.exception))
 
     def test_depth_query_is_sensor_only(self):
+        self.observation["geometry_queries"] = {"depth_available": True}
         query = action(kind="query_depth", delta_position=[0, 0, 0], camera="external", pixel=[123, 88])
         self.client.responses.create.return_value = response(query)
         self.assertEqual(self.decide(), query)
