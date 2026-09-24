@@ -38,6 +38,25 @@ export MANILOOP_LIBERO_ROOT=/path/to/LIBERO
 
 默认从当前工作目录寻找 `.venv-libero` 和 `.external/LIBERO`。源码必须是安装脚本固定的 Git 版本；不支持把任意版本冒充同一实验协议。
 
+## 在另一个 Git 工作区复用已安装的环境
+
+新建 worktree 不会自动带上被 Git 忽略的虚拟环境和资产目录。若原工作区已安装，
+可在新工作区根目录执行（将路径换成原工作区）：
+
+```bash
+python scripts/setup_libero.py --reuse-from ../ManiLoop
+python -m maniloop list --backend libero
+python -m maniloop smoke --backend libero
+```
+
+该命令校验固定源码版本与 Python 3.10 / MuJoCo 2.3.7 / robosuite 1.4.0，
+只为 `.venv-libero` 和 `.external/LIBERO` 创建本地目录链接，不下载、不调用 pip。
+可重复运行；已有目录、文件或其他链接不会被覆盖。两个目标都检查通过后才建立链接。
+原工作区必须保留且不能随意移动；环境更新应由原工作区统一管理。
+普通安装命令遇到共享链接会停止，避免误改另一个工作区的依赖。
+系统不允许目录链接时，使用上文的两个环境变量指定 Python 和 LIBERO 路径。
+链接建立后，已启动的服务在下一次加载目录/场景时即可找到运行时，无需更改 API 配置。
+
 ## 选择任务与批量运行
 
 网页支持切换环境后端、官方任务集、任务编号和初始化编号。点击「应用并重置场景」后使用官方任务指令；首次加载可能需要等待数十秒。机器人固定为 Panda。换成 ARX5 属于新的跨具身体任务变体，需要另行验证，不能继续标作原版 LIBERO。

@@ -36,7 +36,8 @@ artifacts/
 
 # Optional upstream benchmark and isolated simulation runtime
 .external/
-.venv-libero/
+# May be a directory OR a local link to another worktree.
+/.venv-libero
 .runtime/
 
 # Optional local learned-policy runtime and model snapshots
@@ -58,3 +59,6 @@ artifacts/
 
 # Local handoff notes; not public project documentation.
 /docs/TASK_EXPANSION_PROGRESS.md
+
+# Shared inference runtime link (the models store is under ignored .runtime).
+.venv-vla

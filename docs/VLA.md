@@ -66,3 +66,33 @@ python -m maniloop demo --backend libero
 - 默认受控时序：等待推理时暂停物理。500 次决策表示最多 25 秒仿真时间，实际耗时取决于硬件和策略。决策预算、墙钟预算与官方成功判定分别记录。
 
 每次运行的 manifest 保存模型来源、版本、权重摘要、依赖、设备、预处理与时序；结果保存官方评分、推理次数和裁剪数量。已记录的单任务结果与 GPT-6 对比见 [模型对比与指标定义](RESULTS.md)。单个任务／初始化无法估计基准成功率，完成推理也不等于任务成功。
+
+## 独立开发工作区复用已有安装
+
+Git worktree 不会复制被忽略的运行环境与模型。LIBERO 场景可以打开，
+并不意味着 SmolVLA 的推理环境也已经配置：它们分别使用 `.venv-libero` 和 `.venv-vla`。
+
+原工作区已安装本地模型时，在新工作区根目录执行以下命令，无需重新下载：
+
+```bash
+python scripts/setup_vla.py --reuse-from ../ManiLoop
+# 同时检查已有的三个模型：
+python scripts/setup_vla.py --reuse-from ../ManiLoop \
+  --models smolvla-libero act-libero diffusion-libero
+```
+
+该命令检查 Python 和固定依赖、模型来源声明、模型家族、前后处理及其统计文件，
+以及 SmolVLA 的分词器文件，然后建立 `.venv-vla` 与 `.runtime/models` 的相对目录链接。
+它不会执行 pip 或下载，不覆盖已有目录；重复执行可重新校验。
+共享目录的原位置必须保留，勿移动或删除。普通安装模式发现共享路径会拒绝修改。
+不支持目录链接的平台可设置 `MANILOOP_VLA_PYTHON` 和 `MANILOOP_MODELS_ROOT`。
+
+路径检查不等于真实推理成功。补充的模型层集成检查会严格加载实际权重，
+使用真实 LIBERO 双相机观测并执行少量控制步；与纯仿真测试分开启用：
+
+```bash
+MANILOOP_TEST_VLA=1 python -m pytest tests/test_vla_integration.py -q
+```
+
+此检查需要上述三个模型全部准备好，运行时不下载或访问云端 API。
+少量动作验证用于发现安装、预处理、推理和执行链路问题，不作为任务成功率评测。
