@@ -168,9 +168,10 @@ class LiberoEnvironment:
             self._snapshot is None
             or observation.get("observation_id") != self._snapshot["observation_id"]
         ):
-            return False, "Observation belongs to an old reset or decision"
-        if time.monotonic() - self._snapshot["timestamp_monotonic"] > max_age:
-            return False, "Observation expired"
+            return False, "Observation belongs to an old reset or decision（观测版本已失效，不是时间超限）"
+        age = time.monotonic() - self._snapshot["timestamp_monotonic"]
+        if age > max_age:
+            return False, f"Observation expired（观测已等待 {age:.1f} 秒，时间上限 {max_age:g} 秒）"
         return True, "valid"
 
     def depth_query(self, action):
@@ -233,6 +234,18 @@ class LiberoEnvironment:
         except (ValueError, TypeError, KeyError) as exc:
             self.feedback = {"status": "rejected", "message": str(exc)}
         return dict(self.feedback)
+
+    def execute_manual(self, action, *, max_control_steps):
+        """Explicit human-only budget; policy execute() keeps its original limit."""
+        from dataclasses import replace
+        if type(max_control_steps) is not int or not 1 <= max_control_steps <= 200:
+            raise ValueError("Manual target budget must be 1–200 control steps")
+        result = self.execute(action)
+        if result["status"] == "accepted" and self._target is not None:
+            self._target.settings = replace(self._target.settings, max_steps=max_control_steps)
+            self.feedback["max_control_steps"] = max_control_steps
+            result = dict(self.feedback)
+        return result
 
     def stage_native(self, action):
         action.validate()

@@ -1,0 +1,15 @@
+# Offline interface checks only. No learned policy or model API is used.
+[experiment]
+backend = "robocasa"
+robot = "panda_omron"
+robocasa_layout = 11
+robocasa_style = 14
+agent = "mock_vla"
+timing = "controlled"
+max_calls = 2
+max_sim_seconds = 2
+max_wall_seconds = 120
+
+[matrix]
+task = ["OpenDrawer", "CloseDrawer", "OpenCabinet", "CoffeeSetupMug"]
+seed = [0]

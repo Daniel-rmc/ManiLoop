@@ -97,3 +97,21 @@ ACT / Diffusion 是非语言条件的视觉模仿基线，SmolVLA 是语言条�
 ## 云端 LLM 目标闭环
 
 GPT / API 策略支持文字、图像、结构化动作诊断、`llm_rgb512` 观测和 `controllers/target.py` 的固定目标伺服。`EpisodeRunner` 记录执行终态反馈，并支持 current / paired 上下文、单步、暂停与连续运行。决策回看保存前后帧；可选完整录制保存初帧和每个原生控制步，校验后导出双相机 MP4。使用方法见 [GPT6_DEMO.md](GPT6_DEMO.md) 和 [EPISODE_RECORDING.md](EPISODE_RECORDING.md)。
+
+## 外部操作任务：robosuite
+
+`backends/robosuite` 是独立 Python 3.11 worker，使用固定 robosuite 1.5.2 / MuJoCo 3.3.7。
+主进程仍只依赖 Environment 协议，CLI 和网页共用 EpisodeRunner；LIBERO 不迁移。
+首版使用 Panda、显式 world-frame OSC 与一致的末端 site 姿态；只有 step 推进物理。
+RGB 在观察时从当前状态显式渲染，评分走独立操作，不向模型返回物体真值或评分。
+任务目录独立于仿真安装，可供 CLI 与网页读取；实际初始化和运行依赖由 worker 检查。
+完整使用说明与支持边界见 [ROBOSUITE.md](ROBOSUITE.md)。
+
+## 外部厨房任务：RoboCasa
+
+`backends/robocasa` 使用独立 Python3.11 / MuJoCo3.3.1 与固定 RoboCasa、配套 robosuite 源码。
+复用机械臂目标队列与通信模式，不迁移 LIBERO、不混装依赖。上游完整动作12维，
+逻辑 world OSC 七维仅是机械臂子接口；worker 依据机器人 base 姿态转换并通过上游 body-part 接口组装，
+底座速度/躯干增量保持0，使用 arm 模式。独立评分与 sensor-only 边界保留。
+重置后读取当前 episode 语言；布局、风格、源码摘要、动作子接口与实际指令进入记录。
+现阶段默认四任务接口可运行，导航和自主任务成功不属于接入结论。详见 [ROBOCASA.md](ROBOCASA.md)。

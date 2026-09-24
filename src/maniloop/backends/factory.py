@@ -14,6 +14,8 @@ def create_environment(
     libero_python=None,
     libero_root=None,
     observation_profile="debug_rgb128",
+    robocasa_layout=11,
+    robocasa_style=14,
 ):
     if backend == "mujoco":
         from maniloop.simulation.environment import RobotSim
@@ -35,6 +37,18 @@ def create_environment(
             root=libero_root,
             observation_profile=observation_profile,
         )
+    if backend == "robosuite":
+        if robot not in (None, "panda"):
+            raise ValueError("Initial robosuite integration supports Panda only")
+        from .robosuite import RobosuiteEnvironment
+        return RobosuiteEnvironment(task=task, render=render,
+                                   observation_profile=observation_profile)
+    if backend == "robocasa":
+        if robot not in (None, "panda_omron"):
+            raise ValueError("RoboCasa integration requires PandaOmron, not the fixed-base Panda")
+        from .robocasa import RobocasaEnvironment
+        return RobocasaEnvironment(task=task, render=render,
+            observation_profile=observation_profile, layout=robocasa_layout, style=robocasa_style)
     raise ValueError("Unknown environment backend")
 
 
@@ -48,5 +62,7 @@ def options_from_args(args):
         "libero_task_id",
         "init_state_id",
         "observation_profile",
+        "robocasa_layout",
+        "robocasa_style",
     )
     return {key: getattr(args, key) for key in keys if hasattr(args, key)}

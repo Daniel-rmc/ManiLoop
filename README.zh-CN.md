@@ -206,3 +206,46 @@ python -m maniloop smoke
 ## 许可证
 
 ManiLoop 采用 [MIT 许可证](LICENSE)。ARX X5 资产保留 MIT，Panda 资产保留 Apache-2.0。LIBERO、LeRobot 和下载的检查点分别保留自己的许可证。详见[第三方声明](THIRD_PARTY_NOTICES.md)。
+
+## 可选 robosuite 操作任务
+
+使用独立环境接入 Panda 的 Lift、Stack、PickPlaceCan、Door、NutAssemblySquare，
+不改变已有 LIBERO。复用当前工作台的手动控制、模型入口与决策回看。
+安装、控制协议和限制见 [robosuite 指南](docs/ROBOSUITE.md)。
+
+```bash
+python scripts/setup_robosuite.py
+python -m maniloop demo --backend robosuite --task Lift --port 8870
+```
+
+任务已接入不代表模型已完成任务。现有 LIBERO 权重仍只用于 LIBERO；此后端尚不包含 RoboCasa。
+
+## 可选 RoboCasa 厨房任务
+
+新增 `OpenDrawer`、`CloseDrawer`、`OpenCabinet`、`CoffeeSetupMug` 四项厨房任务，
+使用独立的 PandaOmron 后端。首版控制机械臂和夹爪，底座速度与躯干增量保持0，不包含导航。
+
+```bash
+python scripts/setup_robocasa.py --download-assets
+python -m maniloop demo --backend robocasa --task OpenDrawer --port 8872
+```
+
+继续使用同一个工作台查看图像、手动控制、接入模型与回看决策。安装器固定两个上游源码版本，
+将依赖隔离到新环境，不改变现有 robosuite / LIBERO。五组必需资产解压约11.1 GB，另需源码和运行环境空间。
+四任务已在默认布局11/风格14/种子0完成真实接口检查；这不代表模型成功，也不保证其他场景
+在底座保持时一定可完成。详细说明见 [RoboCasa 安装与控制指南](docs/ROBOCASA.md)。
+
+
+### 工作台分区
+
+手动控制、模型运行和场景设置分区显示，相机与动作按钮并排。切换分区保留当前表单；相机布局切换不推进物理。参见[工作台使用说明](docs/WORKSPACE.md)和[六维手动控制](docs/MANUAL_CONTROL.md)。
+
+### Jev 文本指令
+
+在模型面板选择“Jev · 文本原语控制”，将每行一个明确指令映射为有界的机械臂或夹爪动作。
+TypeSafe 专用密钥可直接在工作台填写，只保存在服务内存，与 OpenAI 连接分开。
+保存密钥不调用模型；连接诊断和执行会调用 TypeSafe API。
+
+Jev 只接收文字和机器人本体状态，不读取相机或物体状态。当前支持移动10毫米、
+绕工具轴旋转5度等原语，不提供自主视觉定位或抓放；指令序列结束也不代表任务成功。
+安装、示例和验证范围见 [Jev 使用说明](docs/JEV.md)。

@@ -40,3 +40,23 @@ licenses; ManiLoop's MIT license does not replace them.
 ## Optional learned-policy checkpoints
 
 The optional LeRobot integration uses the Apache-2.0 LeRobot package and downloads public model snapshots separately. No learned weights are redistributed in this repository. The selected `lerobot/smolvla_libero`, `Deepkar/libero-test-act` and `ttotmoon/diffusion-libero-v3` model cards declare Apache-2.0; preserve upstream notices when redistributing snapshots. The latter two are community checkpoints, not official LeRobot releases. Sources and pinned revisions are in `src/maniloop/agents/lerobot/catalog.py` and `docs/VLA.md`.
+
+## Optional robosuite runtime
+
+The optional integration installs robosuite 1.5.2 (MIT) and its assets from the
+upstream release, separately from the existing LIBERO runtime. No robosuite
+assets are vendored by this integration. Preserve upstream code and asset notices.
+Source: https://github.com/ARISE-Initiative/robosuite
+Dependency versions are listed in requirements/robosuite.txt and the local installation snapshot.
+
+## Optional RoboCasa runtime and kitchen assets
+
+RoboCasa 1.0.1 source (MIT, Copyright 2026 the RoboCasa Team) and the paired
+robosuite source are downloaded from pinned official commit archives into an optional installation.
+RoboCasa retains its MuJoCo-related Apache-2.0 notice. Kitchen/object/texture assets
+come from the upstream asset registry; retain individual upstream asset licenses
+and attribution requirements. The source-code MIT license is not a blanket relicensing
+of third-party assets. Neither these assets nor their downloads are bundled in ManiLoop.
+
+Sources: https://github.com/robocasa/robocasa ; https://github.com/ARISE-Initiative/robosuite
+The installation records archive checksums; per-run manifests identify both source implementations.

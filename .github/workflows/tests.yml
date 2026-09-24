@@ -18,6 +18,10 @@ jobs:
           cache: pip
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m pytest -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test tests/workspace_manual.test.mjs
   render:
     runs-on: ubuntu-latest
     env:

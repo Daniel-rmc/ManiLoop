@@ -9,6 +9,7 @@ https://developers.openai.com/api/docs/models
 from __future__ import annotations
 
 import base64
+import copy
 import json
 import math
 import os
@@ -70,6 +71,29 @@ ACTION_SCHEMA = {
     "additionalProperties": False,
 }
 
+
+def action_schema_for(observation: dict, image_names) -> dict:
+    """Advertise only operations supported by this sensor snapshot.
+
+    RGB-only backends keep the existing wire shape, but constrain unused depth
+    fields in the schema rather than relying only on a prose instruction.
+    Return an independent copy so switching environments cannot change defaults.
+    """
+    schema = copy.deepcopy(ACTION_SCHEMA)
+    geometry = observation.get("geometry_queries")
+    depth_available = (isinstance(geometry, dict)
+                       and geometry.get("depth_available") is True
+                       and "external" in image_names)
+    if not depth_available:
+        props = schema["properties"]
+        props["kind"]["enum"] = [kind for kind in props["kind"]["enum"] if kind != "query_depth"]
+        props["camera"] = {"type": "string", "enum": [""],
+                           "description": "Unused: this observation has no depth query. Always empty."}
+        props["pixel"]["items"] = {"type": "integer", "enum": [0]}
+        props["pixel"]["description"] = "Unused: always [0, 0], not the target object's image position."
+    return schema
+
+
 SYSTEM_PROMPT = """You are the action-selection policy of a physical robot experiment.
 Select exactly ONE action from the current sensor observation and the user's task.
 You have no access to hidden simulator state, object poses, collision truth, or
@@ -119,6 +143,8 @@ Always echo the exact current observation_id. All schema fields are required.
 For non-move actions use delta_position=[0,0,0] and delta_rotation=[0,0,0].
 For non-gripper actions use gripper_opening=0 (unused).
 For non-query_depth actions use camera="" and pixel=[0,0].
+These fields are only for depth queries, not for naming the image you observed or
+marking an object location. RGB-only environments never use these fields.
 Provide a short explanation in the language of the user's task, describing the
 observed evidence and purpose of this one action. Never output code or an action
 sequence. Do not repeatedly issue a rejected action without addressing the reported
@@ -172,7 +198,8 @@ def _finite_number(value: Any) -> bool:
 
 
 def validate_action(
-    action: Any, observation_id: str, cameras: set[str] | None = None
+    action: Any, observation_id: str, cameras: set[str] | None = None,
+    *, depth_available: bool | None = None,
 ) -> dict:
     """Validate again locally; structured output alone is not execution permission."""
     if not isinstance(action, dict) or set(action) != set(ACTION_SCHEMA["required"]):
@@ -214,6 +241,8 @@ def validate_action(
     if not action["explanation"].strip() or len(action["explanation"]) > 4000:
         raise PolicyError("Model explanation is missing or too long.")
     if action["kind"] == "query_depth":
+        if depth_available is False:
+            raise PolicyError("当前观测未提供深度查询（query_depth），未执行动作。")
         if action["camera"] != "external" or (
             cameras is not None and action["camera"] not in cameras
         ):
@@ -221,7 +250,10 @@ def validate_action(
                 "Depth queries are available only for the external camera."
             )
     elif action["camera"] != "" or pixel != [0, 0]:
-        raise PolicyError("Unused camera/pixel fields must be empty and [0,0].")
+        raise PolicyError(
+            "Unused camera/pixel fields must be empty and [0,0]. "
+            "模型为非深度查询动作填写了无关字段；这不是 TOML 或 API Key 解析错误，动作未执行。"
+        )
     return action
 
 
@@ -385,7 +417,7 @@ class GPTPolicy:
             content.append(
                 {
                     "type": "input_text",
-                    "text": f"Camera: {camera}. Pixel coordinates refer to this image.",
+                    "text": f"Camera: {camera}. This labels the input image, not the action camera field.",
                 }
             )
             content.append(
@@ -400,6 +432,7 @@ class GPTPolicy:
                     "detail": "high",
                 }
             )
+        schema = action_schema_for(observation, images)
         request = {
             "model": self.model,
             "instructions": SYSTEM_PROMPT,
@@ -409,7 +442,7 @@ class GPTPolicy:
                     "type": "json_schema",
                     "name": "robot_action",
                     "strict": True,
-                    "schema": ACTION_SCHEMA,
+                    "schema": schema,
                 }
             },
             "store": False,
@@ -428,7 +461,10 @@ class GPTPolicy:
             raise PolicyError(
                 "OpenAI returned invalid JSON; no action was produced."
             ) from None
-        return validate_action(action, observation_id, set(images) - {name for name in images if name.startswith("previous/")})
+        return validate_action(
+            action, observation_id, set(images) - {name for name in images if name.startswith("previous/")},
+            depth_available="query_depth" in schema["properties"]["kind"]["enum"],
+        )
 
     @property
     def request_options(self):
