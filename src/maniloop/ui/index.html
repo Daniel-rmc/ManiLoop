@@ -65,8 +65,8 @@
           <div class="panel-header"><div class="panel-title">实验环境</div><span id="active-environment" class="small">加载中</span></div>
           <div class="task-body" style="padding-top:16px">
             <div class="configuration" style="grid-template-columns:1fr 1fr">
-              <label class="field-label">环境后端<select id="backend-select" class="input"><option value="mujoco">ManiLoop 桌面任务</option><option value="libero">LIBERO 官方任务</option><option value="robosuite">robosuite 操作任务</option></select></label>
-              <label class="field-label">机器人<select id="robot-select" class="input"><option value="arx5">ARX X5</option><option value="panda">Franka Panda</option></select></label>
+              <label class="field-label">环境后端<select id="backend-select" class="input"><option value="mujoco">ManiLoop 桌面任务</option><option value="libero">LIBERO 官方任务</option><option value="robosuite">robosuite 操作任务</option><option value="robocasa">RoboCasa 厨房任务</option></select></label>
+              <label class="field-label">机器人<select id="robot-select" class="input"><option value="arx5">ARX X5</option><option value="panda">Franka Panda</option><option value="panda_omron">PandaOmron</option></select></label>
               <label class="field-label">布局<select id="layout-select" class="input"><option value="tabletop_a">桌面 A</option><option value="tabletop_b">桌面 B</option></select></label>
               <label class="field-label">任务<select id="task-select" class="input"><option value="pick_place">抓放</option><option value="push">推物</option></select></label>
               <label class="field-label">时序<select id="timing-select" class="input"><option value="controlled">受控时序</option><option value="realtime">实时模式</option></select></label>
@@ -80,6 +80,14 @@
             <div id="robosuite-options" hidden>
               <label class="field-label">robosuite 任务<select id="robosuite-task" class="input"><option value="Lift">Lift · 抓起方块</option></select></label>
               <p class="key-hint">Panda · world-frame OSC。保留上游任务和评分；仅 RGB 与本体感知。LIBERO 权重与逐控制步录像暂不支持本后端。</p>
+            </div>
+            <div id="robocasa-options" hidden>
+              <label class="field-label">RoboCasa 任务<select id="robocasa-task" class="input"><option value="OpenDrawer">OpenDrawer · 打开抽屉</option></select></label>
+              <div class="configuration" style="grid-template-columns:1fr 1fr">
+                <label class="field-label">厨房布局 ID<input id="robocasa-layout" class="input" type="number" min="1" max="60" step="1" value="11"></label>
+                <label class="field-label">厨房风格 ID<input id="robocasa-style" class="input" type="number" min="1" max="60" step="1" value="14"></label>
+              </div>
+              <p class="key-hint">PandaOmron：首版仅控制机械臂与夹爪，底座/躯干保持。原生12维控制，不等同固定Panda。默认布局11/风格14；其他组合需实际验证。首次加载厨房可能需要较长时间。</p>
             </div>
             <button id="apply-environment" type="button" class="button">应用并重置场景</button>
             <button id="demo-preset" type="button" class="button subtle" style="margin-left:6px">加载 GPT-6 抓放演示</button>
@@ -159,12 +167,39 @@
         <section class="panel manual-panel">
           <div class="panel-header"><div class="panel-title"><span class="number-tag">02</span>手动调试</div><span class="small">无需 API</span></div>
           <div class="manual-body">
+            <label class="field-label">手动参考坐标轴<select id="manual-reference" class="input"><option value="fixed">固定轴（当前后端世界 / 基座系）</option><option value="tool">末端自身轴（TCP）</option></select></label>
             <div class="manual-top"><span id="manual-frame">沿基座坐标轴移动末端</span><label for="jog-step"><select id="jog-step" class="select-compact" aria-label="每次点动距离"><option value="0.005">步长 5 mm</option><option value="0.01" selected>步长 10 mm</option><option value="0.02">步长 20 mm</option></select></label></div>
             <div class="manual-controls">
               <div class="axis-control"><span class="axis-name x">X AXIS</span><button class="jog manual-button" data-axis="0" data-sign="-1" type="button" aria-label="X 轴负方向移动" disabled>− X</button><button class="jog manual-button" data-axis="0" data-sign="1" type="button" aria-label="X 轴正方向移动" disabled>+ X</button></div>
               <div class="axis-control"><span class="axis-name y">Y AXIS</span><button class="jog manual-button" data-axis="1" data-sign="-1" type="button" aria-label="Y 轴负方向移动" disabled>− Y</button><button class="jog manual-button" data-axis="1" data-sign="1" type="button" aria-label="Y 轴正方向移动" disabled>+ Y</button></div>
               <div class="axis-control"><span class="axis-name z">Z AXIS</span><button class="jog manual-button" data-axis="2" data-sign="-1" type="button" aria-label="Z 轴负方向移动" disabled>− Z</button><button class="jog manual-button" data-axis="2" data-sign="1" type="button" aria-label="Z 轴正方向移动" disabled>+ Z</button></div>
             </div>
+            <div class="manual-top" style="margin-top:14px">
+              <span>末端姿态旋转</span>
+              <label>角度步长（°）<input id="rotation-step" class="input" style="width:88px;display:inline-block" type="number" min="0.1" step="0.1" value="5" aria-label="每次旋转角度"></label>
+            </div>
+            <div class="manual-controls">
+              <div class="axis-control"><span class="axis-name x">RX</span><button class="jog manual-button" data-rotation-axis="0" data-sign="-1" type="button" aria-label="绕 X 轴负向旋转" disabled>− Rx</button><button class="jog manual-button" data-rotation-axis="0" data-sign="1" type="button" aria-label="绕 X 轴正向旋转" disabled>+ Rx</button></div>
+              <div class="axis-control"><span class="axis-name y">RY</span><button class="jog manual-button" data-rotation-axis="1" data-sign="-1" type="button" aria-label="绕 Y 轴负向旋转" disabled>− Ry</button><button class="jog manual-button" data-rotation-axis="1" data-sign="1" type="button" aria-label="绕 Y 轴正向旋转" disabled>+ Ry</button></div>
+              <div class="axis-control"><span class="axis-name z">RZ</span><button class="jog manual-button" data-rotation-axis="2" data-sign="-1" type="button" aria-label="绕 Z 轴负向旋转" disabled>− Rz</button><button class="jog manual-button" data-rotation-axis="2" data-sign="1" type="button" aria-label="绕 Z 轴正向旋转" disabled>+ Rz</button></div>
+            </div>
+            <p class="key-hint">选择“末端自身轴”后，±Rz 绕夹爪自身 Z 轴转动。纯旋转将 TCP 位置增量设为零；目标跟踪模式尝试保持位置并达到目标姿态。多个关节可能协同运动，不是只驱动 J7。</p>
+            <label class="field-label">手动目标跟踪时限（秒）<input id="manual-duration" class="input" type="number" min="0.05" max="10" step="0.05" value="3"></label>
+            <p class="key-hint">只对外部后端的手动目标跟踪生效，最长 10 秒；超时报告真实误差。原生单步仍只执行一步，模型动作预算不受此设置影响。</p>
+            <p id="manual-pose-feedback" class="key-hint" aria-live="polite">旋转执行结果显示在下方反馈中。</p>
+            <details style="margin:12px 0">
+              <summary class="small">自定义六维增量（平移 + 旋转）</summary>
+              <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px">
+                <label class="field-label">ΔX · mm<input id="manual-dx" class="input" type="number" step="0.1" value="0"></label>
+                <label class="field-label">ΔY · mm<input id="manual-dy" class="input" type="number" step="0.1" value="0"></label>
+                <label class="field-label">ΔZ · mm<input id="manual-dz" class="input" type="number" step="0.1" value="0"></label>
+                <label class="field-label">Rx · °<input id="manual-rx" class="input" type="number" step="0.1" value="0"></label>
+                <label class="field-label">Ry · °<input id="manual-ry" class="input" type="number" step="0.1" value="0"></label>
+                <label class="field-label">Rz · °<input id="manual-rz" class="input" type="number" step="0.1" value="0"></label>
+              </div>
+              <p class="key-hint">Rx/Ry/Rz 是一次旋转向量的分量，不是绝对欧拉角。按当前坐标轴解释；受后端单步向量范数与可达性限制，不会静默裁剪。</p>
+              <button id="manual-pose-submit" class="button manual-button" type="button" disabled>执行六维增量</button>
+            </details>
             <div class="gripper-actions"><button id="open-gripper" class="button manual-button" type="button" disabled><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6 3H2v10h4M10 3h4v10h-4M5 8h6"/></svg>打开夹爪</button><button id="close-gripper" class="button manual-button" type="button" disabled><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M7 3H4v10h3M9 3h3v10H9"/></svg>闭合夹爪</button></div>
             <div class="reset-row"><label class="seed-wrap" for="scene-seed">场景种子<input id="scene-seed" class="input seed-input" type="number" value="0" min="0" max="2147483647" step="1"></label><button id="reset-button" class="button subtle" type="button" disabled><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a5 5 0 1 1 0 4M3 2v4h4"/></svg>重新初始化</button></div>
           </div>
@@ -422,7 +457,7 @@
       const cloud = $('agent-select').value === 'llm_cloud';
       const ready = !!(connected && state && state.ready);
       const configLocked = pending || configBusy || running || inFlight;
-      ['backend-select','robosuite-task','libero-suite','libero-task','libero-init','robot-select','layout-select','task-select','timing-select','apply-environment','demo-preset','agent-select','local-model'].forEach(id => { $(id).disabled = configLocked || !ready; });
+      ['backend-select','robocasa-task','robocasa-layout','robocasa-style','robosuite-task','libero-suite','libero-task','libero-init','robot-select','layout-select','task-select','timing-select','apply-environment','demo-preset','agent-select','local-model'].forEach(id => { $(id).disabled = configLocked || !ready; });
       ui.start.disabled = pending || configBusy || !ready || running || inFlight || moving;
       ['request-timeout','reasoning-effort','llm-control','llm-resolution','wall-budget','sim-budget','reset-before-start','context-mode','observation-max-age'].forEach(id => { $(id).disabled = configLocked; });
       ['text','vision','action'].forEach(stage => { $('diagnose-' + stage).disabled = pending || configBusy || !ready || running || inFlight || moving; });
@@ -437,6 +472,8 @@
       $('replay-link').hidden = !(state && state.replay_available);
       ui.reset.disabled = pending || !connected || running;
       ui.manual.forEach(button => { button.disabled = pending || !ready || running || inFlight || moving; });
+      const fullJog = !!(state && state.manual_control && state.manual_control.protocol === 'tcp_jog_fixed_tool_v1');
+      if (!fullJog) { document.querySelectorAll('[data-rotation-axis], #manual-pose-submit').forEach(button => { button.disabled = true; }); }
       ui.task.disabled = pending || running;
       [ui.model, ui.key, ui.source, ui.configSelect, ui.configPath, ui.readConfig, ui.discoverConfigs, ui.modelSelect, ui.refreshModels, ui.baseUrl, ui.configKey, ui.configUpload, ui.configToml, ui.readUpload].forEach(control => { control.disabled = configLocked; });
       ui.key.disabled = configLocked || ui.source.value !== 'manual';
@@ -444,7 +481,9 @@
       ui.maxSteps.disabled = pending || running;
       $('scene-seed').disabled = pending || running;
       if ($('backend-select').value !== 'mujoco') ['robot-select','layout-select','task-select'].forEach(id => { $(id).disabled = true; });
-      $('jog-step').disabled = pending || running;
+      ['jog-step','rotation-step','manual-duration','manual-reference','manual-dx','manual-dy','manual-dz','manual-rx','manual-ry','manual-rz'].forEach(id => { $(id).disabled = pending || configBusy || !ready || running || inFlight || moving; });
+      if (!fullJog) { $('manual-reference').value = 'fixed'; $('manual-reference').disabled = true; $('rotation-step').disabled = true; }
+      if (!(state && state.manual_control && state.manual_control.adjustable_target_duration)) $('manual-duration').disabled = true;
       ui.start.querySelector('span').textContent = paused ? '实验已暂停' : running ? '执行中' : pending ? '正在处理…' : '连续执行';
     }
     function setConnection(ok) {
@@ -465,6 +504,10 @@
           loadLiberoTasks(data.environment.task_id);
         } else if (data.backend === 'robosuite') {
           loadRobosuiteTasks(data.environment.task);
+        } else if (data.backend === 'robocasa') {
+          $('robocasa-layout').value = data.environment.layout;
+          $('robocasa-style').value = data.environment.style;
+          loadRobocasaTasks(data.environment.task);
         }
         updateBackendFields();
         $('robot-select').value = data.robot;
@@ -473,10 +516,13 @@
         ui.task.value = data.task_instruction;
       }
       $('active-environment').textContent = `${data.backend || 'mujoco'} · ${data.robot} · ${data.scene} · ${data.timing}`;
-      const world = ['libero', 'robosuite'].includes(data.backend);
+      const world = ['libero', 'robosuite', 'robocasa'].includes(data.backend);
       $('frame-label').textContent = world ? '世界坐标系 · m' : '机器人基座坐标系 · m';
       $('frame-metric').textContent = world ? 'WORLD FRAME · METERS' : 'BASE FRAME · METERS';
-      $('manual-frame').textContent = world ? '沿世界坐标轴移动末端' : '沿基座坐标轴移动末端';
+      updateManualFrame(data);
+      const poseFeedback = data.last_feedback || {};
+      $('manual-pose-feedback').textContent = Number.isFinite(poseFeedback.rotation_error_rad) ? `姿态误差 ${(poseFeedback.rotation_error_rad * 180 / Math.PI).toFixed(2)}° · TCP 位置误差 ${Number.isFinite(poseFeedback.position_error_m) ? (poseFeedback.position_error_m * 1000).toFixed(2) + ' mm' : '—'} · ${poseFeedback.status}` : '旋转和位置执行结果将显示在这里；接受命令不等于到达。';
+      if (!data.manual_control) $('manual-pose-feedback').textContent = '当前后端服务尚未加载新版旋转控制；重启服务后启用。平移和夹爪仍可使用。';
       state = data;
       const running = !!data.running;
       $('simulation-dot').className = 'dot ' + (data.error ? 'error' : running ? 'busy' : data.ready ? 'ok' : '');
@@ -486,7 +532,7 @@
       $('tcp-position').textContent = xyz && xyz.length >= 3 ? xyz.slice(0, 3).map(value => number(value, 3)).join(' / ') : '— / — / —';
       $('gripper-opening').textContent = numeric(data.gripper_opening) ? String(Math.round(data.gripper_opening * 100)) : '—';
       $('step-value').textContent = Number.isInteger(data.api_calls) ? String(data.api_calls) : '0';
-      $('evaluation-status').textContent = data.evaluation && data.evaluation.success ? '独立评估：所选任务已完成 ✓' : `独立评估：${data.backend === 'libero' ? 'LIBERO 官方' : data.backend === 'robosuite' ? ('robosuite ' + data.task_id) : data.task_id === 'push' ? '推物' : '抓放'}任务尚未完成`;
+      $('evaluation-status').textContent = data.evaluation && data.evaluation.success ? '独立评估：所选任务已完成 ✓' : `独立评估：${data.backend === 'libero' ? 'LIBERO 官方' : ['robosuite','robocasa'].includes(data.backend) ? (data.backend + ' ' + data.task_id) : data.task_id === 'push' ? '推物' : '抓放'}任务尚未完成`;
       const latency = data.api_latency ?? data.last_api_latency_s ?? data.api_latency_s ?? data.last_api_duration_s ?? data.api_duration_s ?? (data.last_feedback && data.last_feedback.api_latency_s);
       $('api-latency').textContent = number(latency, 1);
       const simTime = numeric(data.sim_time) ? Math.max(0, data.sim_time) : 0;
@@ -670,8 +716,10 @@
       const backend = $('backend-select').value;
       $('libero-options').hidden = backend !== 'libero';
       $('robosuite-options').hidden = backend !== 'robosuite';
+      $('robocasa-options').hidden = backend !== 'robocasa';
       ['layout-select','task-select'].forEach(id => { $(id).closest('label').hidden = backend !== 'mujoco'; });
-      if (backend !== 'mujoco') $('robot-select').value = 'panda';
+      if (backend !== 'mujoco') $('robot-select').value = backend === 'robocasa' ? 'panda_omron' : 'panda';
+      else if ($('robot-select').value === 'panda_omron') $('robot-select').value = 'panda';
       const localOption = $('agent-select').querySelector('option[value="lerobot"]');
       if (localOption) localOption.disabled = backend !== 'libero';
       if (backend !== 'libero' && $('agent-select').value === 'lerobot') {
@@ -707,10 +755,25 @@
         $('robosuite-task').value = selected;
       } catch (error) { if (sequence === taskCatalogSequence) showError(error); }
     }
+    async function loadRobocasaTasks(selected = 'OpenDrawer') {
+      const sequence = ++taskCatalogSequence;
+      try {
+        const response = await fetch('/api/robocasa-tasks');
+        const data = await response.json();
+        if (sequence !== taskCatalogSequence) return;
+        if (!response.ok) throw new Error(data.error || '任务目录读取失败');
+        $('robocasa-task').replaceChildren(...data.tasks.map(task => {
+          const option = document.createElement('option');
+          option.value = task.id; option.textContent = `${task.id} · ${task.display_name}`; return option;
+        }));
+        $('robocasa-task').value = selected;
+      } catch (error) { if (sequence === taskCatalogSequence) showError(error); }
+    }
     $('backend-select').addEventListener('change', () => {
       updateBackendFields(); updateControls();
       if ($('backend-select').value === 'libero') loadLiberoTasks();
       if ($('backend-select').value === 'robosuite') loadRobosuiteTasks();
+      if ($('backend-select').value === 'robocasa') loadRobocasaTasks();
     });
     $('libero-suite').addEventListener('change', () => loadLiberoTasks());
     $('apply-environment').addEventListener('click', async () => {
@@ -721,7 +784,8 @@
         libero_suite: $('libero-suite').value, libero_task_id: Number($('libero-task').value),
         init_state_id: Number($('libero-init').value),
         robot: $('robot-select').value, scene: $('layout-select').value,
-        task_id: $('backend-select').value === 'robosuite' ? $('robosuite-task').value : $('task-select').value, timing: $('timing-select').value,
+        robocasa_layout: Number($('robocasa-layout').value), robocasa_style: Number($('robocasa-style').value),
+        task_id: $('backend-select').value === 'robocasa' ? $('robocasa-task').value : $('backend-select').value === 'robosuite' ? $('robosuite-task').value : $('task-select').value, timing: $('timing-select').value,
         seed: Number($('scene-seed').value), ...settings
       }, '实验环境已重置。');
       await refreshState();
@@ -829,11 +893,47 @@
       if (!Number.isInteger(seed) || seed < 0 || seed > 2147483647) { showError(new Error('场景种子应为 0 到 2147483647 之间的整数。')); return; }
       perform('/api/reset', {seed}, '场景已重新初始化。');
     });
+    function updateManualFrame(data = state) {
+      const tool = $('manual-reference').value === 'tool';
+      const frame = data && data.backend !== 'mujoco' ? '世界' : '基座';
+      $('manual-frame').textContent = tool ? '沿末端自身坐标轴平移 / 旋转' : `沿${frame}坐标轴平移 / 旋转`;
+    }
+    function manualNumber(id) {
+      const input = $(id);
+      if (!input.value.trim() || !input.checkValidity() || !Number.isFinite(Number(input.value))) throw new Error('请填写有效的手动增量 / 角度步长');
+      return Number(input.value);
+    }
+    async function sendManualPose(position, rotation) {
+      let duration;
+      try { duration = manualNumber('manual-duration'); } catch (error) { showError(error); return; }
+      const limits = state && state.observation && state.observation.action_limits;
+      if (limits && (Math.hypot(...position) > limits.translation_max_m + 1e-9 || Math.hypot(...rotation) > limits.rotation_max_rad + 1e-9)) {
+        showError(new Error('六维增量超过后端单步限制，请减小平移或旋转向量')); return;
+      }
+      await perform('/api/manual', {kind: 'move', delta_position: position, delta_rotation: rotation, reference_frame: $('manual-reference').value, target_duration_seconds: duration});
+    }
+    $('manual-reference').addEventListener('change', () => updateManualFrame());
+    document.querySelectorAll('[data-rotation-axis]').forEach(button => {
+      button.addEventListener('click', () => {
+        try {
+          const rotation = [0, 0, 0];
+          rotation[Number(button.dataset.rotationAxis)] = Number(button.dataset.sign) * manualNumber('rotation-step') * Math.PI / 180;
+          sendManualPose([0, 0, 0], rotation);
+        } catch (error) { showError(error); }
+      });
+    });
+    $('manual-pose-submit').addEventListener('click', () => {
+      try {
+        const position = ['manual-dx','manual-dy','manual-dz'].map(id => manualNumber(id) / 1000);
+        const rotation = ['manual-rx','manual-ry','manual-rz'].map(id => manualNumber(id) * Math.PI / 180);
+        sendManualPose(position, rotation);
+      } catch (error) { showError(error); }
+    });
     document.querySelectorAll('[data-axis]').forEach(button => {
       button.addEventListener('click', () => {
         const delta = [0, 0, 0];
         delta[Number(button.dataset.axis)] = Number(button.dataset.sign) * Number($('jog-step').value);
-        perform('/api/manual', {delta_position: delta, delta_rotation: [0, 0, 0]});
+        sendManualPose(delta, [0, 0, 0]);
       });
     });
     $('open-gripper').addEventListener('click', () => perform('/api/manual', {kind: 'gripper', gripper_opening: 1}));

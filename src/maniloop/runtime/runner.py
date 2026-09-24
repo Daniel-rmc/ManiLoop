@@ -125,6 +125,8 @@ class EpisodeRunner:
         self.api_latency = None
         self.policy = None
         self.request_options = {}
+        self.typesafe_key = ""
+        self.policy_decision = None
         self.diagnostic_stage = None
         self.diagnostic_result = None
         self.awaiting_execution = False
@@ -333,6 +335,27 @@ class EpisodeRunner:
     def command(self, name, payload):
         if name == "stop":
             self.stop()
+        elif name == "typesafe-key":
+            # Explicit local-memory settings only: no provider call or physics step.
+            if self.running or self.future is not None or self.sim.busy:
+                raise ValueError("请先停止任务并等待在途请求和动作结束，再更新 Jev 密钥")
+            if set(payload) == {"typesafe_api_key"}:
+                from maniloop.providers.typesafe import normalize_api_key
+                key = normalize_api_key(payload["typesafe_api_key"])
+            elif set(payload) == {"clear"} and payload["clear"] is True:
+                key = ""
+            else:
+                raise ValueError("Jev 密钥设置仅接受专用密钥或 clear=true")
+            if self.policy_kind == "jev":
+                self.close_policy()  # Release the idle client's previous key too.
+                self.key = ""
+                self.diagnostic_result = None
+            self.typesafe_key = key
+            if self.credentials.get("source") == "typesafe":
+                self.credentials = {**self.credentials, "error": "",
+                    "key_configured": bool(key or os.environ.get("TYPESAFE_API_KEY", "").strip())}
+            self.event("config", "Jev 网页密钥已保存在本次服务内存；尚未验证" if key
+                       else "Jev 网页密钥已清除；启动环境中的密钥不受影响")
         elif name in {"pause", "resume", "step"}:
             if not self.running or self.diagnostic_stage:
                 raise ValueError("请先开始一个机器人演示")
@@ -357,8 +380,10 @@ class EpisodeRunner:
             backend = payload.get("backend", self.sim.backend)
             replacement = create_environment(
                 backend=backend,
+                robocasa_layout=payload.get("robocasa_layout", 11),
+                robocasa_style=payload.get("robocasa_style", 14),
                 render=self.sim.render_enabled,
-                robot=payload.get("robot", "panda" if backend in ("libero", "robosuite") else "arx5"),
+                robot=payload.get("robot", "panda_omron" if backend == "robocasa" else "panda" if backend in ("libero", "robosuite") else "arx5"),
                 scene=payload.get("scene", "tabletop_a"),
                 task=payload.get("task_id", "pick_place"),
                 libero_suite=payload.get("libero_suite", "libero_spatial"),
@@ -377,7 +402,7 @@ class EpisodeRunner:
             self.sim = replacement
             self.timing = timing
             self.max_age = max_age
-            if self.sim.backend in ("libero", "robosuite"):
+            if self.sim.backend in ("libero", "robosuite", "robocasa"):
                 self.sim.set_llm_control(payload.get("llm_control", "osc_step"))
             self.chunk = None
             self._physics_remainder = 0.0
@@ -415,15 +440,45 @@ class EpisodeRunner:
             single_step = payload.get("single_step", False)
             if context_mode not in {"current", "paired"} or type(single_step) is not bool:
                 raise ValueError("上下文模式或单步设置无效")
-            if single_step and (diagnostic or payload.get("agent", "llm_cloud") != "llm_cloud"):
+            if single_step and (diagnostic or payload.get("agent", "llm_cloud") not in ("llm_cloud", "jev")):
                 raise ValueError("单步仅用于 LLM 操作演示")
             self.max_age = validate_observation_max_age(payload.get("observation_max_age_seconds", self.max_age))
             self.context_mode = context_mode
             self.single_step = single_step
             self.diagnostic_stage = diagnostic
             self.diagnostic_result = None
-            if diagnostic and payload.get("agent", "llm_cloud") != "llm_cloud":
+            if diagnostic and payload.get("agent", "llm_cloud") not in ("llm_cloud", "jev"):
                 raise ValueError("连接诊断仅适用于云端 LLM")
+            if payload.get("agent") == "jev":
+                from maniloop.agents.jev import JevAgent
+                if self.timing != "controlled":
+                    raise ValueError("Jev demo 首版要求受控时序；请先在场景设置选择受控时序")
+                if diagnostic and diagnostic != "action":
+                    raise ValueError("Jev 使用类型化选择诊断，不接收图像")
+                max_steps = 1 if diagnostic else payload.get("max_steps", 40)
+                if type(max_steps) is not int or not 0 <= max_steps <= 100:
+                    raise ValueError("Jev 决策上限须为 0–100")
+                from maniloop.providers.typesafe import normalize_api_key
+                supplied = payload.get("typesafe_api_key", "")
+                if not isinstance(supplied, str):
+                    raise ValueError("Jev 专用密钥必须是文本")
+                key = normalize_api_key(supplied.strip() or self.typesafe_key or os.environ.get("TYPESAFE_API_KEY", ""))
+                policy = JevAgent(task, api_key=key, options=payload.get("jev_options"))
+                self.close_policy()
+                self.policy = policy
+                if supplied.strip():
+                    self.typesafe_key = key  # Do not turn an environment key into a browser override.
+                self.policy_kind, self.model = "jev", policy.model
+                self.credential_source = "typesafe"
+                self.key = key  # Existing exception redaction; not reused by other providers.
+                self.credentials = {"source": "typesafe", "provider": "TypeSafe", "path": "",
+                    "base_url": "https://api.typesafe.ai/v1", "model": self.model,
+                    "models": [self.model], "key_configured": True, "error": ""}
+                if self.sim.backend in ("libero", "robosuite", "robocasa"):
+                    self.sim.set_llm_control("tcp_target_servo_v2")
+                self.policy_decision = None
+                self.begin_episode(task, max_steps)
+                return
             if payload.get("agent") == "lerobot":
                 from maniloop.agents.lerobot import LeRobotAgent
 
@@ -461,7 +516,7 @@ class EpisodeRunner:
                 self.begin_episode(task, max_steps)
                 return
             if payload.get("agent") == "mock_vla":
-                if self.sim.backend in ("libero", "robosuite"):
+                if self.sim.backend in ("libero", "robosuite", "robocasa"):
                     self.sim.set_llm_control("osc_step")
                 self.close_policy()
                 self.policy = MockVLAAgent()
@@ -516,20 +571,21 @@ class EpisodeRunner:
                     self.sim.reset(self.seed)
                     self.event("info", "相机配置已切换，场景从所选初始化重新开始")
                 self.sim.set_llm_control(mode)
-            if not diagnostic and self.sim.backend == "robosuite":
+            if not diagnostic and self.sim.backend in ("robosuite", "robocasa"):
                 info = self.sim.describe()
                 profile = payload.get("observation_profile", info["observation_profile"])
                 mode = payload.get("llm_control", self.sim.llm_control)
                 if mode not in ("osc_step", "tcp_target_servo_v2"):
                     raise ValueError("未知 LLM 控制模式")
                 if profile != info["observation_profile"]:
-                    replacement = create_environment(backend="robosuite", task=info["task"],
+                    replacement = create_environment(backend=self.sim.backend, task=info["task"],
+                        robocasa_layout=info.get("layout", 11), robocasa_style=info.get("style", 14),
                         render=self.sim.render_enabled, observation_profile=profile)
                     self.sim.close()
                     self.sim = replacement
                     self.sim.reset(self.seed)
                     self._physics_remainder = 0.0
-                    self.event("info", "相机配置已切换，robosuite 场景重新开始")
+                    self.event("info", "相机配置已切换，外部任务场景重新开始")
                 self.sim.set_llm_control(mode)
             if not diagnostic and payload.get("reset_on_start", False):
                 self.sim.reset(self.seed)
@@ -558,9 +614,25 @@ class EpisodeRunner:
         elif name == "manual":
             if self.running or self.future is not None:
                 raise ValueError("请先停止GPT任务并等待在途请求结束，再手动点动")
+            if self.sim.busy or self.chunk is not None:
+                raise ValueError("请等待上一条手动动作结束，或先停止动作")
             self.diagnostic_stage = None
-            result = self.sim.execute({"kind": "move", **payload})
-            self.event("manual", result["message"], action=payload, feedback=result)
+            action = {"kind": "move", **payload}
+            duration = action.pop("target_duration_seconds", 3.0)
+            if action["kind"] == "move":
+                from maniloop.controllers.manual import prepare_manual_move, manual_control_steps
+                max_steps = manual_control_steps(duration, self.sim.timestep)
+                # Capture fresh robot axes, never a browser's stale transform.
+                observation, _ = self.sim.observe()
+                action = prepare_manual_move(action, observation)
+            if action["kind"] == "move" and hasattr(self.sim, "execute_manual"):
+                result = self.sim.execute_manual(action, max_control_steps=max_steps)
+            else:
+                result = self.sim.execute(action)
+            self.event("manual", result["message"], action=payload,
+                       resolved_action=action,
+                       requested_target_duration_seconds=duration if action["kind"] == "move" else None,
+                       target_budget_control_steps=result.get("max_control_steps"), feedback=result)
         else:
             raise ValueError("未知操作")
 
@@ -675,7 +747,7 @@ class EpisodeRunner:
                 if self.chunk.completed:
                     self.chunk = None
                     self.phase = "executing"
-                    if self.sim.backend in ("libero", "robosuite"):
+                    if self.sim.backend in ("libero", "robosuite", "robocasa"):
                         break
             self.sim.step()
             if self.running and self.sim.terminated:
@@ -749,7 +821,15 @@ class EpisodeRunner:
                     return
                 latency = self.policy.last_latency
                 self.api_latency = latency if type(latency) in (int, float) and np.isfinite(latency) else None
-                action = future.result()
+                try:
+                    action = future.result()
+                finally:
+                    if self.policy_kind == "jev":
+                        self.policy_decision = deepcopy(self.policy.last_decision)
+                        if self.policy_decision:
+                            self.event("provider_decision", "Jev 类型化选择（无生成式思考文本）",
+                                decision=self.policy_decision, request_index=self.api_calls,
+                                usage=self.policy.last_usage)
                 if self.diagnostic_stage:
                     def redact(value):
                         if isinstance(value, str):
@@ -839,11 +919,11 @@ class EpisodeRunner:
                 else:
                     self.transition_before = (deepcopy(self.pending_observation), dict(self.request_images),
                                               deepcopy(action), self.api_calls)
-                    result = self.sim.execute(
-                        Action.from_legacy(
-                            action, frame=self.pending_observation["frame_id"]
-                        ).legacy()
-                    )
+                    executable = Action.from_legacy(
+                        action, frame=self.pending_observation["frame_id"]
+                    ).legacy()
+                    result = (self.policy.execute(self.sim, executable) if self.policy_kind == "jev"
+                              else self.sim.execute(executable))
                     self.awaiting_execution = (result["status"] == "accepted" and
                         self.sim.describe().get("llm_control") == "tcp_target_servo_v2")
                     self.history.append({"action": action, "feedback": result})
@@ -886,6 +966,21 @@ class EpisodeRunner:
         if (self.transition_before is not None and self.future is None
                 and not self.sim.busy and self.sim.settled):
             self.finish_transition()
+        if (self.policy_kind == "jev" and self.running and not self.diagnostic_stage
+                and self.future is None and not self.sim.busy and self.sim.settled
+                and self.transition_before is None):
+            try:
+                self.policy.check_feedback(self.sim.feedback)
+            except Exception as exc:
+                self.stop("Jev 序列执行失败", reason="control_failure")
+                self.phase, self.error = "error", str(exc)
+                self.event("error", self.error)
+                return
+            if self.policy.commands_complete:
+                self.running = self.paused = self.pause_requested = False
+                self.phase, self.termination_reason = "completed", "command_sequence_complete"
+                self.event("complete", "程序确认输入指令已消费完毕；这不是任务成功声明。")
+                return
         if (
             self.running
             and not self.paused
@@ -1000,6 +1095,11 @@ class EpisodeRunner:
             "max_wall_seconds": self.wall_budget,
             "max_sim_seconds": self.sim_budget,
             "motion_busy": self.sim.busy or self.chunk is not None,
+            "manual_control": {"protocol": "tcp_jog_fixed_tool_v1",
+                               "references": ["fixed", "tool"], "rotation": True,
+                               "target_duration_seconds": 3.0,
+                               "adjustable_target_duration": hasattr(self.sim, "execute_manual"),
+                               "joint_position": self.sim.backend == "mujoco"},
             "backend": self.sim.backend,
             "environment": self.sim.describe(),
             "robot": self.sim.robot_name,
@@ -1009,6 +1109,13 @@ class EpisodeRunner:
             "timing": self.timing,
             "agent": self.policy_kind,
             "credential_source": self.credential_source,
+            "jev_available": True,
+            "typesafe_key_input_available": True,
+            "typesafe_key_configured": bool(self.typesafe_key or os.environ.get("TYPESAFE_API_KEY", "").strip()),
+            "typesafe_browser_key_configured": bool(self.typesafe_key),
+            "typesafe_key_source": ("browser" if self.typesafe_key else
+                "environment" if os.environ.get("TYPESAFE_API_KEY", "").strip() else "none"),
+            "policy_decision": deepcopy(self.policy_decision) if self.policy_kind == "jev" else None,
             "sim_time": float(self.sim.simulation_time),
             "tcp_position": self.sim.tcp_position.tolist(),
             "gripper_opening": self.sim.gripper_opening,

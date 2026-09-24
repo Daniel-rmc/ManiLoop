@@ -19,6 +19,8 @@ from maniloop.runtime.settings import validate_observation_max_age
 @dataclass(frozen=True)
 class Experiment:
     backend: str = "mujoco"
+    robocasa_layout: int = 11
+    robocasa_style: int = 14
     libero_suite: str = "libero_spatial"
     libero_task_id: int = 0
     init_state_id: int = 0
@@ -26,6 +28,7 @@ class Experiment:
     scene: str = "tabletop_a"
     task: str = "pick_place"
     agent: str = "mock_vla"
+    instruction: str | None = None
     local_model: str = "smolvla-libero"
     device: str = "auto"
     timing: str = "controlled"
@@ -42,7 +45,7 @@ class Experiment:
     max_wall_seconds: float = 600.0
 
     def validate(self):
-        if self.backend not in ("mujoco", "libero", "robosuite"):
+        if self.backend not in ("mujoco", "libero", "robosuite", "robocasa"):
             raise ValueError("Unknown backend")
         if self.backend == "mujoco":
             if self.robot not in (None, "arx5", "panda") or self.scene not in (
@@ -52,6 +55,12 @@ class Experiment:
                 raise ValueError("Unknown robot or scene")
             if self.task not in ("pick_place", "push"):
                 raise ValueError("Unknown task")
+        elif self.backend == "robocasa":
+            from maniloop.backends.robocasa.catalog import validate_task, validate_scene
+            validate_task(self.task)
+            validate_scene(self.robocasa_layout, self.robocasa_style)
+            if self.robot not in (None, "panda_omron") or self.scene != "tabletop_a":
+                raise ValueError("RoboCasa requires PandaOmron and robocasa_layout/robocasa_style")
         elif self.backend == "robosuite":
             from maniloop.backends.robosuite.catalog import validate_task
             validate_task(self.task)
@@ -73,8 +82,13 @@ class Experiment:
                 raise ValueError(
                     "Use libero_suite/libero_task_id for LIBERO, not native scene/task fields"
                 )
-        if self.agent not in ("llm_cloud", "mock_vla", "lerobot"):
+        if self.agent not in ("llm_cloud", "mock_vla", "lerobot", "jev"):
             raise ValueError("Unknown agent")
+        if self.agent == "jev":
+            from maniloop.agents.jev import instruction_lines
+            instruction_lines(self.instruction)
+            if self.timing != "controlled":
+                raise ValueError("Jev demo requires controlled timing")
         if self.agent == "lerobot":
             from maniloop.agents.lerobot.catalog import MODELS
 
@@ -126,6 +140,8 @@ def load_suite(path: Path) -> list[Experiment]:
     matrix = data.get("matrix", {})
     if not matrix or set(matrix) - {
         "backend",
+        "robocasa_layout",
+        "robocasa_style",
         "libero_suite",
         "libero_task_id",
         "init_state_id",
@@ -174,6 +190,7 @@ def run_episode(
     sim = create_environment(
         render=render,
         backend=case.backend,
+        robocasa_layout=case.robocasa_layout, robocasa_style=case.robocasa_style,
         robot=case.robot,
         scene=case.scene,
         task=case.task,
@@ -200,7 +217,7 @@ def run_episode(
                 "agent": case.agent,
                 "local_model": case.local_model,
                 "device": case.device,
-                "task": sim.instruction,
+                "task": case.instruction if case.instruction is not None else sim.instruction,
                 "max_steps": case.max_calls,
                 "llm_control": case.llm_control,
                 "observation_profile": case.observation_profile,
@@ -226,7 +243,7 @@ def run_episode(
                 time.sleep(0.002)
         # A fixed settling window after voluntary done allows the stability criterion to finish.
         # Never extend an exhausted simulation budget.
-        if runner.phase == "completed" and sim.backend == "mujoco":
+        if runner.phase == "completed" and sim.backend == "mujoco" and case.agent != "jev":
             remaining = max(
                 0.0,
                 min(

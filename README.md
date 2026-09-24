@@ -220,3 +220,38 @@ python -m maniloop demo --backend robosuite --task Lift --port 8870
 
 These are integrated environments, not model-success claims. Existing LIBERO-trained
 local checkpoint presets remain LIBERO-only; RoboCasa is not included in this backend.
+
+## Optional RoboCasa kitchen tasks
+
+Four kitchen tasks are available through a separate PandaOmron backend: `OpenDrawer`,
+`CloseDrawer`, `OpenCabinet`, and `CoffeeSetupMug`. The first integration controls the
+arm and gripper; base velocity and torso delta inputs are held at zero.
+
+```bash
+python scripts/setup_robocasa.py --download-assets
+python -m maniloop demo --backend robocasa --task OpenDrawer --port 8872
+```
+
+Use the same workspace for camera observations, manual controls, model connections,
+and decision review. The installer pins both source projects and isolates their dependencies.
+The five required asset groups occupy about 11.1 GB unpacked, excluding source/runtime files.
+Default layout 11 / style 14 / seed 0 has real interface checks for all four tasks;
+this is not a model success result or a guarantee of arm-only task solvability in every scene.
+See [RoboCasa setup, action semantics, and limitations](docs/ROBOCASA.md).
+
+
+### Operator workspace
+
+The workspace separates manual control, model execution, and scene settings. Stop stays available while switching panels; camera layouts do not advance physics. See [workspace usage](docs/WORKSPACE.md) and [six-dimensional manual control](docs/MANUAL_CONTROL.md).
+
+### Jev text commands
+
+Choose **Jev · 文本原语控制** in the model panel to map explicit, one-line commands
+to bounded arm or gripper primitives. Enter a separate TypeSafe API key in the workspace;
+it is kept in server memory and is not shared with OpenAI connections. Saving the key
+does not call the model; connection diagnostics and execution use the TypeSafe API.
+
+Jev receives text and robot proprioception, without camera images or object state.
+This mode supports commands such as moving 10 mm or rotating the tool 5 degrees;
+it does not autonomously locate or grasp objects. Completing the command sequence
+is distinct from task success. See [Jev setup, examples, and verification](docs/JEV.md).

@@ -21,7 +21,7 @@ maniloop = "maniloop.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-maniloop = ["ui/*.html", "assets/**/*"]
+maniloop = ["ui/*.html", "ui/*.css", "ui/*.js", "assets/**/*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]

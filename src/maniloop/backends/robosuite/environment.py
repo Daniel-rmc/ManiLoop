@@ -212,6 +212,18 @@ class RobosuiteEnvironment:
             self.feedback = {"status": "rejected", "message": str(exc)}
         return dict(self.feedback)
 
+    def execute_manual(self, action, *, max_control_steps):
+        """Explicit human-only budget; policy execute() keeps its original limit."""
+        from dataclasses import replace
+        if type(max_control_steps) is not int or not 1 <= max_control_steps <= 200:
+            raise ValueError("Manual target budget must be 1–200 control steps")
+        result = self.execute(action)
+        if result["status"] == "accepted" and self._target is not None:
+            self._target.settings = replace(self._target.settings, max_steps=max_control_steps)
+            self.feedback["max_control_steps"] = max_control_steps
+            result = dict(self.feedback)
+        return result
+
     def stage_native(self, action):
         action.validate()
         if (

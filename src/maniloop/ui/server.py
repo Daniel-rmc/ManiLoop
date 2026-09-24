@@ -17,6 +17,12 @@ from maniloop.providers.chat import ChatService
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Exact allowlist: no user files, path traversal, or arbitrary repository access.
+WORKSPACE_ASSETS = {
+    "/ui/" + name: (name, "text/css; charset=utf-8" if name.endswith(".css") else "text/javascript; charset=utf-8")
+    for name in ("workspace.css", "workspace-layout.css", "workspace.js", "workspace-layout.js", "manual-control.js")
+}
+
 
 def handler_for(demo=None, chat=None):
     chat = chat or ChatService()
@@ -70,9 +76,12 @@ def handler_for(demo=None, chat=None):
             elif path == "/":
                 self.send(
                     200,
-                    (ROOT / "ui" / "index.html").read_bytes(),
+                    (ROOT / "ui" / "workspace.html").read_bytes(),
                     "text/html; charset=utf-8",
                 )
+            elif path in WORKSPACE_ASSETS:
+                filename, content_type = WORKSPACE_ASSETS[path]
+                self.send(200, (ROOT / "ui" / filename).read_bytes(), content_type)
             elif path == "/api/config-options":
                 discover = parse_qs(urlparse(self.path).query).get("discover") == ["1"]
                 configs = discover_configs() if discover else []
@@ -93,6 +102,9 @@ def handler_for(demo=None, chat=None):
                         "manual_base_url": manual_base,
                     },
                 )
+            elif path == "/api/robocasa-tasks":
+                from maniloop.backends.robocasa.catalog import list_tasks
+                self.json(200, {"tasks": list_tasks()})
             elif path == "/api/robosuite-tasks":
                 from maniloop.backends.robosuite.catalog import list_tasks
                 self.json(200, {"tasks": list_tasks()})
@@ -142,6 +154,7 @@ def handler_for(demo=None, chat=None):
                 "chat/send", "chat/preview", "chat/models",
                 "start",
                 "diagnose",
+                "typesafe-key",
                 "stop",
                 "pause",
                 "resume",
@@ -206,7 +219,7 @@ def serve(args):
     if configured_age is not None:
         validate_observation_max_age(configured_age)
     sim = create_environment(**options_from_args(args))
-    if sim.backend in ("libero", "robosuite"):
+    if sim.backend in ("libero", "robosuite", "robocasa"):
         sim.set_llm_control(getattr(args, "llm_control", "osc_step"))
     demo = Demo(sim, args.model, timing=args.timing, output=args.output,
                 observation_max_age_seconds=getattr(args, "observation_max_age_seconds", None))

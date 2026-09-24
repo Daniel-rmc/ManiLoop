@@ -1,0 +1,105 @@
+/* Compact operator workspace; no framework or build step required. */
+.shell { max-width: 1600px; padding: 20px 28px; }
+.topbar { margin-bottom: 18px; }
+.intro { margin-bottom: 18px; }
+.intro h1 { font-size: 25px; }
+.workspace { grid-template-columns: minmax(0, 1.35fr) minmax(390px, 1fr); gap: 20px; }
+.left-column { gap: 12px; top: 18px; }
+.right-column { display: block; min-width: 0; }
+.viewport { height: clamp(280px, 49vh, 520px); min-height: 0; aspect-ratio: auto; }
+.camera-main { z-index: 0; }
+.camera-placeholder, .camera-label, .viewport-corner, .axes-label, .wrist-view { z-index: 1; }
+.viewport[data-layout="dual"] { display: grid; grid-template-columns: 1fr 1fr; }
+.viewport[data-layout="dual"] .camera-main { position: static; }
+.viewport[data-layout="dual"] .wrist-view { position: relative; bottom: auto; right: auto; width: 100%; height: 100%; min-width: 0; max-width: none; aspect-ratio: auto; border: 0; border-left: 1px solid var(--border); border-radius: 0; box-shadow: none; }
+.viewport[data-layout="dual"] .wrist-view .camera-label { top: 16px; left: 12px; }
+.viewport[data-layout="dual"] .axes-label { max-width: 48%; flex-wrap: wrap; }
+.metrics { padding: 16px 0; }
+.metric { padding: 0 14px; }
+.metric-sub { letter-spacing: 0; }
+.workspace-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; min-height: 45px; }
+.workspace-toolbar > div { min-width: 0; }
+.workspace-context { color: var(--subtle); font: 12px/1.6 var(--mono); overflow-wrap: anywhere; }
+#workspace-run-state { color: var(--muted); font-size: 11px; }
+#workspace-run-state[data-active="true"] { color: var(--orange); }
+#workspace-stop { flex-shrink: 0; border-color: #bc666655; color: var(--red); }
+.workspace-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 4px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-deep); }
+.workspace-tabs button { border: 0; border-radius: 7px; background: transparent; color: var(--muted); min-height: 38px; font-size: 13px; }
+.workspace-tabs button[aria-selected="true"] { background: #293343; color: var(--text); box-shadow: 0 1px 4px #0004; }
+.workspace-tabs button:hover { color: var(--text); }
+.panel-header { min-height: 48px; height: auto; padding: 12px 16px; flex-wrap: wrap; }
+.panel-header .small { overflow-wrap: anywhere; }
+.manual-body, .task-body { padding: 14px 16px 16px; }
+.manual-settings { display: grid; grid-template-columns: 1.35fr 1fr; gap: 12px; margin-bottom: 12px; }
+.manual-settings .field-label, .environment-panel .field-label, #manual-custom .field-label { display: flex; flex-direction: column; align-items: stretch; gap: 6px; margin-bottom: 0; }
+.manual-settings .input { height: 34px; }
+.manual-top { margin-bottom: 8px; }
+.manual-controls { gap: 10px; }
+.jog { min-height: 38px; color: var(--text); }
+.key-hint { color: #9aa7b9; font-size: 11px; }
+.manual-feedback { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 10px 12px; margin-top: 12px; border-radius: 8px; background: var(--panel-deep); color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.manual-feedback strong { color: var(--text); font-weight: 500; }
+.status-badge { border-radius: 4px; padding: 3px 6px; background: #8697af15; color: var(--subtle); }
+.status-badge[data-status="reached"], .status-badge[data-status="completed"] { color: var(--green); }
+.status-badge[data-status="timed_out"], .status-badge[data-status="executing"] { color: var(--orange); }
+.status-badge[data-status="rejected"] { color: var(--red); }
+.fold { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 12px 0; background: #10161e60; }
+.fold > summary { color: var(--subtle); font-size: 12px; cursor: pointer; min-height: 22px; }
+.fold > summary:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+.fold[open] > summary { margin-bottom: 12px; }
+.help-fold .key-hint { margin: 8px 0; }
+#manual-zero { margin-left: 8px; }
+#connection-fold .credentials-section { border-top: 0; padding-top: 0; margin-bottom: 0; }
+#workspace-environment .configuration { gap: 12px; margin-bottom: 12px; }
+#workspace-environment [id$="-options"] > .field-label { margin: 12px 0; }
+#active-environment { font-size: 10px; }
+#action-error { margin: 0 0 12px; }
+#evaluation-status { margin-top: 0; }
+.inspector { margin-top: 18px; }
+.inspector .diagnostics { margin-top: 10px; }
+.inspector .inspect-body { max-height: 240px; }
+.task-actions { margin-top: 12px; }
+#task-input { min-height: 84px; }
+@media (min-width: 1060px) and (min-height: 700px) {
+  .left-column { position: sticky; }
+}
+@media (max-width: 1100px) {
+  .shell { padding: 18px; }
+  .workspace { grid-template-columns: minmax(0, 1fr) minmax(370px, 1fr); gap: 14px; }
+  .metric { padding: 0 10px; }
+  .metric-value.coords { font-size: 11px; }
+}
+@media (max-width: 900px) {
+  .workspace { grid-template-columns: 1fr; }
+  .left-column { position: static; }
+  .right-column { display: block; }
+  .viewport { height: min(62vw, 430px); }
+  .workspace-toolbar { margin-top: 4px; }
+}
+@media (max-width: 620px) {
+  .shell { padding: 14px 12px; }
+  .topbar { flex-wrap: wrap; gap: 8px; }
+  .brand { order: -1; }
+  .topbar > a { margin-left: auto; }
+  .topmeta { width: 100%; justify-content: flex-end; }
+  .intro h1 { font-size: 22px; }
+  .metrics { grid-template-columns: 1.4fr 1fr; gap: 12px 0; padding: 12px 0; }
+  .metric:nth-child(2) { border-right: 0; }
+  .metric-value.coords { font-size: 12px; }
+  .metric-label { font-size: 11px; }
+  .metric-sub { font-size: 9px; }
+  .manual-settings { grid-template-columns: 1.2fr 1fr; }
+  .manual-settings .field-label { font-size: 11px; }
+  .manual-controls { gap: 8px; }
+  .jog { min-height: 40px; }
+  .panel-header .status-chip { width: 100%; }
+  #camera-layout-button { margin-left: auto; }
+  .workspace-context { font-size: 11px; }
+  .task-body, .manual-body { padding: 12px; }
+  .fold { padding: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace-tabs button { transition: none; }
+}
+/* Keep Stop available even while editing a long provider configuration. */
+.workspace-toolbar { position: sticky; top: 10px; z-index: 5; padding: 6px 0; background: #0d1117f5; backdrop-filter: blur(8px); }

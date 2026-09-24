@@ -21,12 +21,14 @@ def main(argv=None):
     smoke = commands.add_parser("smoke", help="Render cameras without a model request")
     batch = commands.add_parser("benchmark", help="Fixed-policy episode or TOML matrix")
     for p in (listing, demo, smoke, batch):
-        p.add_argument("--backend", choices=["mujoco", "libero", "robosuite"], default="mujoco")
+        p.add_argument("--backend", choices=["mujoco", "libero", "robosuite", "robocasa"], default="mujoco")
+        p.add_argument("--robocasa-layout", type=int, default=11)
+        p.add_argument("--robocasa-style", type=int, default=14)
         p.add_argument("--libero-suite", default="libero_spatial")
         p.add_argument("--libero-task-id", type=int, default=0)
         p.add_argument("--init-state-id", type=int, default=0)
     for p in (demo, smoke, batch):
-        p.add_argument("--robot", choices=["arx5", "panda"], default=None)
+        p.add_argument("--robot", choices=["arx5", "panda", "panda_omron"], default=None)
         p.add_argument(
             "--scene", choices=["tabletop_a", "tabletop_b"], default="tabletop_a"
         )
@@ -55,7 +57,8 @@ def main(argv=None):
     batch.add_argument(
         "--suite", type=Path, help="Experiment matrix TOML (contains no credentials)"
     )
-    batch.add_argument("--agent", choices=["mock_vla", "llm_cloud", "lerobot"], default="mock_vla")
+    batch.add_argument("--agent", choices=["mock_vla", "llm_cloud", "lerobot", "jev"], default="mock_vla")
+    batch.add_argument("--instruction", default=None, help="Explicit command; Jev accepts one action per line")
     batch.add_argument("--local-model", choices=["smolvla-libero", "act-libero", "diffusion-libero"], default="smolvla-libero")
     batch.add_argument("--device", choices=["auto", "cpu", "mps", "cuda"], default="auto")
     batch.add_argument("--seed", type=int, default=0)
@@ -82,6 +85,10 @@ def main(argv=None):
         from maniloop.backends.robosuite.catalog import list_tasks
         print(json.dumps({"backend": "robosuite", "tasks": list_tasks(),
                           "setup": "python scripts/setup_robosuite.py"}, ensure_ascii=False, indent=2))
+    elif args.command == "list" and args.backend == "robocasa":
+        from maniloop.backends.robocasa.catalog import list_tasks
+        print(json.dumps({"backend": "robocasa", "tasks": list_tasks(),
+            "setup": "python scripts/setup_robocasa.py --download-assets"}, ensure_ascii=False, indent=2))
     elif args.command == "list":
         print(
             json.dumps(
@@ -103,7 +110,7 @@ def main(argv=None):
     elif args.command == "smoke":
         sim = create_environment(**options_from_args(args))
         try:
-            sim.step(2 if args.backend in ("libero", "robosuite") else 500)
+            sim.step(2 if args.backend in ("libero", "robosuite", "robocasa") else 500)
             observation, images = sim.observe()
             destination = (
                 args.output
@@ -140,6 +147,7 @@ def main(argv=None):
             else [
                 Experiment(
                     backend=args.backend,
+                    robocasa_layout=args.robocasa_layout, robocasa_style=args.robocasa_style,
                     libero_suite=args.libero_suite,
                     libero_task_id=args.libero_task_id,
                     init_state_id=args.init_state_id,
@@ -147,6 +155,7 @@ def main(argv=None):
                     scene=args.scene,
                     task=args.task,
                     agent=args.agent,
+                    instruction=args.instruction,
                     local_model=args.local_model,
                     device=args.device,
                     timing=args.timing,

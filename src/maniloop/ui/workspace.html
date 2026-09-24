@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <title>ManiLoop · 机器人实验台</title>
+  <link rel="stylesheet" href="/ui/workspace.css">
+  <link rel="stylesheet" href="/ui/workspace-layout.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a href="/chat" target="_blank" rel="noopener" class="button subtle">API 聊天测试 ↗</a>
+      <div class="brand">
+        <div class="brandmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h13M7 20v-5l5-4-3-5M14 11l4-4M16 5l4 4 2-2M16 5l2-2"/><circle cx="9" cy="5" r="2"/><circle cx="13" cy="12" r="2"/><path d="M4 20v-3h6"/></svg></div>
+        <div><div class="brandname">ManiLoop<span>机器人实验台</span></div><div class="eyebrow">LANGUAGE → ACTION → OBSERVATION</div></div>
+      </div>
+      <div class="topmeta"><span class="pill">MuJoCo / LOCAL</span><span class="connection"><i id="connection-dot" class="dot"></i><span id="connection-label">连接中</span></span></div>
+    </header>
+    <section class="intro">
+      <div><h1>观察场景，直接操作。</h1><p>手动验证六维动作，或切换模型运行；所有结果以实际执行反馈为准。</p></div>
+      <div class="flow"><strong>相机与状态</strong><span class="arrow">→</span><strong>LLM API</strong><span class="arrow">→</span><strong>小幅动作</strong><span class="arrow">→</span><strong>再次观察</strong></div>
+    </section>
+
+    <div class="workspace">
+      <div class="left-column">
+        <section class="panel" aria-label="仿真实时画面">
+          <div class="panel-header"><div class="panel-title"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="4" width="10" height="10" rx="2"/><path d="m12 7 4-2v8l-4-2z"/></svg>仿真现场</div><button id="camera-layout-button" class="button subtle" type="button" aria-pressed="false">双相机并排</button><div class="status-chip"><i id="simulation-dot" class="dot"></i><span id="simulation-status">正在连接环境</span></div></div>
+          <div id="camera-viewport" class="viewport" data-layout="pip">
+            <img id="external-camera" class="camera camera-main" alt="当前机器人仿真场景的固定相机画面" draggable="false">
+            <div id="camera-placeholder" class="camera-placeholder"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1"><path d="M5 13h8l3-5h8l3 5h8v21H5z"/><circle cx="20" cy="23" r="7"/></svg><span>等待相机画面</span></div>
+            <div class="camera-label"><i class="dot"></i>EXTERNAL CAM</div><div class="viewport-corner" id="sim-clock">SIM 00:00.0</div>
+            <div class="axes-label"><b class="x">X</b><b class="y">Y</b><b class="z">Z ↑</b><span id="frame-label">机器人基座坐标系 · m</span></div>
+            <div class="wrist-view"><img id="wrist-camera" class="camera" alt="安装在机器人腕部的相机画面" draggable="false"><div id="wrist-placeholder" class="wrist-wait">等待腕部相机</div><div class="camera-label">WRIST CAM</div></div>
+          </div>
+          <div class="view-footer"><div class="legend"><span>外部相机 + 腕部相机</span></div><span>图像来自模拟相机</span></div>
+        </section>
+        <section class="panel metrics" aria-label="机器人状态">
+          <div class="metric"><div class="metric-label">末端位置 · XYZ</div><div id="tcp-position" class="metric-value coords">— / — / —</div><div class="metric-sub" id="frame-metric">BASE FRAME · METERS</div></div>
+          <div class="metric"><div class="metric-label">夹爪开度</div><div class="metric-value"><span id="gripper-opening">—</span><small>%</small></div><div class="metric-sub">0 CLOSE · 100 OPEN</div></div>
+          <div class="metric"><div class="metric-label">决策次数</div><div id="step-value" class="metric-value">0</div><div class="metric-sub">POLICY CALLS</div></div>
+          <div class="metric"><div class="metric-label">最近 API 耗时</div><div class="metric-value"><span id="api-latency">—</span><small>s</small></div><div class="metric-sub">WALL TIME</div></div>
+        </section>
+    <div id="evaluation-status" class="session-notice" role="status">独立评估：红块 → 绿色区域基准尚未完成</div>
+      </div>
+<aside class="right-column" aria-label="实验控制区">
+  <div class="workspace-toolbar"><div><div id="workspace-context" class="workspace-context">等待场景连接</div><span id="workspace-run-state">手动预览 · 不调用模型</span></div><button id="workspace-stop" class="button stop" type="button" disabled>停止执行</button></div>
+  <div class="workspace-tabs" role="tablist" aria-label="工作台模式">
+    <button id="tab-manual" role="tab" data-workspace-tab="manual" aria-controls="workspace-manual" aria-selected="true">手动控制</button>
+    <button id="tab-model" role="tab" data-workspace-tab="model" aria-controls="workspace-model" aria-selected="false" tabindex="-1">模型运行</button>
+    <button id="tab-environment" role="tab" data-workspace-tab="environment" aria-controls="workspace-environment" aria-selected="false" tabindex="-1">场景设置</button>
+  </div>
+            <div id="action-error" class="inline-error" role="alert" hidden></div>
+        <section class="panel manual-panel" id="workspace-manual" role="tabpanel" aria-labelledby="tab-manual">
+          <div class="panel-header"><div class="panel-title">手动控制 · 六维位姿</div><span class="small">无需 API</span></div>
+          <div class="manual-body">
+<div class="manual-settings">            <label class="field-label">手动参考坐标轴<select id="manual-reference" class="input"><option value="fixed">固定轴（当前后端世界 / 基座系）</option><option value="tool">末端自身轴（TCP）</option></select></label>            <label class="field-label">手动目标跟踪时限（秒）<input id="manual-duration" class="input" type="number" min="0.05" max="10" step="0.05" value="3"></label></div>
+            <div class="manual-top"><span id="manual-frame">沿基座坐标轴移动末端</span><label for="jog-step"><select id="jog-step" class="select-compact" aria-label="每次点动距离"><option value="0.005">步长 5 mm</option><option value="0.01" selected>步长 10 mm</option><option value="0.02">步长 20 mm</option></select></label></div>
+            <div class="manual-controls">
+              <div class="axis-control"><span class="axis-name x">X AXIS</span><button class="jog manual-button" data-axis="0" data-sign="-1" type="button" aria-label="X 轴负方向移动" disabled>− X</button><button class="jog manual-button" data-axis="0" data-sign="1" type="button" aria-label="X 轴正方向移动" disabled>+ X</button></div>
+              <div class="axis-control"><span class="axis-name y">Y AXIS</span><button class="jog manual-button" data-axis="1" data-sign="-1" type="button" aria-label="Y 轴负方向移动" disabled>− Y</button><button class="jog manual-button" data-axis="1" data-sign="1" type="button" aria-label="Y 轴正方向移动" disabled>+ Y</button></div>
+              <div class="axis-control"><span class="axis-name z">Z AXIS</span><button class="jog manual-button" data-axis="2" data-sign="-1" type="button" aria-label="Z 轴负方向移动" disabled>− Z</button><button class="jog manual-button" data-axis="2" data-sign="1" type="button" aria-label="Z 轴正方向移动" disabled>+ Z</button></div>
+            </div>
+            <div class="manual-top" style="margin-top:14px">
+              <span>末端姿态旋转</span>
+              <label>角度步长（°）<input id="rotation-step" class="input" style="width:88px;display:inline-block" type="number" min="0.1" step="0.1" value="5" aria-label="每次旋转角度"></label>
+            </div>
+            <div class="manual-controls">
+              <div class="axis-control"><span class="axis-name x">RX</span><button class="jog manual-button" data-rotation-axis="0" data-sign="-1" type="button" aria-label="绕 X 轴负向旋转" disabled>− Rx</button><button class="jog manual-button" data-rotation-axis="0" data-sign="1" type="button" aria-label="绕 X 轴正向旋转" disabled>+ Rx</button></div>
+              <div class="axis-control"><span class="axis-name y">RY</span><button class="jog manual-button" data-rotation-axis="1" data-sign="-1" type="button" aria-label="绕 Y 轴负向旋转" disabled>− Ry</button><button class="jog manual-button" data-rotation-axis="1" data-sign="1" type="button" aria-label="绕 Y 轴正向旋转" disabled>+ Ry</button></div>
+              <div class="axis-control"><span class="axis-name z">RZ</span><button class="jog manual-button" data-rotation-axis="2" data-sign="-1" type="button" aria-label="绕 Z 轴负向旋转" disabled>− Rz</button><button class="jog manual-button" data-rotation-axis="2" data-sign="1" type="button" aria-label="绕 Z 轴正向旋转" disabled>+ Rz</button></div>
+            </div>
+
+
+
+<div class="manual-feedback"><span id="manual-status" class="status-badge">等待操作</span><span>位置误差 <strong id="manual-position-error">—</strong></span><span>姿态误差 <strong id="manual-rotation-error">—</strong></span></div>
+            <p id="manual-pose-feedback" class="key-hint" aria-live="polite">旋转执行结果显示在下方反馈中。</p>
+            <details id="manual-custom" class="fold">
+              <summary class="small">自定义六维增量（平移 + 旋转）</summary>
+              <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px">
+                <label class="field-label">ΔX · mm<input id="manual-dx" class="input" type="number" step="0.1" value="0"></label>
+                <label class="field-label">ΔY · mm<input id="manual-dy" class="input" type="number" step="0.1" value="0"></label>
+                <label class="field-label">ΔZ · mm<input id="manual-dz" class="input" type="number" step="0.1" value="0"></label>
+                <label class="field-label">Rx · °<input id="manual-rx" class="input" type="number" step="0.1" value="0"></label>
+                <label class="field-label">Ry · °<input id="manual-ry" class="input" type="number" step="0.1" value="0"></label>
+                <label class="field-label">Rz · °<input id="manual-rz" class="input" type="number" step="0.1" value="0"></label>
+              </div>
+              <p class="key-hint">Rx/Ry/Rz 是一次旋转向量的分量，不是绝对欧拉角。按当前坐标轴解释；受后端单步向量范数与可达性限制，不会静默裁剪。</p>
+              <button id="manual-pose-submit" class="button manual-button" type="button" disabled>执行六维增量</button><button id="manual-zero" class="button subtle" type="button">清零输入</button>
+            </details>
+            <div class="gripper-actions"><button id="open-gripper" class="button manual-button" type="button" disabled><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6 3H2v10h4M10 3h4v10h-4M5 8h6"/></svg>打开夹爪</button><button id="close-gripper" class="button manual-button" type="button" disabled><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M7 3H4v10h3M9 3h3v10H9"/></svg>闭合夹爪</button></div>
+<p id="manual-limits" class="key-hint">正在读取动作范围…</p><details class="fold help-fold"><summary>坐标轴与执行说明</summary>            <p class="key-hint">选择“末端自身轴”后，±Rz 绕夹爪自身 Z 轴转动。纯旋转将 TCP 位置增量设为零；目标跟踪模式尝试保持位置并达到目标姿态。多个关节可能协同运动，不是只驱动 J7。</p>            <p class="key-hint">只对外部后端的手动目标跟踪生效，最长 10 秒；超时报告真实误差。原生单步仍只执行一步，模型动作预算不受此设置影响。</p></details>
+            <div class="reset-row"><label class="seed-wrap" for="scene-seed">场景种子<input id="scene-seed" class="input seed-input" type="number" value="0" min="0" max="2147483647" step="1"></label><button id="reset-button" class="button subtle" type="button" disabled><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a5 5 0 1 1 0 4M3 2v4h4"/></svg>重新初始化</button></div>
+          </div>
+        </section>
+        <section class="panel task-panel" id="workspace-model" role="tabpanel" aria-labelledby="tab-model" hidden>
+          <div class="panel-header"><div class="panel-title"><span class="number-tag">01</span>任务与模型</div><span class="small">由你发起每次实验</span></div>
+          <form id="task-form" class="task-body" autocomplete="off">
+            <label class="field-label" for="agent-select">策略类型</label>
+            <select id="agent-select" class="input" style="margin-bottom:14px"><option value="llm_cloud">云端 LLM API</option><option value="jev">Jev · 文本原语控制</option><option value="mock_vla">模拟 VLA · 离线接口检查</option><option value="lerobot">本地 LeRobot · 真实模型</option></select>
+<div id="jev-fields" hidden>
+  <p class="session-notice">纯 Jev 文本控制：每行一个动作，Jev 选择原语，本地跟踪目标。相机仅供人类查看，不发送给 Jev。序列结束不等于任务成功。</p>
+  <div class="key-row">
+    <label class="field-label" for="jev-api-key">Jev API Key · TypeSafe 专用</label>
+    <input id="jev-api-key" class="input mono" type="password" placeholder="在此粘贴 TypeSafe API Key，不是 OpenAI Key" autocomplete="new-password" spellcheck="false" autocapitalize="none" maxlength="1000" aria-describedby="jev-key-status jev-key-hint">
+  </div>
+  <div class="gripper-actions">
+    <button id="jev-save-key" class="button" type="button">保存到本次服务</button>
+    <button id="jev-clear-key" class="button subtle" type="button">清除网页密钥</button>
+  </div>
+  <p id="jev-key-status" class="key-hint" role="status" aria-live="polite">正在检查 TypeSafe 访问配置…</p>
+  <p id="jev-key-hint" class="key-hint">仅保存在本机服务内存，不写入文件、浏览器存储或实验日志。保存不调用模型；也可直接填写后诊断或运行。提交成功后清空输入框，留空复用已保存密钥；服务重启后需重新填写。与 OpenAI 配置独立。</p>
+  <div class="configuration" style="grid-template-columns:1fr 1fr;margin-top:10px">
+    <label class="field-label">Jev 模型<input id="jev-model" class="input" value="jev-1.13.0" maxlength="68"></label>
+    <label class="field-label">请求超时 · 秒<input id="jev-timeout" class="input" type="number" min="1" max="120" value="30"></label>
+    <label class="field-label">默认平移 · mm<input id="jev-distance" class="input" type="number" min="0.1" max="50" step="0.1" value="10"></label>
+    <label class="field-label">默认旋转 · °<input id="jev-angle" class="input" type="number" min="0.1" max="28.6" step="0.1" value="5"></label>
+    <label class="field-label">最低候选概率<input id="jev-probability" class="input" type="number" min="0" max="1" step="0.05" value="0.7"></label>
+    <label class="field-label">本地跟踪 · 秒<input id="jev-duration" class="input" type="number" min="0.05" max="10" step="0.05" value="3"></label>
+  </div>
+  <p class="key-hint">指令带数值和单位时使用该值；否则使用默认步长。阈值是实验设置，不是动作安全率。多动作请换行，物体定位请求会停止并提示缺少视觉。</p>
+  <div class="gripper-actions">
+    <button id="jev-diagnose" class="button" type="button">Jev 连接诊断 · 不动作</button>
+    <button id="jev-example" class="button subtle" type="button">载入三步演示指令</button>
+  </div>
+  <p class="key-hint">诊断会请求一次 Jev。演示：上移 10mm → 工具轴旋转 5° → 打开夹爪。不自动重置场景，实际受控制范围和接触条件限制。</p>
+  <pre id="jev-result" class="config-preview" style="max-height:260px;overflow:auto;white-space:pre-wrap">尚无 Jev 响应。这里显示候选与概率，不伪造模型思考文本。</pre>
+</div>
+            <div id="local-policy-fields" hidden><label class="field-label" for="local-model">本地模型</label><select id="local-model" class="input"><option value="smolvla-libero">SmolVLA · LeRobot 官方 · 支持语言</option><option value="act-libero">ACT · 社区 · 视觉模仿策略</option><option value="diffusion-libero">Diffusion Policy · 社区 · 视觉模仿策略</option></select><p class="key-hint">需先安装本地模型，使用 LIBERO 场景。开始时自动切换 256 像素相机并从所选初始化重新开始。ACT / DP 不读取语言指令。首次加载模型需要一些时间。</p></div>
+            <label class="field-label" for="task-input">任务指令<span>描述目标，由模型选择动作</span></label>
+            <textarea id="task-input" class="task-input" required maxlength="4000" spellcheck="false">把红色方块抓起来，放到绿色目标区域，再松开夹爪。</textarea>
+            <div class="hint-row"><span>从简单、明确的单物体任务开始</span><span class="keyboard">⌘ / Ctrl + Enter</span></div>
+            <details id="connection-fold" class="fold" open><summary>模型连接与认证</summary>
+            <div class="credentials-section">
+              <label class="field-label" for="credential-source">密钥来源<span id="key-status" class="key-status">等待读取</span></label>
+              <select id="credential-source" class="input"><option value="manual" selected>手动输入密钥与 API 地址</option><option value="codex">Codex · 使用当前 ChatGPT 登录</option><option value="upload">导入 config.toml + API Key</option><option value="file">本地配置文件（CC Switch）</option></select>
+              <p id="codex-login-note" class="key-hint" hidden>由本机官方 Codex CLI 使用 ChatGPT 登录；无需填写 API Key。只发送相机与传感数据，使用账户 Codex 额度。登录失效时请运行 codex login 重新授权。</p>
+              <div id="file-config-fields" hidden>
+                <label class="field-label config-source-label" for="config-select">配置位置<span>由本地服务读取</span></label>
+                <div class="config-path-row"><select id="config-select" class="input model-input" aria-label="选择已发现的本地配置"><option value="__custom__">自定义本地路径…</option></select><button id="discover-configs-button" type="button" class="button">发现本地配置</button></div>
+                <div class="config-path-row"><input id="config-path" class="input model-input" type="text" placeholder="配置文件的本地绝对路径" maxlength="2048" spellcheck="false" autocapitalize="none" aria-label="本地配置文件路径"><button id="read-config-button" type="button" class="button">读取配置</button></div>
+                <p class="key-hint">每次决策前重新读取，切换后无需重启服务。额度不足时会停止任务，切换后可再次开始。</p>
+              </div>
+              <div id="upload-config-fields" hidden>
+                <label class="field-label config-source-label" for="config-upload">选择 config.toml<span>也可在下方粘贴内容</span></label>
+                <input id="config-upload" class="input" type="file" accept=".toml,application/toml,text/plain" aria-label="上传 TOML 配置文件">
+                <label class="field-label config-source-label" for="config-toml">TOML 配置内容<span id="config-upload-name">仅保留在本次页面中</span></label>
+                <textarea id="config-toml" class="task-input mono" style="min-height:118px;font-size:11px" placeholder='model = "你的模型名称"&#10;model_provider = "custom"&#10;[model_providers.custom]&#10;base_url = "https://你的服务商/v1"&#10;wire_api = "responses"' spellcheck="false" autocapitalize="none" maxlength="1048576"></textarea>
+                <p class="key-hint">配置决定服务商地址与默认模型。导入内容只发送给本机仿真服务。</p>
+              </div>
+              <div id="config-key-fields" hidden>
+                <div class="key-row"><label class="field-label" for="config-api-key">API Key<span>可单独填写，优先于配置中的密钥</span></label><input id="config-api-key" class="input mono" type="password" placeholder="配置未含密钥时填写；留空使用配置中的密钥" autocomplete="new-password" spellcheck="false" autocapitalize="none" maxlength="1000"></div>
+                <div id="upload-preview-action" class="config-path-row" hidden><span></span><button id="read-upload-config-button" type="button" class="button">读取配置</button></div>
+                <div id="config-preview" class="config-preview" role="status"><p class="config-empty">点击发现后查找路径，点击读取后检查所选配置。</p></div>
+                <p class="key-hint">密钥不写入浏览器存储或实验日志。填写后可先读取配置，再刷新模型列表。</p>
+              </div>
+              <div id="manual-config-fields">
+                <div class="key-row"><label class="field-label" for="api-key">API 密钥</label><input id="api-key" class="input mono" type="password" placeholder="输入 API 密钥，或使用服务端环境变量" autocomplete="new-password" spellcheck="false" autocapitalize="none" maxlength="1000"></div>
+                <div class="key-row"><label class="field-label" for="base-url">API 地址<span>可选，留空使用服务默认地址</span></label><input id="base-url" class="input model-input" type="url" placeholder="https://api.openai.com/v1" spellcheck="false" autocapitalize="none" maxlength="2048"></div>
+                <p class="key-hint">开始提交后清空密钥输入；不写入浏览器存储或实验日志。</p>
+              </div>
+            </div>
+            </details>
+            <div class="configuration">
+              <div><label class="field-label" for="model-select">LLM 模型</label><select id="model-select" class="input model-input"><option value="">跟随本地配置</option><option value="__custom__">自定义模型…</option></select></div>
+              <div><label class="field-label" for="max-steps">调用上限（0 不限次数）</label><input id="max-steps" class="input mono" type="number" value="40" min="0" max="100" step="1" required></div>
+            </div>
+            <div id="custom-model-fields" class="custom-model" hidden><label class="field-label" for="model-input">自定义模型名称</label><input id="model-input" class="input model-input" type="text" placeholder="输入服务商支持的完整模型 ID" maxlength="120" spellcheck="false" autocapitalize="none"></div>
+            <div class="model-tools"><p class="key-hint" id="model-catalog-note">刷新会请求当前服务商的模型列表。列出的模型仍需支持图像与结构化输出。</p><button id="refresh-models-button" type="button" class="button subtle">刷新模型列表</button></div>
+            <details id="cloud-controls" class="fold"><summary>运行参数与连接诊断</summary><div class="fold-body">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div><label class="field-label" for="request-timeout">请求超时（秒）</label><input id="request-timeout" class="input" type="number" min="1" max="600" value="120"></div>
+                <div><label class="field-label" for="reasoning-effort">推理强度</label><select id="reasoning-effort" class="input"><option value="auto">模型默认</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="xhigh">xhigh</option></select></div>
+                <div><label class="field-label" for="llm-control">外部任务动作执行</label><select id="llm-control" class="input"><option value="tcp_target_servo_v2">目标跟踪（推荐）</option><option value="osc_step">原生单步（基线）</option></select></div>
+                <div><label class="field-label" for="llm-resolution">外部任务相机</label><select id="llm-resolution" class="input"><option value="llm_rgb512">512 × 512（LLM）</option><option value="debug_rgb128">128 × 128（基线）</option></select></div>
+                <div><label class="field-label" for="wall-budget">实验总时限（秒）</label><input id="wall-budget" class="input" type="number" min="1" value="600"></div>
+                <div><label class="field-label" for="sim-budget">仿真时限（秒）</label><input id="sim-budget" class="input" type="number" min="1" value="120"></div>
+                <div style="grid-column:1/-1"><label class="field-label" for="observation-max-age">观测有效期（秒，仅实时模式）</label><input id="observation-max-age" class="input" type="number" min="0" step="any" value="60" required><p class="key-hint">可设 300、600 等；0 表示不限制时间。受控时序始终不限观测等待时间。重置、停止或新决策产生的观测版本变更仍会使旧指令失效；本设置与 API 请求超时、目标执行时限独立。</p></div>
+                <div style="grid-column:1/-1"><label class="field-label" for="context-mode">视觉反馈</label><select id="context-mode" class="input"><option value="current">当前双相机 · 基线</option><option value="paired">前后双相机 · 对照上次动作</option></select><p class="key-hint">前后模式增加上次动作前的画面与本体状态，供模型比较执行变化。独立评分仅供人类查看。</p></div>
+              </div>
+              <label class="key-hint" style="display:block;margin-top:10px"><input id="reset-before-start" type="checkbox" checked> 开始新实验时重置场景</label>
+              <p class="key-hint">目标跟踪在本地持续执行，最长 1 秒后重新观察；反馈报告实际误差。更换相机配置会重置场景。相机与动作设置在「应用并重置场景」或开始实验时生效；VLA 使用各自训练配置。</p>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px"><button id="diagnose-text" type="button" class="button subtle">1 · 文本诊断</button><button id="diagnose-vision" type="button" class="button subtle">2 · 图像诊断</button><button id="diagnose-action" type="button" class="button subtle">3 · 动作格式诊断</button></div>
+              <p class="key-hint">每次诊断调用一次所选模型，可能计费；使用当前场景，不执行机器人动作。可依次定位连接、图像和结构化输出问题。</p>
+              <pre id="diagnostic-result" class="config-preview" style="white-space:pre-wrap" aria-live="polite">尚未诊断</pre>
+            </div>
+            </details>
+            <div class="task-actions"><button id="start-button" type="submit" class="button primary" disabled><svg viewBox="0 0 16 16" fill="currentColor"><path d="m5 3 8 5-8 5z"/></svg><span>开始执行</span></button><button id="stop-button" type="button" class="button stop" disabled><svg viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="4" width="8" height="8" rx="1"/></svg>停止</button></div>
+            <div id="step-controls" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:9px"><button id="step-button" type="button" class="button" disabled>单步执行</button><button id="pause-button" type="button" class="button" disabled>执行后暂停</button><button id="resume-button" type="button" class="button" disabled>继续连续执行</button><a id="replay-link" class="button subtle" href="/replay/current" target="_blank" rel="noopener noreferrer" hidden>回看最近实验 ↗</a></div>
+            <p id="step-controls-note" class="key-hint">单步只请求一次模型，等本次动作结束后暂停。暂停保留实验上下文；停止结束本次实验。</p>
+            <div id="session-notice" class="session-notice">无需密钥即可预览场景和手动调试。选择配置并开始后，才会发送任务与相机观测。</div>
+
+          </form>
+        </section>
+        <section class="panel environment-panel" id="workspace-environment" role="tabpanel" aria-labelledby="tab-environment" hidden>
+          <div class="panel-header"><div class="panel-title">实验环境</div><span id="active-environment" class="small">加载中</span></div>
+          <div class="task-body" style="padding-top:16px">
+            <div class="configuration" style="grid-template-columns:1fr 1fr">
+              <label class="field-label">环境后端<select id="backend-select" class="input"><option value="mujoco">ManiLoop 桌面任务</option><option value="libero">LIBERO 官方任务</option><option value="robosuite">robosuite 操作任务</option><option value="robocasa">RoboCasa 厨房任务</option></select></label>
+              <label class="field-label">机器人<select id="robot-select" class="input"><option value="arx5">ARX X5</option><option value="panda">Franka Panda</option><option value="panda_omron">PandaOmron</option></select></label>
+              <label class="field-label">布局<select id="layout-select" class="input"><option value="tabletop_a">桌面 A</option><option value="tabletop_b">桌面 B</option></select></label>
+              <label class="field-label">任务<select id="task-select" class="input"><option value="pick_place">抓放</option><option value="push">推物</option></select></label>
+              <label class="field-label">时序<select id="timing-select" class="input"><option value="controlled">受控时序</option><option value="realtime">实时模式</option></select></label>
+            </div>
+            <div id="libero-options" hidden>
+              <label class="field-label">官方任务集<select id="libero-suite" class="input"><option>libero_spatial</option><option>libero_object</option><option>libero_goal</option><option>libero_90</option><option>libero_10</option></select></label>
+              <label class="field-label">官方任务<select id="libero-task" class="input"><option value="0">0 · 正在读取任务目录</option></select></label>
+              <label class="field-label">初始化编号<input id="libero-init" class="input" type="number" min="0" step="1" value="0"></label>
+              <p class="key-hint">保留官方 Panda、任务与评分。仅 RGB 与本体感知；不提供深度查询。适配实验单独比较。</p>
+            </div>
+            <div id="robosuite-options" hidden>
+              <label class="field-label">robosuite 任务<select id="robosuite-task" class="input"><option value="Lift">Lift · 抓起方块</option></select></label>
+              <p class="key-hint">Panda · world-frame OSC。保留上游任务和评分；仅 RGB 与本体感知。LIBERO 权重与逐控制步录像暂不支持本后端。</p>
+            </div>
+            <div id="robocasa-options" hidden>
+              <label class="field-label">RoboCasa 任务<select id="robocasa-task" class="input"><option value="OpenDrawer">OpenDrawer · 打开抽屉</option></select></label>
+              <div class="configuration" style="grid-template-columns:1fr 1fr">
+                <label class="field-label">厨房布局 ID<input id="robocasa-layout" class="input" type="number" min="1" max="60" step="1" value="11"></label>
+                <label class="field-label">厨房风格 ID<input id="robocasa-style" class="input" type="number" min="1" max="60" step="1" value="14"></label>
+              </div>
+              <p class="key-hint">PandaOmron：首版仅控制机械臂与夹爪，底座/躯干保持。原生12维控制，不等同固定Panda。默认布局11/风格14；其他组合需实际验证。首次加载厨房可能需要较长时间。</p>
+            </div>
+            <button id="apply-environment" type="button" class="button">应用并重置场景</button>
+            <button id="demo-preset" type="button" class="button subtle" style="margin-left:6px">加载 GPT-6 抓放演示</button>
+            <p id="demo-preset-note" class="key-hint" hidden>已载入 spatial 0 / init 0 / seed 0，30 次决策、512 像素相机和目标跟踪。选择认证后，点击单步或连续执行；加载预设不会调用模型。</p>
+            <p class="key-hint">受控时序在模型思考时暂停物理；实时模式独立比较。策略只读取图像与传感状态。</p>
+          </div>
+        </section>
+</aside>
+</div>
+<details class="inspector fold"><summary>观测、动作与完整日志</summary>
+    <section class="diagnostics" aria-label="闭环诊断">
+      <div class="panel"><div class="panel-header"><div class="tabs" role="tablist" aria-label="模型输入输出"><button id="tab-observation" class="tab" type="button" role="tab" aria-selected="true" aria-controls="inspect-observation">模型观测</button><button id="tab-action" class="tab" type="button" role="tab" aria-selected="false" aria-controls="inspect-action" tabindex="-1">最近动作</button></div><span class="small">只读 · 决策接口</span></div><div id="inspect-observation" class="inspect-body" role="tabpanel" aria-labelledby="tab-observation" tabindex="0"><pre id="observation-content">等待第一份观测…</pre></div><div id="inspect-action" class="inspect-body" role="tabpanel" aria-labelledby="tab-action" tabindex="0" hidden><pre id="action-content">尚未发出动作。</pre></div></div>
+      <div class="panel"><div class="panel-header"><div class="panel-title">执行反馈</div><span class="small">实际动作结果</span></div><div class="inspect-body"><div id="feedback-summary" class="result-summary"><span class="result-icon">↳</span><span id="feedback-content">初始化环境后，可先点动机械臂，观察末端位置与相机画面的变化。</span></div><pre id="feedback-details" hidden></pre></div></div>
+      <div class="panel log-panel"><div class="panel-header"><div class="panel-title">实验日志<span id="log-count" class="small mono">0 EVENTS</span></div><span class="small">最新事件在前</span></div><div id="log-container" class="log-container" role="log" aria-label="实验事件日志"><div class="log-empty">环境连接后，这里将显示观测、模型决策和执行结果。</div></div></div>
+    </section>
+</details>
+    <footer class="footer"><span>当前为仿真实验；同一观测与动作接口可用于后续真机适配，真机效果需独立验证。</span><span class="mono">MANILOOP · ROBOT MANIPULATION · SIMULATION</span></footer>
+  </main>
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script type="module" src="/ui/workspace.js"></script>
+</body>
+</html>
