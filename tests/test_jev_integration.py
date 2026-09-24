@@ -39,9 +39,9 @@ def test_sequence_executes_once_and_stops_without_extra_request(backend, task, m
         assert len(requests) == runner.api_calls == runner.step_count == 3
         assert env.gripper_opening > .9
         assert env.tcp_position[2] > before[2] + .005
-        events = [json.loads(l) for l in runner.log_file.read_text().splitlines()]
+        events = [json.loads(l) for l in runner.log_file.read_text(encoding="utf-8").splitlines()]
         assert len([e for e in events if e['type'] == 'provider_decision']) == 3
-        assert 'fixture-not-real' not in runner.log_file.read_text()
+        assert 'fixture-not-real' not in runner.log_file.read_text(encoding="utf-8")
         assert runner.manifest['policy']['images_sent_to_policy'] is False
         assert runner.manifest['policy']['request_options']['target_duration_seconds'] == 3
         clock = env.simulation_time

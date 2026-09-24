@@ -104,7 +104,7 @@ def test_typed_key_diagnosis_reuses_memory_and_never_leaks(runner, monkeypatch):
         assert KEY not in json.dumps(runner.state)
         for file in runner.log_file.parent.iterdir():
             if file.suffix in {'.json', '.jsonl', '.html'}:
-                assert KEY not in file.read_text()
+                assert KEY not in file.read_text(encoding="utf-8")
     assert used == [KEY, KEY]
     client = runner.policy.client
     runner.command('typesafe-key', {'clear': True})
