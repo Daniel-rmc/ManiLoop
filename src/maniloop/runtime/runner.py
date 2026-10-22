@@ -73,7 +73,7 @@ class EpisodeRunner:
         self._last_wall = time.monotonic()
         self._physics_remainder = 0.0
         self.seed = 0
-        self.model = model or os.environ.get("OPENAI_MODEL") or "gpt-6-astra"
+        self.model = model or os.environ.get("OPENAI_MODEL") or DEFAULT_MODEL
         self.default_model = self.model
         self.manual_base_url = None
         self.key = os.environ.get("OPENAI_API_KEY", "")
@@ -88,7 +88,7 @@ class EpisodeRunner:
             "source": "manual",
             "path": "",
             "provider": "OpenAI",
-            "base_url": "https://api.openai.com/v1",
+            "base_url": "https://openrouter.ai/api/v1",
             "model": self.model,
             "key_configured": bool(self.key),
             "models": [self.model],
@@ -133,6 +133,7 @@ class EpisodeRunner:
         self.token = 0
         self.future_token = -1
         self.log_file = None
+        self.motion = None
         self.next_request = 0.0
         self.event("info", f"{sim.robot_name} 场景已准备；输入任务后开始闭环")
 
@@ -152,6 +153,7 @@ class EpisodeRunner:
     def stop(self, message="任务已停止", reason="user_stop"):
         if not self.running and self.log_file and self.termination_reason:
             # A completed run is immutable even if Stop/Reset is sent again.
+            self._finalize_motion()
             self.update_review()
             self.sim.hold()
             return
@@ -166,6 +168,7 @@ class EpisodeRunner:
             self.policy.cancel()
         self.sim.hold()
         self.event("info", message)
+        self._finalize_motion()
         self.update_review()
 
     def update_review(self):
@@ -679,6 +682,12 @@ class EpisodeRunner:
         (run / "manifest.json").write_text(
             json.dumps(self.manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+        self.motion = None
+        try:
+            from maniloop.recording.motion import MotionRecorder
+            self.motion = MotionRecorder(self.sim, run)
+        except Exception as exc:
+            self.event("info", f"运动视频录制不可用：{exc}")
         self.event(
             "start", "开始任务", task=task, model=self.model, max_calls=max_steps or None
         )
@@ -705,6 +714,7 @@ class EpisodeRunner:
             self.stop("环境已结束", reason="environment_terminated")
         self.tick()
         if not self.running and self.log_file:
+            self._finalize_motion()
             self.update_review()
         if self.paused:
             self._physics_remainder = 0.0
@@ -750,9 +760,30 @@ class EpisodeRunner:
                     if self.sim.backend in ("libero", "robosuite", "robocasa"):
                         break
             self.sim.step()
+            if self.motion is not None:
+                self.motion.tick(self.sim)
             if self.running and self.sim.terminated:
                 self.stop("环境已结束", reason="environment_terminated")
                 break
+
+    def _finalize_motion(self):
+        motion, self.motion = self.motion, None
+        if motion is None:
+            return
+        try:
+            stats = motion.finalize()
+        except Exception as exc:
+            self.event("info", f"运动视频封装失败：{exc}")
+            return
+        if stats is None:
+            return
+        if stats.get("video"):
+            message = f"运动视频已保存 {stats['video']}（{stats['frames']} 帧"
+            if stats.get("dropped"):
+                message += f"，渲染繁忙丢弃 {stats['dropped']} 帧"
+            self.event("info", message + "）")
+        else:
+            self.event("info", "运动视频未生成（无有效帧或编码失败）")
 
     def close_policy(self):
         policy, self.policy = self.policy, None
@@ -765,6 +796,7 @@ class EpisodeRunner:
         self.running = False
         self.chunk = None
         self.token += 1
+        self._finalize_motion()
         self.close_policy()
         self.pool.shutdown(wait=True, cancel_futures=True)
         self.sim.close()

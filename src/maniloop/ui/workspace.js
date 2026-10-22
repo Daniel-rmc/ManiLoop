@@ -583,7 +583,7 @@ $('demo-preset').addEventListener('click', async () => {
     $('agent-select').dispatchEvent(new Event('change'));
     updateBackendFields();
     ui.modelSelect.value = '__custom__';
-    ui.model.value = 'gpt-6-astra';
+    ui.model.value = 'openai/gpt-6-astra';
     updateModelInput();
     ui.maxSteps.value = '30';
     $('request-timeout').value = '120';
