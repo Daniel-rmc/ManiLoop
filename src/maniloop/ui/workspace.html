@@ -99,7 +99,7 @@
           <div class="panel-header"><div class="panel-title"><span class="number-tag">01</span>任务与模型</div><span class="small">由你发起每次实验</span></div>
           <form id="task-form" class="task-body" autocomplete="off">
             <label class="field-label" for="agent-select">策略类型</label>
-            <select id="agent-select" class="input" style="margin-bottom:14px"><option value="llm_cloud">云端 LLM API</option><option value="jev">Jev · 文本原语控制</option><option value="mock_vla">模拟 VLA · 离线接口检查</option><option value="lerobot">本地 LeRobot · 真实模型</option></select>
+            <select id="agent-select" class="input" style="margin-bottom:14px"><option value="llm_cloud">云端 LLM API</option><option value="harness">分层大脑 Harness · 规划+验证</option><option value="jev">Jev · 文本原语控制</option><option value="mock_vla">模拟 VLA · 离线接口检查</option><option value="lerobot">本地 LeRobot · 真实模型</option></select>
 <div id="jev-fields" hidden>
   <p class="session-notice">纯 Jev 文本控制：每行一个动作，Jev 选择原语，本地跟踪目标。相机仅供人类查看，不发送给 Jev。序列结束不等于任务成功。</p>
   <div class="key-row">
