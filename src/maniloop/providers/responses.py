@@ -25,7 +25,7 @@ from openai import (
     RateLimitError,
 )
 
-DEFAULT_MODEL = "gpt-6-astra"
+DEFAULT_MODEL = "openai/gpt-6-astra"
 from maniloop.core.observations import PUBLIC_OBSERVATION_FIELDS, guard_sensor_tree
 
 ACTION_SCHEMA = {

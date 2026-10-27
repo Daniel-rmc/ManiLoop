@@ -21,7 +21,7 @@ import tomllib
 from urllib.parse import urlsplit, urlunsplit
 
 MAX_CONFIG_BYTES = 1024 * 1024
-DEFAULT_BASE_URL = "https://api.openai.com/v1"
+DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
 
 
 class ConfigError(ValueError):

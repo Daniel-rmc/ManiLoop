@@ -237,7 +237,7 @@ function updateControls() {
   const pauseRequested = !!(state && state.pause_requested);
   const inFlight = !!(state && state.pending_request);
   const moving = !!(state && state.motion_busy);
-  const cloud = $('agent-select').value === 'llm_cloud';
+  const cloud = ['llm_cloud', 'harness'].includes($('agent-select').value);
   const steppable = cloud || $('agent-select').value === 'jev';
   const ready = !!(connected && state && state.ready);
   const configLocked = pending || configBusy || running || inFlight;
@@ -322,7 +322,7 @@ function renderState(data) {
     ui.notice.textContent = data.paused ? '已暂停：不会请求下一次模型决策。可检查画面与反馈，选择执行下一步或继续连续执行。' : data.pause_requested ? '等待本次决策和动作结束，随后暂停；不会额外请求下一次决策。' : (data.timing === 'controlled' ? '受控时序：模型思考期间暂停物理，动作执行后重新观察。' : '实时模式：模型思考期间物理持续推进。');
     ui.notice.className = 'session-notice running';
   } else {
-    ui.notice.textContent = $('agent-select').value === 'jev' ? 'Jev 仅读取指令与本体状态；每行请求一次选择，本地执行后才处理下一行。' : $('agent-select').value === 'lerobot' ? '使用本机已安装的真实模型；ACT / DP 不使用语言。默认按官方任务与所选初始化执行。' : $('agent-select').value === 'mock_vla' ? '模拟 VLA 只做小幅关节动作来验证接口，不调用 API，也不代表真实模型能力。' : ui.source.value === 'codex' ? '预览和手动调试不调用模型。单步、连续执行或诊断通过 Codex 登录请求模型，使用账号额度。' : '无需密钥即可预览与手动调试。开始执行会向所选服务商发送相机观测和任务指令。';
+    ui.notice.textContent = $('agent-select').value === 'jev' ? 'Jev 仅读取指令与本体状态；每行请求一次选择，本地执行后才处理下一行。' : $('agent-select').value === 'harness' ? '分层大脑：上层把任务分解为语义子任务、验证完成并在失败时反思重规划；下层由所选云端模型逐步执行。密钥配置与云端 LLM 相同。' : $('agent-select').value === 'lerobot' ? '使用本机已安装的真实模型；ACT / DP 不使用语言。默认按官方任务与所选初始化执行。' : $('agent-select').value === 'mock_vla' ? '模拟 VLA 只做小幅关节动作来验证接口，不调用 API，也不代表真实模型能力。' : ui.source.value === 'codex' ? '预览和手动调试不调用模型。单步、连续执行或诊断通过 Codex 登录请求模型，使用账号额度。' : '无需密钥即可预览与手动调试。开始执行会向所选服务商发送相机观测和任务指令。';
     ui.notice.className = 'session-notice';
   }
   $('observation-content').textContent = data.observation && Object.keys(data.observation).length ? text(data.observation) : '等待第一份观测…';
@@ -583,7 +583,7 @@ $('demo-preset').addEventListener('click', async () => {
     $('agent-select').dispatchEvent(new Event('change'));
     updateBackendFields();
     ui.modelSelect.value = '__custom__';
-    ui.model.value = 'gpt-6-astra';
+    ui.model.value = 'openai/gpt-6-astra';
     updateModelInput();
     ui.maxSteps.value = '30';
     $('request-timeout').value = '120';
@@ -608,12 +608,13 @@ $('demo-preset').addEventListener('click', async () => {
 });
 $('agent-select').addEventListener('change', () => {
   const local = $('agent-select').value === 'lerobot';
+  const cloud = ['llm_cloud', 'harness'].includes($('agent-select').value);
   $('local-policy-fields').hidden = !local;
-  $('cloud-controls').hidden = $('agent-select').value !== 'llm_cloud';
-  ui.modelSelect.parentElement.hidden = $('agent-select').value !== 'llm_cloud';
-  document.querySelector('.model-tools').hidden = $('agent-select').value !== 'llm_cloud';
-  if ($('agent-select').value !== 'llm_cloud') $('custom-model-fields').hidden = true;
-  document.querySelector('.credentials-section').hidden = $('agent-select').value !== 'llm_cloud';
+  $('cloud-controls').hidden = !cloud;
+  ui.modelSelect.parentElement.hidden = !cloud;
+  document.querySelector('.model-tools').hidden = !cloud;
+  if (!cloud) $('custom-model-fields').hidden = true;
+  document.querySelector('.credentials-section').hidden = !cloud;
   ui.maxSteps.max = local ? '1000' : '100';
   ui.maxSteps.value = local ? '500' : '40';
   updateControls();
@@ -713,11 +714,11 @@ async function startEpisode(singleStep = false) {
   const model = selectedModel();
   const maxSteps = Number(ui.maxSteps.value);
   if (!task) { showError(new Error('请先输入任务指令。')); ui.task.focus(); return; }
-  if ($('agent-select').value === 'llm_cloud' && ui.modelSelect.value === '__custom__' && !model) { showError(new Error('请填写自定义模型名称。')); ui.model.focus(); return; }
+  if (['llm_cloud', 'harness'].includes($('agent-select').value) && ui.modelSelect.value === '__custom__' && !model) { showError(new Error('请填写自定义模型名称。')); ui.model.focus(); return; }
   if (!Number.isInteger(maxSteps) || maxSteps < 0 || maxSteps > Number(ui.maxSteps.max)) { showError(new Error('决策次数超出当前策略允许范围；0 表示不限次数。')); return; }
   const agent = $('agent-select').value;
   const body = {task, max_steps: maxSteps, agent, single_step: singleStep};
-  if (agent === 'llm_cloud') Object.assign(body, selectedCredentials(), environmentSettings(), {
+  if (agent === 'llm_cloud' || agent === 'harness') Object.assign(body, selectedCredentials(), environmentSettings(), {
     model, request_options: requestSettings(), reset_on_start: $('reset-before-start').checked,
     context_mode: $('context-mode').value,
     max_wall_seconds: Number($('wall-budget').value), max_sim_seconds: Number($('sim-budget').value)
@@ -727,9 +728,9 @@ async function startEpisode(singleStep = false) {
     catch (error) { showError(error); return; }
   }
   if (agent === 'lerobot') Object.assign(body, {local_model: $('local-model').value, device: 'auto'});
-  if (agent === 'llm_cloud' && !validateConfigSelection(body)) return;
-  if (agent === 'llm_cloud' && body.credential_source === 'manual' && !body.api_key && !(state && state.manual_key_configured)) { showError(new Error('请填写 API 密钥，或选择本地配置文件。')); ui.key.focus(); return; }
-  if (agent === 'llm_cloud') ui.key.value = '';
+  if ((agent === 'llm_cloud' || agent === 'harness') && !validateConfigSelection(body)) return;
+  if ((agent === 'llm_cloud' || agent === 'harness') && body.credential_source === 'manual' && !body.api_key && !(state && state.manual_key_configured)) { showError(new Error('请填写 API 密钥，或选择本地配置文件。')); ui.key.focus(); return; }
+  if (agent === 'llm_cloud' || agent === 'harness') ui.key.value = '';
   try {
     const result = await perform('/api/start', body, singleStep ? '已提交一次模型决策；动作结束后暂停。' : '任务已提交，正在准备第一次模型决策。');
     if (agent === 'jev') clearSubmittedJevKey(body, result);

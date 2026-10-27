@@ -66,6 +66,7 @@ class EpisodeRunner:
         self.representation = SensorRepresentation()
         self.chunk = None
         self.policy_kind = "llm_cloud"
+        self.harness_roles = {}
         self.sim_budget = 120.0
         self.wall_budget = 600.0
         self.started_wall = None
@@ -73,7 +74,7 @@ class EpisodeRunner:
         self._last_wall = time.monotonic()
         self._physics_remainder = 0.0
         self.seed = 0
-        self.model = model or os.environ.get("OPENAI_MODEL") or "gpt-6-astra"
+        self.model = model or os.environ.get("OPENAI_MODEL") or DEFAULT_MODEL
         self.default_model = self.model
         self.manual_base_url = None
         self.key = os.environ.get("OPENAI_API_KEY", "")
@@ -88,7 +89,7 @@ class EpisodeRunner:
             "source": "manual",
             "path": "",
             "provider": "OpenAI",
-            "base_url": "https://api.openai.com/v1",
+            "base_url": "https://openrouter.ai/api/v1",
             "model": self.model,
             "key_configured": bool(self.key),
             "models": [self.model],
@@ -133,6 +134,7 @@ class EpisodeRunner:
         self.token = 0
         self.future_token = -1
         self.log_file = None
+        self.motion = None
         self.next_request = 0.0
         self.event("info", f"{sim.robot_name} 场景已准备；输入任务后开始闭环")
 
@@ -152,6 +154,7 @@ class EpisodeRunner:
     def stop(self, message="任务已停止", reason="user_stop"):
         if not self.running and self.log_file and self.termination_reason:
             # A completed run is immutable even if Stop/Reset is sent again.
+            self._finalize_motion()
             self.update_review()
             self.sim.hold()
             return
@@ -166,6 +169,7 @@ class EpisodeRunner:
             self.policy.cancel()
         self.sim.hold()
         self.event("info", message)
+        self._finalize_motion()
         self.update_review()
 
     def update_review(self):
@@ -273,6 +277,9 @@ class EpisodeRunner:
             **({"request_options": self.request_options} if self.request_options else {}),
         )
         self.close_policy()
+        if self.policy_kind == "harness":
+            from maniloop.harness import HarnessAgent
+            policy = HarnessAgent(policy, roles=self.harness_roles)
         self.policy = policy
         self.key = config.api_key
         self.model = model
@@ -359,7 +366,7 @@ class EpisodeRunner:
         elif name in {"pause", "resume", "step"}:
             if not self.running or self.diagnostic_stage:
                 raise ValueError("请先开始一个机器人演示")
-            if self.policy_kind != "llm_cloud":
+            if self.policy_kind not in ("llm_cloud", "harness"):
                 raise ValueError("单步与暂停目前仅用于 LLM 演示")
             if name == "pause":
                 self.human_pause_used = True
@@ -525,8 +532,16 @@ class EpisodeRunner:
                 self.credential_source = "mock"
                 self.begin_episode(task, int(payload.get("max_steps", 30)))
                 return
-            self.policy_kind = "llm_cloud"
+            harness_mode = payload.get("agent") == "harness"
+            self.policy_kind = "harness" if harness_mode else "llm_cloud"
             source = payload.get("credential_source", "manual")
+            if harness_mode and source == "codex":
+                raise ValueError("分层大脑暂不支持 Codex 登录，请使用 API 密钥或配置文件")
+            if harness_mode:
+                roles = payload.get("harness_roles", {})
+                if type(roles) is not dict:
+                    raise ValueError("harness_roles 必须是对象")
+                self.harness_roles = dict(roles)
             config = None if source == "codex" else self.resolve_connection(payload)
             override = payload.get("model") or None
             if override is not None and (
@@ -679,6 +694,12 @@ class EpisodeRunner:
         (run / "manifest.json").write_text(
             json.dumps(self.manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+        self.motion = None
+        try:
+            from maniloop.recording.motion import MotionRecorder
+            self.motion = MotionRecorder(self.sim, run)
+        except Exception as exc:
+            self.event("info", f"运动视频录制不可用：{exc}")
         self.event(
             "start", "开始任务", task=task, model=self.model, max_calls=max_steps or None
         )
@@ -705,6 +726,7 @@ class EpisodeRunner:
             self.stop("环境已结束", reason="environment_terminated")
         self.tick()
         if not self.running and self.log_file:
+            self._finalize_motion()
             self.update_review()
         if self.paused:
             self._physics_remainder = 0.0
@@ -750,9 +772,30 @@ class EpisodeRunner:
                     if self.sim.backend in ("libero", "robosuite", "robocasa"):
                         break
             self.sim.step()
+            if self.motion is not None:
+                self.motion.tick(self.sim)
             if self.running and self.sim.terminated:
                 self.stop("环境已结束", reason="environment_terminated")
                 break
+
+    def _finalize_motion(self):
+        motion, self.motion = self.motion, None
+        if motion is None:
+            return
+        try:
+            stats = motion.finalize()
+        except Exception as exc:
+            self.event("info", f"运动视频封装失败：{exc}")
+            return
+        if stats is None:
+            return
+        if stats.get("video"):
+            message = f"运动视频已保存 {stats['video']}（{stats['frames']} 帧"
+            if stats.get("dropped"):
+                message += f"，渲染繁忙丢弃 {stats['dropped']} 帧"
+            self.event("info", message + "）")
+        else:
+            self.event("info", "运动视频未生成（无有效帧或编码失败）")
 
     def close_policy(self):
         policy, self.policy = self.policy, None
@@ -765,6 +808,7 @@ class EpisodeRunner:
         self.running = False
         self.chunk = None
         self.token += 1
+        self._finalize_motion()
         self.close_policy()
         self.pool.shutdown(wait=True, cancel_futures=True)
         self.sim.close()
@@ -824,10 +868,12 @@ class EpisodeRunner:
                 try:
                     action = future.result()
                 finally:
-                    if self.policy_kind == "jev":
+                    if self.policy_kind in ("jev", "harness"):
                         self.policy_decision = deepcopy(self.policy.last_decision)
                         if self.policy_decision:
-                            self.event("provider_decision", "Jev 类型化选择（无生成式思考文本）",
+                            self.event("provider_decision",
+                                "Jev 类型化选择（无生成式思考文本）" if self.policy_kind == "jev"
+                                else "分层大脑状态（计划/验证/记忆快照）",
                                 decision=self.policy_decision, request_index=self.api_calls,
                                 usage=self.policy.last_usage)
                 if self.diagnostic_stage:
@@ -1115,7 +1161,8 @@ class EpisodeRunner:
             "typesafe_browser_key_configured": bool(self.typesafe_key),
             "typesafe_key_source": ("browser" if self.typesafe_key else
                 "environment" if os.environ.get("TYPESAFE_API_KEY", "").strip() else "none"),
-            "policy_decision": deepcopy(self.policy_decision) if self.policy_kind == "jev" else None,
+            "policy_decision": (deepcopy(self.policy_decision)
+                if self.policy_kind in ("jev", "harness") else None),
             "sim_time": float(self.sim.simulation_time),
             "tcp_position": self.sim.tcp_position.tolist(),
             "gripper_opening": self.sim.gripper_opening,

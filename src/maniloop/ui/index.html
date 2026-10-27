@@ -129,7 +129,7 @@
               </div>
               <div id="manual-config-fields">
                 <div class="key-row"><label class="field-label" for="api-key">API 密钥</label><input id="api-key" class="input mono" type="password" placeholder="输入 API 密钥，或使用服务端环境变量" autocomplete="new-password" spellcheck="false" autocapitalize="none" maxlength="1000"></div>
-                <div class="key-row"><label class="field-label" for="base-url">API 地址<span>可选，留空使用服务默认地址</span></label><input id="base-url" class="input model-input" type="url" placeholder="https://api.openai.com/v1" spellcheck="false" autocapitalize="none" maxlength="2048"></div>
+                <div class="key-row"><label class="field-label" for="base-url">API 地址<span>可选，留空使用服务默认地址</span></label><input id="base-url" class="input model-input" type="url" placeholder="https://openrouter.ai/api/v1" spellcheck="false" autocapitalize="none" maxlength="2048"></div>
                 <p class="key-hint">开始提交后清空密钥输入；不写入浏览器存储或实验日志。</p>
               </div>
             </div>
@@ -804,7 +804,7 @@
         $('agent-select').dispatchEvent(new Event('change'));
         updateBackendFields();
         ui.modelSelect.value = '__custom__';
-        ui.model.value = 'gpt-6-astra';
+        ui.model.value = 'openai/gpt-6-astra';
         updateModelInput();
         ui.maxSteps.value = '30';
         $('request-timeout').value = '120';
