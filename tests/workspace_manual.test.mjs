@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source = readFileSync(new URL('../src/maniloop/ui/manual-control.js', import.meta.url), 'utf8');
-const {buildPoseCommand, radians} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const {buildPoseCommand, radians, syncControlMode, actionLimitsDescription} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const state = {
   manual_control: {protocol: 'tcp_jog_fixed_tool_v1', adjustable_target_duration: true},
   observation: {action_limits: {translation_max_m: 0.05, rotation_max_rad: 0.5}}
@@ -115,4 +115,65 @@ test('legacy capability stays disabled without briefly enabling on each poll', t
   dom.writes.length = 0;
   controls.update(legacy, false);
   assert.deepEqual(dom.menuWrites(), []);
+});
+
+function controlDOM(value = 'tcp_target_servo_v2') {
+  const writes = [], record = (id, initial) => {
+    const node = {};
+    for (const [key, initialValue] of Object.entries(initial)) {
+      let value = initialValue;
+      Object.defineProperty(node, key, {get: () => value, set(next) { writes.push({id, key, value: next}); value = next; }});
+    }
+    return node;
+  };
+  const control = record('control', {value});
+  const v3 = record('v3', {value: 'tcp_target_servo_v3', disabled: true});
+  control.options = [{value: 'tcp_target_servo_v2'}, v3, {value: 'osc_step'}];
+  return {control, v3, note: record('note', {textContent: ''}), writes};
+}
+
+test('server-started LIBERO v3 restores selection and explains target versus native scales', () => {
+  const {control, v3, note} = controlDOM();
+  syncControlMode(control, note, 'libero', 'tcp_target_servo_v3');
+  assert.equal(control.value, 'tcp_target_servo_v3');
+  assert.equal(v3.disabled, false);
+  for (const value of ['2.5 m / 180°', '200', '10 秒', '20 Hz', '5 cm / 0.5 rad', '2 ms', '夹爪命令仍最多 20 步']) assert.ok(note.textContent.includes(value));
+});
+
+test('non-LIBERO backends disable v3 and safely fall back without changing old modes', () => {
+  for (const backend of ['mujoco', 'robosuite', 'robocasa']) {
+    const {control, v3, note} = controlDOM('tcp_target_servo_v3');
+    syncControlMode(control, note, backend);
+    assert.equal(control.value, 'tcp_target_servo_v2');
+    assert.equal(v3.disabled, true);
+    syncControlMode(control, note, backend, 'osc_step');
+    assert.equal(control.value, 'osc_step');
+    syncControlMode(control, note, backend, 'tcp_target_servo_v2');
+    assert.equal(control.value, 'tcp_target_servo_v2');
+  }
+});
+
+test('unchanged control refresh preserves selection without rebuilding the native menu', () => {
+  const {control, note, writes} = controlDOM();
+  syncControlMode(control, note, 'libero', 'tcp_target_servo_v3');
+  writes.length = 0;
+  for (let i = 0; i < 100; i++) syncControlMode(control, note, 'libero');
+  assert.deepEqual(writes, []);
+  syncControlMode(control, note, 'libero', 'tcp_target_servo_v2');
+  assert.equal(control.value, 'tcp_target_servo_v2');
+  assert.match(note.textContent, /最长 1 秒/);
+});
+
+test('manual v3 validates advertised planning bounds, preserving the independent duration', () => {
+  const wide = {...state, backend: 'libero', environment: {llm_control: 'tcp_target_servo_v3'},
+    observation: {action_limits: {translation_max_m: 2.5, rotation_max_rad: Math.PI}}};
+  const command = buildPoseCommand([0.4,0,0], [0,0,Math.PI], 'fixed', 3, wide);
+  assert.equal(command.delta_position[0], 0.4);
+  assert.equal(command.target_duration_seconds, 3);
+  assert.throws(() => buildPoseCommand([2.51,0,0], [0,0,0], 'fixed', 3, wide));
+  assert.throws(() => buildPoseCommand([0,0,0], [0,0,Math.PI + 0.01], 'fixed', 3, wide));
+  const label = actionLimitsDescription(wide);
+  assert.match(label, /规划目标向量上限：平移 2500 mm · 旋转 180.0°/);
+  assert.match(label, /原生控制：20 Hz，每步尺度 50 mm \/ 0.5 rad/);
+  assert.match(actionLimitsDescription(state), /单步向量上限：平移 50 mm/);
 });

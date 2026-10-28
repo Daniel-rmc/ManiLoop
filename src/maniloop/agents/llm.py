@@ -31,6 +31,10 @@ class LLMAgent:
     def last_usage(self):
         return self.provider.last_usage
 
+    @property
+    def last_request_manifest(self):
+        return getattr(self.provider, "last_request_manifest", None)
+
     def reset(self, seed=0):
         # Requests have no persistent remote conversation; episode history is supplied explicitly.
         pass

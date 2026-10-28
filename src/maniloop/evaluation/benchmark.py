@@ -100,8 +100,10 @@ class Experiment:
                 raise ValueError(
                     "Local checkpoints require LIBERO and a supported model/device"
                 )
-        if self.llm_control not in ("osc_step", "tcp_target_servo_v2") or self.observation_profile not in ("llm_rgb512", "debug_rgb128"):
+        if self.llm_control not in ("osc_step", "tcp_target_servo_v2", "tcp_target_servo_v3") or self.observation_profile not in ("llm_rgb512", "debug_rgb128"):
             raise ValueError("Unknown LLM control / observation profile")
+        if self.llm_control == "tcp_target_servo_v3" and (self.backend != "libero" or self.agent != "llm_cloud"):
+            raise ValueError("tcp_target_servo_v3 requires a LIBERO LLM policy")
         if type(self.request_timeout_seconds) not in (int, float) or not 0 < self.request_timeout_seconds <= 600:
             raise ValueError("Request timeout must be 0–600 seconds")
         if self.reasoning_effort not in ("auto", "low", "medium", "high", "xhigh"):

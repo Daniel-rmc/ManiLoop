@@ -17,11 +17,13 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
       - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pip install -e '.[chatgpt]'
       - run: python -m pytest -q
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
       - run: node --test tests/workspace_manual.test.mjs
+      - run: node --test tests/chatgpt_plan_ui.test.mjs
   render:
     runs-on: ubuntu-latest
     env:

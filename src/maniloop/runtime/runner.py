@@ -124,7 +124,9 @@ class EpisodeRunner:
         self.pending_observation, self.request_images = sim.observe()
         self.api_latency = None
         self.policy = None
+        self._closing_policies = []
         self.request_options = {}
+        self._chatgpt_auth = None
         self.typesafe_key = ""
         self.policy_decision = None
         self.diagnostic_stage = None
@@ -162,7 +164,7 @@ class EpisodeRunner:
         self.phase = "stopped"
         self.termination_reason = reason
         self.token += 1
-        if self.future is not None and hasattr(self.policy, "cancel"):
+        if (self.future is not None or self.transport_busy) and hasattr(self.policy, "cancel"):
             self.policy.cancel()
         self.sim.hold()
         self.event("info", message)
@@ -312,6 +314,17 @@ class EpisodeRunner:
 
     def connection_request(self, name, payload):
         # Called on an HTTP worker: listing models must never block physics.
+        if payload.get("credential_source") == "chatgpt_plan":
+            from maniloop.providers.chatgpt_plan import list_plan_models
+            account = self.chatgpt_account(payload.get("chatgpt_account_id"))
+            models = (list_plan_models(self.chatgpt_auth_store(), account["id"])
+                      if name == "models" else [])
+            public = {"source": "chatgpt_plan", "provider": "ChatGPT 套餐直连",
+                      "base_url": "https://api.openai.com/v1", "path": "",
+                      "model": self.default_model, "models": models,
+                      "key_configured": account["logged_in"] and account["plan_enabled"],
+                      "account_label": account["label"], "error": ""}
+            return {"ok": True, "config": public, "models": models}
         if payload.get("credential_source") == "codex":
             from maniloop.providers.codex import login_status
             status = login_status()
@@ -332,12 +345,64 @@ class EpisodeRunner:
             "config": config.public(),
         }
 
+    def chatgpt_auth_store(self):
+        # Only this app's independent OAuth store; never load Codex credentials.
+        with self.lock:
+            if self._chatgpt_auth is None:
+                from maniloop.providers.chatgpt_auth import ChatGPTAuthStore
+                self._chatgpt_auth = ChatGPTAuthStore()
+            return self._chatgpt_auth
+
+    def chatgpt_account(self, account_id=None):
+        status = self.chatgpt_auth_store().status()
+        if status.get("pending"):
+            raise ValueError("请先完成或取消 ChatGPT 授权")
+        selected = account_id or status.get("active_account_id")
+        if not isinstance(selected, str):
+            raise ValueError("请先为 ManiLoop 登录 ChatGPT 并启用套餐使用")
+        for account in status["accounts"]:
+            if account["id"] == selected:
+                if not account["logged_in"] or not account["plan_enabled"]:
+                    raise ValueError("此账号尚未授权 ChatGPT 套餐使用，请重新授权")
+                return account
+        raise ValueError("请选择已保存的 ChatGPT 账号")
+
+    def chatgpt_auth_command(self, name, payload):
+        if self.running or self.future is not None or self.transport_busy or self.sim.busy or self.chunk is not None:
+            raise ValueError("请先停止任务并等待在途请求和动作结束，再更改 ChatGPT 账号")
+        if set(payload) - {"account_id", "retry_registration"}:
+            raise ValueError("ChatGPT 账号操作包含不支持的字段")
+        retry = payload.get("retry_registration", False)
+        if type(retry) is not bool or (retry and (name != "chatgpt/login" or payload.get("account_id") is not None)):
+            raise ValueError("注册重试不能与账号选择或其他操作混用")
+        account_id = payload.get("account_id")
+        if account_id is not None and (not isinstance(account_id, str) or not account_id or len(account_id) > 256):
+            raise ValueError("ChatGPT 账号标识无效")
+        auth = self.chatgpt_auth_store()
+        # A completed decision cannot retain a previous account's client.
+        if self.credential_source == "chatgpt_plan":
+            self.close_policy()
+            self.diagnostic_result = None
+        if name == "chatgpt/login":
+            return {"ok": True, **(auth.start_login(retry_registration=True) if retry else auth.start_login(account_id))}
+        if name == "chatgpt/select":
+            auth.select_account(account_id)
+        elif name == "chatgpt/logout":
+            auth.logout(account_id)
+        elif name == "chatgpt/cancel":
+            auth.cancel_login()
+        else:
+            raise ValueError("未知 ChatGPT 账号操作")
+        return {"ok": True, **auth.status()}
+
     def command(self, name, payload):
+        if name.startswith("chatgpt/"):
+            return self.chatgpt_auth_command(name, payload)
         if name == "stop":
             self.stop()
         elif name == "typesafe-key":
             # Explicit local-memory settings only: no provider call or physics step.
-            if self.running or self.future is not None or self.sim.busy:
+            if self.running or self.future is not None or self.transport_busy or self.sim.busy:
                 raise ValueError("请先停止任务并等待在途请求和动作结束，再更新 Jev 密钥")
             if set(payload) == {"typesafe_api_key"}:
                 from maniloop.providers.typesafe import normalize_api_key
@@ -374,10 +439,15 @@ class EpisodeRunner:
                 self.phase = "observing"
                 self.event("resume", "执行下一次决策" if self.single_step else "恢复连续执行")
         elif name == "configure":
-            if self.running or self.future is not None:
+            if self.running or self.future is not None or self.transport_busy:
                 raise ValueError("请先停止任务并等待请求结束")
             max_age = validate_observation_max_age(payload.get("observation_max_age_seconds", self.max_age))
             backend = payload.get("backend", self.sim.backend)
+            mode = payload.get("llm_control", "osc_step")
+            if mode not in ("osc_step", "tcp_target_servo_v2", "tcp_target_servo_v3"):
+                raise ValueError("未知 LLM 控制模式")
+            if mode == "tcp_target_servo_v3" and backend != "libero":
+                raise ValueError("tcp_target_servo_v3 仅支持 LIBERO")
             replacement = create_environment(
                 backend=backend,
                 robocasa_layout=payload.get("robocasa_layout", 11),
@@ -403,7 +473,7 @@ class EpisodeRunner:
             self.timing = timing
             self.max_age = max_age
             if self.sim.backend in ("libero", "robosuite", "robocasa"):
-                self.sim.set_llm_control(payload.get("llm_control", "osc_step"))
+                self.sim.set_llm_control(mode)
             self.chunk = None
             self._physics_remainder = 0.0
             self.command("reset", {"seed": payload.get("seed", 0)})
@@ -428,13 +498,15 @@ class EpisodeRunner:
             self.pending_observation, self.request_images = self.sim.observe()
             self.event("info", "场景已重置")
         elif name in ("start", "diagnose"):
+            if payload.get("llm_control") == "tcp_target_servo_v3" and self.sim.backend != "libero":
+                raise ValueError("tcp_target_servo_v3 仅支持 LIBERO")
             diagnostic = payload.get("stage") if name == "diagnose" else None
             if name == "diagnose" and diagnostic not in ("text", "vision", "action"):
                 raise ValueError("诊断阶段必须为 text / vision / action")
             task = "Connection diagnostic; never execute actions" if diagnostic else str(payload.get("task", "")).strip()
             if not task or len(task) > 4000:
                 raise ValueError("请输入1至4000字的任务")
-            if self.running or self.future is not None or self.sim.busy:
+            if self.running or self.future is not None or self.transport_busy or self.sim.busy:
                 raise ValueError("已有任务或API请求尚未结束，请停止并等待请求返回")
             context_mode = payload.get("context_mode", "current")
             single_step = payload.get("single_step", False)
@@ -527,7 +599,7 @@ class EpisodeRunner:
                 return
             self.policy_kind = "llm_cloud"
             source = payload.get("credential_source", "manual")
-            config = None if source == "codex" else self.resolve_connection(payload)
+            config = None if source in {"codex", "chatgpt_plan"} else self.resolve_connection(payload)
             override = payload.get("model") or None
             if override is not None and (
                 not isinstance(override, str)
@@ -544,7 +616,19 @@ class EpisodeRunner:
             if type(options) is not dict:
                 raise ValueError("请求设置必须是对象")
             self.request_options = dict(options)
-            if source == "codex":
+            if source == "chatgpt_plan":
+                from maniloop.providers.chatgpt_plan import ChatGPTPlanPolicy
+                account = self.chatgpt_account(payload.get("chatgpt_account_id"))
+                policy = ChatGPTPlanPolicy(model=model, auth_store=self.chatgpt_auth_store(),
+                                          account_id=account["id"], request_options=self.request_options)
+                self.close_policy()
+                self.policy = policy
+                self.key = ""
+                self.model = model
+                self.credentials = {"source": "chatgpt_plan", "provider": "ChatGPT 套餐直连",
+                    "path": "", "base_url": "https://api.openai.com/v1", "model": model,
+                    "models": [model], "key_configured": True, "error": ""}
+            elif source == "codex":
                 from maniloop.providers.codex import CodexPolicy
                 policy = CodexPolicy(model=model, request_options=self.request_options)
                 self.close_policy()
@@ -559,7 +643,7 @@ class EpisodeRunner:
             if not diagnostic and self.sim.backend == "libero":
                 profile = payload.get("observation_profile", self.sim.describe().get("observation_profile", "debug_rgb128"))
                 mode = payload.get("llm_control", self.sim.llm_control)
-                if mode not in ("osc_step", "tcp_target_servo_v2"):
+                if mode not in ("osc_step", "tcp_target_servo_v2", "tcp_target_servo_v3"):
                     raise ValueError("未知 LLM 控制模式")
                 if profile != self.sim.describe().get("observation_profile", "debug_rgb128"):
                     info = self.sim.describe()
@@ -612,7 +696,7 @@ class EpisodeRunner:
                 self.manual_base_url = config.base_url
             self.begin_episode(task, max_steps)
         elif name == "manual":
-            if self.running or self.future is not None:
+            if self.running or self.future is not None or self.transport_busy:
                 raise ValueError("请先停止GPT任务并等待在途请求结束，再手动点动")
             if self.sim.busy or self.chunk is not None:
                 raise ValueError("请等待上一条手动动作结束，或先停止动作")
@@ -754,8 +838,18 @@ class EpisodeRunner:
                 self.stop("环境已结束", reason="environment_terminated")
                 break
 
+    @property
+    def transport_busy(self):
+        # Cancellation/deadline may finish the Future before socket I/O exits.
+        # Retain closing clients so replacing a policy cannot bypass this gate.
+        self._closing_policies = [policy for policy in getattr(self, "_closing_policies", ())
+                                  if getattr(policy, "transport_busy", False) is True]
+        return bool(self._closing_policies) or getattr(getattr(self, "policy", None), "transport_busy", False) is True
+
     def close_policy(self):
         policy, self.policy = self.policy, None
+        if policy is not None and getattr(policy, "transport_busy", False) is True:
+            self._closing_policies.append(policy)
         if policy is not None and hasattr(policy, "close"):
             policy.close()
         elif policy is not None and hasattr(policy, "client"):
@@ -767,6 +861,8 @@ class EpisodeRunner:
         self.token += 1
         self.close_policy()
         self.pool.shutdown(wait=True, cancel_futures=True)
+        if self._chatgpt_auth is not None:
+            self._chatgpt_auth.close()
         self.sim.close()
 
     def _visual_changed(self, old_images, new_images):
@@ -790,8 +886,9 @@ class EpisodeRunner:
             except queue.Empty:
                 break
             try:
-                self.command(name, payload)
-                done.put({"ok": True, "task_instruction": self.sim.instruction})
+                result = self.command(name, payload)
+                done.put(result if isinstance(result, dict) else
+                         {"ok": True, "task_instruction": self.sim.instruction})
             except Exception as exc:
                 message = str(exc)
                 self.event("error", message)
@@ -824,6 +921,10 @@ class EpisodeRunner:
                 try:
                     action = future.result()
                 finally:
+                    manifest = getattr(self.policy, "last_request_manifest", None)
+                    if isinstance(manifest, dict) and manifest:
+                        self.event("request_manifest", "模型请求协议与实际发送参数",
+                                   request_index=self.api_calls, manifest=deepcopy(manifest))
                     if self.policy_kind == "jev":
                         self.policy_decision = deepcopy(self.policy.last_decision)
                         if self.policy_decision:
@@ -925,7 +1026,7 @@ class EpisodeRunner:
                     result = (self.policy.execute(self.sim, executable) if self.policy_kind == "jev"
                               else self.sim.execute(executable))
                     self.awaiting_execution = (result["status"] == "accepted" and
-                        self.sim.describe().get("llm_control") == "tcp_target_servo_v2")
+                        self.sim.describe().get("llm_control") in ("tcp_target_servo_v2", "tcp_target_servo_v3"))
                     self.history.append({"action": action, "feedback": result})
                     self.history = self.history[-8:]
                     self.geometry = []
@@ -1086,7 +1187,7 @@ class EpisodeRunner:
             "api_calls": self.api_calls,
             "max_steps": self.max_steps,
             "api_latency": self.api_latency,
-            "pending_request": self.future is not None,
+            "pending_request": self.future is not None or self.transport_busy,
             "diagnostic_result": self.diagnostic_result,
             "diagnostic_stage": self.diagnostic_stage,
             "observation_max_age_seconds": self.max_age,

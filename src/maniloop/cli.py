@@ -38,6 +38,7 @@ def main(argv=None):
             type=Path,
             default=Path("runs") if p != smoke else Path("artifacts"),
         )
+    connection_groups = {}
     for p in (demo, batch):
         p.add_argument(
             "--timing", choices=["controlled", "realtime"], default="controlled"
@@ -45,10 +46,14 @@ def main(argv=None):
         p.add_argument("--observation-max-age-seconds", type=float, default=None,
                        help="Realtime observation age limit; 0 disables only the time limit (default: 60 seconds)")
         p.add_argument("--model", default=None)
-        p.add_argument("--codex-login", action="store_true", help="Use the official Codex CLI's ChatGPT login; no API key")
+        connection_groups[p] = p.add_mutually_exclusive_group()
+        connection_groups[p].add_argument("--codex-login", action="store_true", help="Use the official Codex CLI's ChatGPT login; no API key")
+        connection_groups[p].add_argument("--chatgpt-plan", action="store_true",
+                      help="Use ManiLoop's independently authorized ChatGPT plan account; no Codex CLI or API key")
     demo.add_argument("--port", type=int, default=8765)
     for p in (demo, batch):
-        p.add_argument("--llm-control", choices=["tcp_target_servo_v2", "osc_step"], default="tcp_target_servo_v2")
+        p.add_argument("--llm-control", choices=["tcp_target_servo_v2", "tcp_target_servo_v3", "osc_step"], default="tcp_target_servo_v2",
+                       help="LIBERO v3 allows broad pose goals with 10 s tracking; v2 preserves the original short-step protocol")
         p.add_argument("--observation-profile", choices=["llm_rgb512", "debug_rgb128"], default="llm_rgb512")
     batch.add_argument("--request-timeout-seconds", type=float, default=120)
     batch.add_argument("--context-mode", choices=["current", "paired"], default="current")
@@ -65,7 +70,7 @@ def main(argv=None):
     batch.add_argument("--max-calls", type=int, default=30, help="Decision budget; 0 disables this limit (simulation and wall-time limits remain)")
     batch.add_argument("--max-sim-seconds", type=float, default=120.0)
     batch.add_argument("--max-wall-seconds", type=float, default=600.0)
-    batch.add_argument(
+    connection_groups[batch].add_argument(
         "--provider-config",
         type=Path,
         help="Provider TOML/JSON or CC Switch DB; key may use OPENAI_API_KEY",
@@ -74,6 +79,8 @@ def main(argv=None):
         "--no-render", action="store_true", help="Only for offline mock adapter checks"
     )
     args = parser.parse_args(argv)
+    if getattr(args, "llm_control", None) == "tcp_target_servo_v3" and args.backend != "libero":
+        parser.error("tcp_target_servo_v3 requires the LIBERO backend")
     if args.command == "chat":
         from maniloop.ui.server import serve_chat
         serve_chat(args)
@@ -174,9 +181,9 @@ def main(argv=None):
         if args.suite and args.record_episode:
             cases = [replace(case, record_episode=True) for case in cases]
         connection = {
-            "credential_source": "codex" if args.codex_login else "file" if args.provider_config else "manual",
+            "credential_source": "chatgpt_plan" if args.chatgpt_plan else "codex" if args.codex_login else "file" if args.provider_config else "manual",
             "config_path": str(args.provider_config) if args.provider_config else None,
-            "api_key": None if args.codex_login else os.environ.get("OPENAI_API_KEY"),
+            "api_key": None if args.codex_login or args.chatgpt_plan else os.environ.get("OPENAI_API_KEY"),
             "model": args.model,
         }
         args.output.mkdir(parents=True, exist_ok=True)

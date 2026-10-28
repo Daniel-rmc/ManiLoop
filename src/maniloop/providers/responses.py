@@ -13,6 +13,7 @@ import copy
 import json
 import math
 import os
+import re
 import time
 from typing import Any
 
@@ -27,6 +28,7 @@ from openai import (
 
 DEFAULT_MODEL = "gpt-6-astra"
 from maniloop.core.observations import PUBLIC_OBSERVATION_FIELDS, guard_sensor_tree
+from .policy_request import build_policy_request, request_manifest
 
 ACTION_SCHEMA = {
     "type": "object",
@@ -156,10 +158,11 @@ and executes your command and does not supply a scripted task sequence.
 class PolicyError(RuntimeError):
     """A sanitized failure; metadata never contains provider response bodies."""
 
-    def __init__(self, message, *, category="invalid_response", http_status=None):
+    def __init__(self, message, *, category="invalid_response", http_status=None, code=None):
         super().__init__(message)
         self.category = category
         self.http_status = http_status
+        self.code = code
 
 
 def _get(value: Any, key: str, default: Any = None) -> Any:
@@ -400,56 +403,16 @@ class GPTPolicy:
             )
         ):
             raise PolicyError("At least one named, nonempty JPEG image is required.")
-        content = [
-            {
-                "type": "input_text",
-                "text": _strict_json(
-                    {
-                        "task": task,
-                        "observation": observation,
-                        "history": history[-12:],
-                        "geometry_results": geometry_results[-8:],
-                    }
-                ),
-            }
-        ]
-        for camera, jpeg in images.items():
-            content.append(
-                {
-                    "type": "input_text",
-                    "text": f"Camera: {camera}. This labels the input image, not the action camera field.",
-                }
-            )
-            content.append(
-                {
-                    "type": "input_image",
-                    "image_url": (
-                        "data:image/png;base64,"
-                        if jpeg.startswith(b"\x89PNG")
-                        else "data:image/jpeg;base64,"
-                    )
-                    + base64.b64encode(jpeg).decode("ascii"),
-                    "detail": "high",
-                }
-            )
         schema = action_schema_for(observation, images)
-        request = {
-            "model": self.model,
-            "instructions": SYSTEM_PROMPT,
-            "input": [{"role": "user", "content": content}],
-            "text": {
-                "format": {
-                    "type": "json_schema",
-                    "name": "robot_action",
-                    "strict": True,
-                    "schema": schema,
-                }
-            },
-            "store": False,
-            "max_output_tokens": self.max_output_tokens,
-        }
-        if self.reasoning_effort is not None:
-            request["reasoning"] = {"effort": self.reasoning_effort}
+        try:
+            request = build_policy_request(
+                model=self.model, instructions=SYSTEM_PROMPT, task=task,
+                observation=observation, history=history, geometry_results=geometry_results,
+                images=images, schema=schema, max_output_tokens=self.max_output_tokens,
+                reasoning_effort=self.reasoning_effort,
+            )
+        except (TypeError, ValueError, OverflowError, RecursionError):
+            raise PolicyError("Policy inputs must be finite, JSON-serializable sensor data.") from None
         text = self._request_text(request)
         try:
             action = json.loads(
@@ -492,15 +455,19 @@ class GPTPolicy:
                 {"type": "input_image", "image_url": f"data:{mime};base64," + base64.b64encode(data).decode("ascii"), "detail": "high"},
             ]
         request = {"model": self.model, "input": [{"role": "user", "content": content}],
-                   "store": False, "max_output_tokens": self.max_output_tokens}
+                   "store": False}
+        if self.max_output_tokens is not None:
+            request["max_output_tokens"] = self.max_output_tokens
         if self.reasoning_effort is not None:
             request["reasoning"] = {"effort": self.reasoning_effort}
         text = self._request_text(request)
         return {"stage": stage, "output": text[:1000], "executed": False}
 
     def _request_text(self, request):
+        self.last_request_manifest = request_manifest(request, transport="responses_api", requested=self.request_options)
         self.last_usage = {}
         self.last_response_id = None
+        self.last_response_model = None
         started = time.monotonic()
         try:
             response = self.client.responses.create(**request)
@@ -532,6 +499,10 @@ class GPTPolicy:
         finally:
             self.last_latency = time.monotonic() - started
 
+        return self._parse_response(response)
+
+    def _parse_response(self, response):
+        """Shared terminal response validation; partial stream text is never an action."""
         response_id = _get(response, "id")
         # IDs are opaque; compatible providers need not use OpenAI's resp_ prefix.
         if (
@@ -541,12 +512,27 @@ class GPTPolicy:
         ):
             raise PolicyError("OpenAI returned a missing or invalid response ID.")
         self.last_response_id = response_id
+        reported_model = _get(response, "model")
+        self.last_response_model = None
+        if type(reported_model) is str and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}", reported_model):
+            self.last_response_model = reported_model
+            manifest = getattr(self, "last_request_manifest", None)
+            if isinstance(manifest, dict):
+                manifest["model_reported"] = reported_model
+                manifest["model_reported_scope"] = "provider_identifier_not_snapshot_attestation"
         usage = _get(response, "usage")
         if usage is not None:
             for field in ("input_tokens", "output_tokens", "total_tokens"):
                 count = _get(usage, field)
                 if type(count) is int and count >= 0:
                     self.last_usage[field] = count
+            for group, field, recorded in (
+                ("output_tokens_details", "reasoning_tokens", "reasoning_tokens"),
+                ("input_tokens_details", "cached_tokens", "cached_input_tokens"),
+            ):
+                count = _get(_get(usage, group), field)
+                if type(count) is int and count >= 0:
+                    self.last_usage[recorded] = count
         if _get(_get(response, "incomplete_details"), "reason") == "max_output_tokens":
             raise PolicyError(
                 "模型输出达到长度上限，动作未完成。请简化任务或提高 OPENAI_MAX_OUTPUT_TOKENS 后重试。"
