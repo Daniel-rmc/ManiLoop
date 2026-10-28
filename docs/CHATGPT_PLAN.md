@@ -21,6 +21,23 @@ python -m maniloop demo --port 8767
 
 Click **取消授权** to cancel a sign-in attempt. Closing the browser window alone does not cancel it: return to the workbench and cancel explicitly before starting again, or wait for the attempt to expire. If registration issued a client ID but code exchange failed, use **继续上次注册** to retry that registration without creating a new one. If the browser blocks the popup, allow popups for the local workbench and click again. A failed sign-in does not silently replace another saved account. Use ChatGPT **Settings → Usage** to manage app access and usage. If remote revocation cannot be confirmed during logout, disconnect the app there as well.
 
+### Record one LIBERO episode
+
+Install the [independent LIBERO environment](LIBERO.md), finish the workbench authorization and diagnostics, and select the account you want to use. The CLI reuses that active ManiLoop account without opening a login window. If you set `MANILOOP_CHATGPT_AUTH_DIR` for the workbench, use the same value in this terminal.
+
+```bash
+python -m maniloop benchmark \
+  --backend libero --libero-suite libero_spatial --libero-task-id 0 --init-state-id 0 \
+  --seed 0 --agent llm_cloud --chatgpt-plan --model gpt-6-astra \
+  --timing controlled --context-mode paired --reasoning-effort medium \
+  --llm-control tcp_target_servo_v2 --observation-profile llm_rgb512 \
+  --max-calls 0 --max-wall-seconds 3600 --max-sim-seconds 120 \
+  --request-timeout-seconds 120 --record-episode \
+  --output runs/chatgpt-plan-recorded
+```
+
+This makes real model requests and records every LIBERO control step. `--max-calls 0` removes the decision-count cap; environment termination and wall/simulation time limits remain. Use a model verified for the selected account. `--chatgpt-plan`, `--codex-login`, and `--provider-config` are mutually exclusive; errors never switch billing paths. Every attempt is saved separately, and success is determined by the independent evaluator. See [episode recording and MP4 export](EPISODE_RECORDING.md) for integrity checks and export commands.
+
 ### Comparison and budget behavior
 
 The direct route shares ManiLoop's sensor-only input construction, image bytes, history, action schema, and local action checks with the Responses API policy. Its application-side input manifest records the request protocol and content hashes; it does not claim visibility into server-side processing. The Codex CLI route remains a separately labeled harness configuration.
@@ -53,6 +70,23 @@ python -m maniloop demo --port 8767
 5. 依次运行 **文本诊断、图像诊断、动作格式诊断**。每项都会请求模型，动作格式诊断不会移动机器人。通过后先用 **单步执行** 检查，再开始完整 episode。
 
 点击 **取消授权** 可取消本次登录。仅关闭浏览器窗口不会取消授权；请回到工作台明确取消后再重试，或等待本次授权过期。若已取得注册 ID 但授权码交换失败，可点击 **继续上次注册** 复用该注册重试，无需创建新注册。如果弹窗被阻止，请允许本地工作台打开弹窗后重试。登录失败不会静默替换另一个已保存账号。可在 ChatGPT **设置 → 使用情况** 管理应用授权与用量；若退出时未确认远端撤销成功，也可在那里断开应用。
+
+### 录制一个 LIBERO 完整回合
+
+先按 [LIBERO 安装说明](LIBERO.md)准备独立环境，在工作台完成授权、诊断并选择账号。CLI 复用 ManiLoop 当前账号，不会打开登录窗口。如果工作台设置了 `MANILOOP_CHATGPT_AUTH_DIR`，请在此终端使用相同值。
+
+```bash
+python -m maniloop benchmark \
+  --backend libero --libero-suite libero_spatial --libero-task-id 0 --init-state-id 0 \
+  --seed 0 --agent llm_cloud --chatgpt-plan --model gpt-6-astra \
+  --timing controlled --context-mode paired --reasoning-effort medium \
+  --llm-control tcp_target_servo_v2 --observation-profile llm_rgb512 \
+  --max-calls 0 --max-wall-seconds 3600 --max-sim-seconds 120 \
+  --request-timeout-seconds 120 --record-episode \
+  --output runs/chatgpt-plan-recorded
+```
+
+这会发起真实模型请求，并录制每个 LIBERO 原生控制步。`--max-calls 0` 取消决策次数上限，环境终止及墙钟、仿真时限仍有效。模型必须已在所选账号中验证可用。`--chatgpt-plan`、`--codex-login`、`--provider-config` 互斥，出错不会切换计费路径。每次尝试独立保存，成功与否由独立评分器判定。完整性检查和视频导出见[完整 episode 录制](EPISODE_RECORDING.md)。
 
 ### 公平比较与预算
 

@@ -407,3 +407,93 @@ def test_transport_busy_remains_true_until_interrupted_worker_exits(interruption
             canceller.join(1)
     assert p.transport_busy is False
     assert p.last_response_id is None
+
+
+def test_non_sse_json_is_diagnosed_but_never_accepted():
+    import hashlib
+    p = policy()
+    body = json.dumps({"object": "response", "status": "completed", "output": "private-output",
+                       "private-field": "private-secret", "error": {"code": "subscription_sharing_usage_unavailable", "message": "private-message"}}).encode()
+    with setup_transport(lambda _: httpx.Response(200, headers={"content-type": "Application/JSON; charset=utf-8"}, content=body)):
+        with pytest.raises(PolicyError, match="media type: application/json"):
+            decide(p)
+    manifest = p.last_request_manifest
+    assert manifest["http"] == {"http_status": 200, "media_type": "application/json", "declared_mime": "application/json", "parsed_format": "unverified"}
+    diag = manifest["body_diagnostic"]
+    assert diag == {"prefix_bytes": len(body), "prefix_sha256": hashlib.sha256(body).hexdigest(),
+                    "truncated": False, "is_json": True, "top_level_fields": ["error", "object", "output", "status"],
+                    "object_is_response": True, "response_status": "completed", "error_code": "subscription_sharing_usage_unavailable", "framing": "json"}
+    assert "private" not in json.dumps(manifest)
+    assert p.last_response_id is None
+
+
+@pytest.mark.parametrize("mime", ["text/html", "text/plain", "", "application/vnd.example+json", "x" * 300])
+def test_non_sse_media_is_allowlisted_and_body_is_bounded(mime):
+    import hashlib
+    p = policy()
+    body = b"private-page" * 10000
+    with setup_transport(lambda _: httpx.Response(200, headers={"content-type": mime}, content=body)):
+        with pytest.raises(PolicyError):
+            decide(p)
+    diag = p.last_request_manifest["body_diagnostic"]
+    assert diag["prefix_bytes"] == 65536 and diag["truncated"] is True
+    assert diag["prefix_sha256"] == hashlib.sha256(body[:65536]).hexdigest()
+    assert diag["is_json"] is False
+    assert "private" not in json.dumps(p.last_request_manifest)
+    assert p.last_request_manifest["http"]["media_type"] == (mime if mime in {"text/html", "text/plain", "application/vnd.example+json"} else "missing" if not mime else "other")
+
+
+def test_http_metadata_recorded_for_valid_sse_and_status_error():
+    p = policy()
+    with setup_transport(lambda _: httpx.Response(200, headers={"content-type": "text/event-stream; charset=utf-8"}, text=sse(done()))):
+        decide(p)
+    assert p.last_request_manifest["http"] == {"http_status": 200, "media_type": "text/event-stream", "declared_mime": "text/event-stream", "parsed_format": "sse"}
+    with setup_transport(lambda _: httpx.Response(503, json={"detail": "private"})):
+        with pytest.raises(PolicyError):
+            decide(p)
+    assert p.last_request_manifest["http"] == {"http_status": 503, "media_type": "application/json", "declared_mime": "application/json", "parsed_format": "unverified"}
+    assert "body_diagnostic" not in p.last_request_manifest
+
+
+def test_remote_protocol_failure_is_safe_connection_error():
+    p = policy()
+    def handler(_):
+        raise httpx.RemoteProtocolError("private proxy headers")
+    with setup_transport(handler):
+        with pytest.raises(PolicyError) as exc:
+            decide(p)
+    assert exc.value.category == "connection"
+    assert "private" not in str(exc.value)
+    assert "http" not in p.last_request_manifest
+
+
+@pytest.mark.parametrize("mime", [None, "text/plain", "application/json", "application/octet-stream"])
+@pytest.mark.parametrize("prefix,framing", [(b"", "sse_data"), (b"event: response.completed\n", "sse_event"), (b"\xef\xbb\xbf: heartbeat\n\n", "sse_data")])
+def test_strict_sse_does_not_require_correct_declared_mime(mime, prefix, framing):
+    p = policy()
+    headers = {} if mime is None else {"content-type": mime}
+    body = prefix + sse(done()).encode()
+    with setup_transport(lambda _: httpx.Response(200, headers=headers, content=body)):
+        assert decide(p) == ACTION
+    http = p.last_request_manifest["http"]
+    assert http["declared_mime"] == (mime or "missing")
+    assert http["parsed_format"] == "sse"
+    assert p.last_request_manifest["body_diagnostic"]["framing"] == framing
+
+
+@pytest.mark.parametrize("body,framing", [
+    (b"<!DOCTYPE html><html>private challenge</html>", "html"),
+    (json.dumps(final()).encode(), "json"),
+    (sse({"type": "response.output_text.delta", "delta": "partial"}).encode(), "sse_data"),
+    (sse({"type": "response.output_item.added", "item": {"type": "function_call"}}, done()).encode(), "sse_data"),
+])
+def test_missing_mime_does_not_allow_html_json_partial_or_tools(body, framing):
+    p = policy()
+    with setup_transport(lambda _: httpx.Response(200, content=body)):
+        with pytest.raises(PolicyError):
+            decide(p)
+    assert p.last_response_id is None
+    assert p.last_request_manifest["http"]["declared_mime"] == "missing"
+    assert p.last_request_manifest["http"]["parsed_format"] == "unverified"
+    assert p.last_request_manifest["body_diagnostic"]["framing"] == framing
+    assert "private" not in json.dumps(p.last_request_manifest)

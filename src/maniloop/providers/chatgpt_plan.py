@@ -6,8 +6,10 @@ endpoint, organization headers or hidden conversation continuation is supported.
 from __future__ import annotations
 
 import codecs
+import hashlib
 import json
 import math
+import re
 import socket
 import threading
 import time
@@ -40,6 +42,38 @@ _PLAN_ERRORS = {
 for _legacy_quota in ("rate_limit_exceeded", "usage_limit_reached", "insufficient_quota", "quota_exceeded"):
     _PLAN_ERRORS[_legacy_quota] = ("rate_limit", "ChatGPT usage or rate limits prevented this request. Pause new requests and check the account's usage status.")
 _SAFE_ERROR_PARAMS = frozenset({"model", "input", "tools", "tool_choice", "service_tier", "stream", "store", "instructions", "text", "reasoning", "reasoning.effort", "max_output_tokens", "temperature", "previous_response_id"})
+_DIAGNOSTIC_TOP_FIELDS = frozenset({"id", "object", "status", "model", "output", "usage", "error",
+                                  "detail", "type", "code", "message", "incomplete_details"})
+_RESPONSE_STATUSES = frozenset({"completed", "failed", "incomplete", "in_progress", "queued", "cancelled"})
+_MIME_PATTERN = re.compile(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+/[!#$%&'*+.^_`|~0-9A-Za-z-]+")
+
+
+def _media_type(value):
+    if value is None or value == "":
+        return "missing"
+    if not isinstance(value, str) or len(value) > 512 or any(ord(c) < 32 or ord(c) > 126 for c in value):
+        return "other"
+    media = value.partition(";")[0].strip().lower()
+    return media if len(media) <= 128 and _MIME_PATTERN.fullmatch(media) else "other"
+
+
+def _prefix_framing(raw):
+    data = bytes(raw).removeprefix(b"\xef\xbb\xbf").lstrip()
+    # SSE may begin with blank lines or comments/heartbeats.
+    for line in data.splitlines():
+        if not line or line.startswith(b":"):
+            continue
+        if line.startswith(b"data:"):
+            return "sse_data"
+        if line.startswith(b"event:"):
+            return "sse_event"
+        break
+    lower = data.lower()
+    if lower.startswith((b"<!doctype html", b"<html")):
+        return "html"
+    if data.startswith((b"{", b"[")):
+        return "json"
+    return "other"
 
 
 def _plan_error(code=None, *, status=None, param=None):
@@ -295,13 +329,32 @@ class ChatGPTPlanPolicy(GPTPolicy):
                     with self._lock:
                         self._response = response
                     self._check_interrupted()
+                    media_type = _media_type(response.headers.get("content-type"))
+                    self.last_request_manifest["http"] = {"http_status": response.status_code,
+                                                           "media_type": media_type,
+                                                           "declared_mime": media_type,
+                                                           "parsed_format": "unverified"}
                     if response.status_code != 200:
                         raise _http_error(response)
-                    if "text/event-stream" not in response.headers.get("content-type", "").lower():
-                        raise PolicyError("ChatGPT did not return an event stream.")
-                    result["response"] = self._read_stream(response)
+                    # Some admitted direct-route streams omit or mislabel MIME.
+                    # Validate the actual complete SSE protocol, never JSON fallback.
+                    evidence = {"prefix": bytearray(), "truncated": False}
+                    try:
+                        result["response"] = self._read_stream(response, evidence)
+                        self.last_request_manifest["http"]["parsed_format"] = "sse"
+                    except PolicyError as exc:
+                        if exc.category == "invalid_response" and media_type != "text/event-stream":
+                            raise PolicyError(str(exc) + f" (declared media type: {media_type})", category=exc.category,
+                                              http_status=exc.http_status, code=exc.code) from None
+                        raise
+                    finally:
+                        self.last_request_manifest["body_diagnostic"] = self._diagnose_prefix(
+                            evidence["prefix"], evidence["truncated"])
+
         except PolicyError as exc:
             result["error"] = exc
+        except httpx.RemoteProtocolError:
+            result["error"] = PolicyError("ChatGPT connection closed before a complete HTTP response; no action was executed.", category="connection")
         except httpx.TimeoutException:
             result["error"] = PolicyError("ChatGPT request timed out; no action was executed.", category="timeout")
         except Exception:
@@ -311,7 +364,30 @@ class ChatGPTPlanPolicy(GPTPolicy):
                 self._response = self._client = None
             finished.set()
 
-    def _read_stream(self, response):
+    def _diagnose_prefix(self, raw, truncated):
+        """Bounded shape-only evidence; raw bytes never enter the manifest."""
+        result = {"prefix_bytes": len(raw), "prefix_sha256": hashlib.sha256(raw).hexdigest(),
+                  "truncated": truncated, "is_json": False, "top_level_fields": [],
+                  "object_is_response": False, "framing": _prefix_framing(raw)}
+        if not truncated:
+            try:
+                value = json.loads(raw, parse_constant=_reject_constant, object_pairs_hook=_unique_object)
+            except (ValueError, TypeError, RecursionError):
+                value = None
+            else:
+                result["is_json"] = True
+            if isinstance(value, dict):
+                result["top_level_fields"] = sorted(set(value) & _DIAGNOSTIC_TOP_FIELDS)
+                result["object_is_response"] = value.get("object") == "response"
+                status = value.get("status")
+                if type(status) is str and status in _RESPONSE_STATUSES:
+                    result["response_status"] = status
+                code, _ = _error_fields(value)
+                if type(code) is str and code in _PLAN_ERRORS:
+                    result["error_code"] = code
+        return result
+
+    def _read_stream(self, response, evidence):
         completed = None
         data_lines = []
         saw_done = False
@@ -353,7 +429,7 @@ class ChatGPTPlanPolicy(GPTPolicy):
             elif not kind.startswith("response."):
                 raise PolicyError("ChatGPT returned an unsupported stream event.")
 
-        for line in self._stream_lines(response):
+        for line in self._stream_lines(response, evidence):
             self._check_interrupted()
             if line == "":
                 dispatch()
@@ -369,13 +445,17 @@ class ChatGPTPlanPolicy(GPTPolicy):
             raise PolicyError("ChatGPT stream disconnected before response.completed; no action was executed.")
         return completed
 
-    def _stream_lines(self, response):
+    def _stream_lines(self, response, evidence):
         # Bound raw bytes before buffering lines, including streams without newlines.
-        decoder = codecs.getincrementaldecoder("utf-8")("strict")
+        decoder = codecs.getincrementaldecoder("utf-8-sig")("strict")
         buffered, size = "", 0
         for chunk in response.iter_bytes():
             self._check_interrupted()
             size += len(chunk)
+            remaining = 65536 - len(evidence["prefix"])
+            evidence["prefix"].extend(chunk[:remaining])
+            if len(chunk) > remaining:
+                evidence["truncated"] = True
             if size > MAX_STREAM_BYTES:
                 raise PolicyError("ChatGPT response stream exceeded the size limit.")
             buffered += decoder.decode(chunk)
