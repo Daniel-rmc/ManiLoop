@@ -12,7 +12,7 @@ from maniloop.providers.credentials import (
     normalize_base_url,
 )
 from maniloop.providers.catalog import ModelCatalogError
-from maniloop.providers.responses import DEFAULT_MODEL
+from maniloop.providers.responses import DEFAULT_MODEL, PolicyError
 from maniloop.providers.chat import ChatService
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # Exact allowlist: no user files, path traversal, or arbitrary repository access.
 WORKSPACE_ASSETS = {
     "/ui/" + name: (name, "text/css; charset=utf-8" if name.endswith(".css") else "text/javascript; charset=utf-8")
-    for name in ("workspace.css", "workspace-layout.css", "workspace.js", "workspace-layout.js", "manual-control.js")
+    for name in ("workspace.css", "workspace-layout.css", "workspace.js", "workspace-layout.js", "manual-control.js", "chatgpt-plan.js")
 }
 
 
@@ -73,6 +73,11 @@ def handler_for(demo=None, chat=None):
                 self.json(200, chat.options(discover=discover))
             elif demo is None:
                 self.json(404, {"error": "Not found"})
+            elif path == "/api/chatgpt/status":
+                try:
+                    self.json(200, {"ok": True, **demo.chatgpt_auth_store().status()})
+                except Exception:
+                    self.json(400, {"ok": False, "error": "无法读取 ManiLoop 的 ChatGPT 授权状态"})
             elif path == "/":
                 self.send(
                     200,
@@ -152,6 +157,7 @@ def handler_for(demo=None, chat=None):
             name = urlparse(self.path).path.removeprefix("/api/")
             if name not in [
                 "chat/send", "chat/preview", "chat/models",
+                "chatgpt/login", "chatgpt/select", "chatgpt/logout", "chatgpt/cancel",
                 "start",
                 "diagnose",
                 "typesafe-key",
@@ -167,6 +173,8 @@ def handler_for(demo=None, chat=None):
             ]:
                 return self.json(404, {"error": "Not found"})
             try:
+                if name.startswith("chatgpt/") and self.headers.get_content_type() != "application/json":
+                    return self.json(415, {"ok": False, "error": "ChatGPT 账号操作需要 application/json"})
                 size = int(self.headers.get("Content-Length", "0"))
                 if not 0 < size <= 8 * 1024 * 1024:
                     raise ValueError("Invalid request length")
@@ -189,6 +197,9 @@ def handler_for(demo=None, chat=None):
                 if name in ["config-preview", "models"]:
                     try:
                         return self.json(200, demo.connection_request(name, payload))
+                    except PolicyError as exc:
+                        return self.json(400, {"ok": False, "error": str(exc),
+                                              "category": exc.category, "http_status": exc.http_status})
                     except (ConfigError, ModelCatalogError, ValueError) as exc:
                         return self.json(400, {"ok": False, "error": str(exc)})
                     except Exception:
@@ -214,6 +225,8 @@ def handler_for(demo=None, chat=None):
 
 
 def serve(args):
+    if getattr(args, "codex_login", False) and getattr(args, "chatgpt_plan", False):
+        raise ValueError("请选择 ChatGPT 套餐直连或 Codex CLI，不能同时使用两种接入")
     from maniloop.runtime.settings import validate_observation_max_age
     configured_age = getattr(args, "observation_max_age_seconds", None)
     if configured_age is not None:
@@ -228,6 +241,8 @@ def serve(args):
         demo.replay_html = load_latest_replay(args.output)
     if getattr(args, "codex_login", False):
         demo.credential_source = "codex"
+    elif getattr(args, "chatgpt_plan", False):
+        demo.credential_source = "chatgpt_plan"
     server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_for(demo))
     server.daemon_threads = True
     threading.Thread(target=server.serve_forever, daemon=True).start()

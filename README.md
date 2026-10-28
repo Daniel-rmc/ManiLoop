@@ -130,6 +130,7 @@ Choose one route below. Stop the existing server before running a different laun
 
 | Model route | How to connect | Compatibility boundary |
 | --- | --- | --- |
+| ChatGPT plan direct | Select the direct route and authorize ManiLoop in your browser | Eligible account models through Responses, without Codex CLI; no server token hard cap in the current preview |
 | GPT through Codex | Official Codex CLI login; select the Codex source | Uses models available to that CLI/account; ManiLoop does not extract login tokens |
 | Hosted or self-hosted vision model | Enter the service base URL, model ID, and API key, or import provider TOML | Robot control requires **Responses API + image input + JSON Schema output** |
 | Local LeRobot checkpoints | Select a supported model loaded by the isolated inference worker | Three reviewed LIBERO checkpoint presets; not arbitrary model-folder import |
@@ -143,6 +144,10 @@ Choose one route below. Stop the existing server before running a different laun
 </details>
 
 ### GPT / compatible model APIs
+
+To use your ChatGPT plan directly, install `python -m pip install -e '.[chatgpt]'`, start the normal local demo, and choose **ChatGPT 套餐直连 · 独立授权** in the model panel. Click **Continue with ChatGPT**, authorize ManiLoop, refresh the account's model list, and run the text/image/action-format diagnostics. This route uses ManiLoop's own prompt and control loop without launching Codex CLI. Account eligibility and model access are verified by those diagnostics. See the [bilingual setup and comparison guide](docs/CHATGPT_PLAN.md).
+
+The existing Codex CLI route remains available as a separate harness configuration:
 
 Install a current official [Codex CLI](https://github.com/openai/codex), then:
 

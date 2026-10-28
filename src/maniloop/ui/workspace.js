@@ -1,3 +1,4 @@
+import {createChatGPTPlanControls, connectionModels, defaultReasoningLabel} from "./chatgpt-plan.js";
 import {createManualControls} from './manual-control.js';
 import {createWorkspaceLayout} from './workspace-layout.js';
 
@@ -31,6 +32,10 @@ const cameraLoading = {external: false, wrist: false};
 const manualControls = createManualControls({getState: () => state, perform, showError});
 const workspaceLayout = createWorkspaceLayout({perform});
 
+const chatgptPlan = createChatGPTPlanControls({request, showError, showToast,
+  onChanged: () => {
+    if (ui.source.value === 'chatgpt_plan') { ui.modelSelect.value = ''; invalidatePreview(); }
+  }});
 function text(value) {
   if (value == null) return '';
   return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
@@ -79,6 +84,7 @@ function selectedModel() { return ui.modelSelect.value === '__custom__' ? ui.mod
 function selectedCredentials() {
   const body = {credential_source: ui.source.value};
   if (ui.source.value === 'codex') return body;
+  if (ui.source.value === 'chatgpt_plan') return {...body, chatgpt_account_id: chatgptPlan.accountId()};
   if (ui.source.value === 'file') body.config_path = ui.configPath.value.trim();
   else if (ui.source.value === 'upload') {
     body.config_toml = ui.configToml.value;
@@ -92,6 +98,9 @@ function selectedCredentials() {
   return body;
 }
 function validateConfigSelection(body) {
+  if (body.credential_source === 'chatgpt_plan' && (!chatgptPlan.ready() || chatgptPlan.pending())) {
+    showError(new Error('请先完成 ChatGPT 套餐授权，再刷新模型列表或发起请求。')); return false;
+  }
   if (body.credential_source === 'file' && !body.config_path) {
     showError(new Error('请先选择或输入本地配置文件路径。')); ui.configPath.focus(); return false;
   }
@@ -102,15 +111,14 @@ function validateConfigSelection(body) {
 }
 function updateModelChoices() {
   const selected = ui.modelSelect.value;
-  const models = [...new Set([
+  const configured = [
     ...configOptions.models,
-    ...(ui.source.value !== 'manual' && previewRevision === configRevision && configPreview ? [...(configPreview.models || []), configPreview.model] : []),
-    ...fetchedModels
-  ].filter(model => typeof model === 'string' && model && model !== '__custom__'))];
-  if (selected && selected !== '__custom__' && !models.includes(selected)) models.push(selected);
+    ...(ui.source.value !== 'manual' && previewRevision === configRevision && configPreview ? [...(configPreview.models || []), configPreview.model] : [])
+  ];
+  const models = connectionModels(ui.source.value, configured, fetchedModels, selected);
   ui.modelSelect.replaceChildren();
   const add = (value, label) => { const option = document.createElement('option'); option.value = value; option.textContent = label; ui.modelSelect.appendChild(option); };
-  add('', ui.source.value === 'codex' ? 'GPT-6 Astra（默认）' : ui.source.value === 'manual' ? '使用服务默认模型' : '跟随配置中的模型');
+  add('', ui.source.value === 'chatgpt_plan' ? '请读取此账号的模型列表并选择' : ui.source.value === 'codex' ? 'GPT-6 Astra（默认）' : ui.source.value === 'manual' ? '使用服务默认模型' : '跟随配置中的模型');
   models.forEach(model => add(model, model));
   add('__custom__', '自定义模型…');
   ui.modelSelect.value = selected;
@@ -147,6 +155,9 @@ function renderConfigPreview(config) {
 }
 function updateCredentialStatus() {
   const codex = ui.source.value === 'codex';
+  const plan = ui.source.value === 'chatgpt_plan';
+  $('chatgpt-plan-fields').hidden = !plan;
+  $('reasoning-effort').querySelector('option[value="auto"]').textContent = defaultReasoningLabel(ui.source.value);
   const file = ui.source.value === 'file';
   const upload = ui.source.value === 'upload';
   const usesConfig = file || upload;
@@ -154,7 +165,7 @@ function updateCredentialStatus() {
   $('upload-config-fields').hidden = !upload;
   $('upload-preview-action').hidden = !upload;
   $('config-key-fields').hidden = !usesConfig;
-  $('manual-config-fields').hidden = usesConfig || codex;
+  $('manual-config-fields').hidden = usesConfig || codex || plan;
   $('codex-login-note').hidden = !codex;
   // A live run may refresh its provider after CC Switch changes. An idle preview remains independent.
   const metadata = state && state.running && state.credentials && state.credentials.source === ui.source.value && usesConfig
@@ -162,7 +173,8 @@ function updateCredentialStatus() {
   const configured = usesConfig ? !!(metadata && metadata.key_configured && !metadata.error) : !!(ui.key.value.trim() || (state && state.manual_key_configured));
   $('key-status').textContent = configBusy ? '正在读取…' : configured ? '已配置' : usesConfig && !metadata ? '等待读取' : '尚未配置 API 密钥';
   $('key-status').className = 'key-status' + (configured ? ' configured' : '');
-  $('model-catalog-note').textContent = codex ? 'Codex 模式仅检查本机登录记录；模型是否可用须通过实际诊断验证。' : '刷新会请求当前服务商的模型列表。列出的模型仍需支持图像与结构化输出。';
+  $('model-catalog-note').textContent = plan ? '读取此账号的模型目录；目录可见不代表请求一定可用，请先运行连接诊断。' : codex ? 'Codex 模式仅检查本机登录记录；模型是否可用须通过实际诊断验证。' : '刷新会请求当前服务商的模型列表。列出的模型仍需支持图像与结构化输出。';
+  if (plan) { $('key-status').textContent = chatgptPlan.ready() ? '已授权套餐直连' : '需要独立授权'; $('key-status').className = 'key-status' + (chatgptPlan.ready() ? ' configured' : ''); }
   if (codex) { $('key-status').textContent = '使用 Codex 登录'; $('key-status').className = 'key-status'; }
   ui.key.placeholder = state && state.manual_key_configured ? '服务已保存手动密钥；留空继续使用，或输入新密钥' : '输入 API 密钥，或使用服务端环境变量';
   if (usesConfig) renderConfigPreview(metadata);
@@ -241,10 +253,12 @@ function updateControls() {
   const steppable = cloud || $('agent-select').value === 'jev';
   const ready = !!(connected && state && state.ready);
   const configLocked = pending || configBusy || running || inFlight;
+  chatgptPlan.update(configLocked || moving || !connected);
+  const authPending = ui.source.value === 'chatgpt_plan' && chatgptPlan.pending();
   ['backend-select','robocasa-task','robocasa-layout','robocasa-style','robosuite-task','libero-suite','libero-task','libero-init','robot-select','layout-select','task-select','timing-select','apply-environment','demo-preset','agent-select','local-model'].forEach(id => { $(id).disabled = configLocked || !ready; });
-  ui.start.disabled = pending || configBusy || !ready || running || inFlight || moving;
+  ui.start.disabled = pending || configBusy || authPending || !ready || running || inFlight || moving;
   ['request-timeout','reasoning-effort','llm-control','llm-resolution','wall-budget','sim-budget','reset-before-start','context-mode','observation-max-age'].forEach(id => { $(id).disabled = configLocked; });
-  ['text','vision','action'].forEach(stage => { $('diagnose-' + stage).disabled = pending || configBusy || !ready || running || inFlight || moving; });
+  ['text','vision','action'].forEach(stage => { $('diagnose-' + stage).disabled = pending || configBusy || authPending || !ready || running || inFlight || moving; });
   ui.stop.disabled = pending || !connected || (!running && !moving);
   ui.step.disabled = !steppable || pending || configBusy || !ready || inFlight || moving || (running && !paused);
   ui.pause.disabled = !steppable || pending || !connected || !running || paused || pauseRequested;
@@ -277,7 +291,7 @@ function setConnection(ok) {
 }
 function renderState(data) {
   if (!state) {
-    if (data.credential_source === 'codex') ui.source.value = 'codex';
+    if (['codex','chatgpt_plan'].includes(data.credential_source)) ui.source.value = data.credential_source;
     $('context-mode').value = data.context_mode || 'current';
     $('observation-max-age').value = String(data.observation_max_age_seconds ?? 60);
     $('backend-select').value = data.backend || 'mujoco';
@@ -442,6 +456,7 @@ ui.discoverConfigs.addEventListener('click', () => loadConfigOptions(true));
 ui.readUpload.addEventListener('click', readConfig);
 ui.refreshModels.addEventListener('click', refreshModels);
 ui.source.addEventListener('change', () => {
+  if (ui.source.value === 'chatgpt_plan') { ui.modelSelect.value = ''; chatgptPlan.refresh(); }
   invalidatePreview(); updateControls();
 });
 ui.configSelect.addEventListener('change', () => {
@@ -701,6 +716,7 @@ $('jev-diagnose').addEventListener('click', async () => {
 
 for (const stage of ['text','vision','action']) $('diagnose-' + stage).addEventListener('click', async () => {
   const body = {...selectedCredentials(), model: selectedModel(), request_options: requestSettings(), stage};
+  if (body.credential_source === 'chatgpt_plan' && !body.model) { showError(new Error('请先读取账号模型列表并选择模型。')); return; }
   if (!validateConfigSelection(body)) return;
   $('diagnostic-result').textContent = '正在提交诊断…';
   await perform('/api/diagnose', body, '已提交一次诊断请求，不执行机器人动作。');
@@ -728,6 +744,7 @@ async function startEpisode(singleStep = false) {
   }
   if (agent === 'lerobot') Object.assign(body, {local_model: $('local-model').value, device: 'auto'});
   if (agent === 'llm_cloud' && !validateConfigSelection(body)) return;
+  if (agent === 'llm_cloud' && body.credential_source === 'chatgpt_plan' && !model) { showError(new Error('请先读取账号模型列表并选择模型。')); return; }
   if (agent === 'llm_cloud' && body.credential_source === 'manual' && !body.api_key && !(state && state.manual_key_configured)) { showError(new Error('请填写 API 密钥，或选择本地配置文件。')); ui.key.focus(); return; }
   if (agent === 'llm_cloud') ui.key.value = '';
   try {
@@ -786,6 +803,6 @@ tabs.forEach((tab, index) => {
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { refreshState(); refreshCameras(); } });
 window.addEventListener('pagehide', () => { ui.key.value = ''; $('jev-api-key').value = ''; });
 updateModelChoices(); updateCredentialStatus();
-refreshState(); refreshCameras(); loadConfigOptions();
+refreshState(); refreshCameras(); loadConfigOptions(); chatgptPlan.refresh({quiet: true});
 setInterval(refreshState, 500);
 setInterval(refreshCameras, 200);

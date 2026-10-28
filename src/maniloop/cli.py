@@ -47,6 +47,8 @@ def main(argv=None):
         p.add_argument("--model", default=None)
         p.add_argument("--codex-login", action="store_true", help="Use the official Codex CLI's ChatGPT login; no API key")
     demo.add_argument("--port", type=int, default=8765)
+    demo.add_argument("--chatgpt-plan", action="store_true",
+                      help="Select independent ChatGPT plan authorization in the local workbench")
     for p in (demo, batch):
         p.add_argument("--llm-control", choices=["tcp_target_servo_v2", "osc_step"], default="tcp_target_servo_v2")
         p.add_argument("--observation-profile", choices=["llm_rgb512", "debug_rgb128"], default="llm_rgb512")

@@ -134,9 +134,23 @@
             <div class="hint-row"><span>从简单、明确的单物体任务开始</span><span class="keyboard">⌘ / Ctrl + Enter</span></div>
             <details id="connection-fold" class="fold" open><summary>模型连接与认证</summary>
             <div class="credentials-section">
-              <label class="field-label" for="credential-source">密钥来源<span id="key-status" class="key-status">等待读取</span></label>
-              <select id="credential-source" class="input"><option value="manual" selected>手动输入密钥与 API 地址</option><option value="codex">Codex · 使用当前 ChatGPT 登录</option><option value="upload">导入 config.toml + API Key</option><option value="file">本地配置文件（CC Switch）</option></select>
-              <p id="codex-login-note" class="key-hint" hidden>由本机官方 Codex CLI 使用 ChatGPT 登录；无需填写 API Key。只发送相机与传感数据，使用账户 Codex 额度。登录失效时请运行 codex login 重新授权。</p>
+              <label class="field-label" for="credential-source">连接方式<span id="key-status" class="key-status">等待读取</span></label>
+              <select id="credential-source" class="input"><option value="manual" selected>手动输入密钥与 API 地址</option><option value="chatgpt_plan">ChatGPT 套餐直连 · 独立授权</option><option value="codex">Codex CLI · 含 Codex harness</option><option value="upload">导入 config.toml + API Key</option><option value="file">本地配置文件（CC Switch）</option></select>
+              <p id="codex-login-note" class="key-hint" hidden>由本机官方 Codex CLI 使用 ChatGPT 登录，并经过 Codex harness；无需填写 API Key。只发送相机与传感数据，使用账户 Codex 额度。登录失效时请运行 codex login 重新授权。</p>
+              <div id="chatgpt-plan-fields" hidden>
+                <p class="key-hint">直接使用已授权的 ChatGPT 套餐请求模型，由 ManiLoop 管理提示与闭环，不经过 Codex CLI。模型和可用额度以此账号的授权为准。</p>
+                <label class="field-label" for="chatgpt-account">ChatGPT 账号<span>与 Codex 登录独立</span></label>
+                <select id="chatgpt-account" class="input"><option value="">选择已保存的 ChatGPT 账号</option></select>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+                  <button id="chatgpt-login" type="button" class="button">Continue with ChatGPT</button>
+                  <button id="chatgpt-reauthorize" type="button" class="button subtle" disabled>重新授权此账号</button>
+                  <button id="chatgpt-retry-registration" type="button" class="button subtle" hidden>继续上次注册</button>
+                  <button id="chatgpt-logout" type="button" class="button subtle" disabled>退出此账号</button>
+                  <button id="chatgpt-cancel" type="button" class="button subtle" hidden>取消授权</button>
+                </div>
+                <p id="chatgpt-status" class="key-hint" role="status" aria-live="polite">尚未读取连接状态。</p>
+                <p class="key-hint">可设置推理强度与本地等待时限；此通道不支持服务端 token 硬上限。凭据由本机保存，不进入浏览器存储或实验日志。<a href="https://chatgpt.com/#settings/Usage" target="_blank" rel="noopener noreferrer">管理套餐使用与应用授权</a></p>
+              </div>
               <div id="file-config-fields" hidden>
                 <label class="field-label config-source-label" for="config-select">配置位置<span>由本地服务读取</span></label>
                 <div class="config-path-row"><select id="config-select" class="input model-input" aria-label="选择已发现的本地配置"><option value="__custom__">自定义本地路径…</option></select><button id="discover-configs-button" type="button" class="button">发现本地配置</button></div>

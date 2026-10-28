@@ -130,6 +130,7 @@ python -m maniloop demo --backend robocasa --task OpenDrawer \
 
 | 模型接入方式 | 如何连接 | 兼容边界 |
 | --- | --- | --- |
+| ChatGPT 套餐直连 | 选择直连来源，在浏览器中为 ManiLoop 独立授权 | 使用账号可用的 Responses 模型，不经过 Codex CLI；当前预览无服务端 token 硬上限 |
 | 通过 Codex 使用 GPT | 在官方 Codex CLI 登录，选择 Codex 来源 | 使用该 CLI／账户可用的模型；ManiLoop 不提取登录 token |
 | 云端或自托管视觉模型 | 填写服务基础地址、模型 ID、API Key，或导入供应商 TOML | 机器人控制需要 **Responses API、图像输入和 JSON Schema 输出** |
 | 本地 LeRobot 检查点 | 选择由独立推理进程加载的支持模型 | 当前提供三个已核对的 LIBERO 检查点预设，不是任意模型文件夹导入 |
@@ -143,6 +144,10 @@ python -m maniloop demo --backend robocasa --task OpenDrawer \
 </details>
 
 ### GPT 与兼容模型 API
+
+使用 ChatGPT 套餐直连时，先运行 `python -m pip install -e '.[chatgpt]'`，正常启动本地 demo，在模型面板选择 **ChatGPT 套餐直连 · 独立授权**。点击 **Continue with ChatGPT** 授权 ManiLoop，刷新账号模型列表，再运行文字、图像和动作格式诊断。该方式使用 ManiLoop 自己的提示和闭环，不启动 Codex CLI；账号资格与模型访问以诊断结果为准。详见[双语接入与比较指南](docs/CHATGPT_PLAN.md)。
+
+现有 Codex CLI 入口继续保留，作为单独标记的 harness 配置：
 
 安装近期官方 [Codex CLI](https://github.com/openai/codex)，然后运行：
 
