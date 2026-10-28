@@ -443,6 +443,11 @@ class EpisodeRunner:
                 raise ValueError("请先停止任务并等待请求结束")
             max_age = validate_observation_max_age(payload.get("observation_max_age_seconds", self.max_age))
             backend = payload.get("backend", self.sim.backend)
+            mode = payload.get("llm_control", "osc_step")
+            if mode not in ("osc_step", "tcp_target_servo_v2", "tcp_target_servo_v3"):
+                raise ValueError("未知 LLM 控制模式")
+            if mode == "tcp_target_servo_v3" and backend != "libero":
+                raise ValueError("tcp_target_servo_v3 仅支持 LIBERO")
             replacement = create_environment(
                 backend=backend,
                 robocasa_layout=payload.get("robocasa_layout", 11),
@@ -468,7 +473,7 @@ class EpisodeRunner:
             self.timing = timing
             self.max_age = max_age
             if self.sim.backend in ("libero", "robosuite", "robocasa"):
-                self.sim.set_llm_control(payload.get("llm_control", "osc_step"))
+                self.sim.set_llm_control(mode)
             self.chunk = None
             self._physics_remainder = 0.0
             self.command("reset", {"seed": payload.get("seed", 0)})
@@ -493,6 +498,8 @@ class EpisodeRunner:
             self.pending_observation, self.request_images = self.sim.observe()
             self.event("info", "场景已重置")
         elif name in ("start", "diagnose"):
+            if payload.get("llm_control") == "tcp_target_servo_v3" and self.sim.backend != "libero":
+                raise ValueError("tcp_target_servo_v3 仅支持 LIBERO")
             diagnostic = payload.get("stage") if name == "diagnose" else None
             if name == "diagnose" and diagnostic not in ("text", "vision", "action"):
                 raise ValueError("诊断阶段必须为 text / vision / action")
@@ -636,7 +643,7 @@ class EpisodeRunner:
             if not diagnostic and self.sim.backend == "libero":
                 profile = payload.get("observation_profile", self.sim.describe().get("observation_profile", "debug_rgb128"))
                 mode = payload.get("llm_control", self.sim.llm_control)
-                if mode not in ("osc_step", "tcp_target_servo_v2"):
+                if mode not in ("osc_step", "tcp_target_servo_v2", "tcp_target_servo_v3"):
                     raise ValueError("未知 LLM 控制模式")
                 if profile != self.sim.describe().get("observation_profile", "debug_rgb128"):
                     info = self.sim.describe()
@@ -1019,7 +1026,7 @@ class EpisodeRunner:
                     result = (self.policy.execute(self.sim, executable) if self.policy_kind == "jev"
                               else self.sim.execute(executable))
                     self.awaiting_execution = (result["status"] == "accepted" and
-                        self.sim.describe().get("llm_control") == "tcp_target_servo_v2")
+                        self.sim.describe().get("llm_control") in ("tcp_target_servo_v2", "tcp_target_servo_v3"))
                     self.history.append({"action": action, "feedback": result})
                     self.history = self.history[-8:]
                     self.geometry = []

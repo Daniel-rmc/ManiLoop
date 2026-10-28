@@ -66,3 +66,15 @@ def test_existing_benchmark_routes_keep_their_connection(flags, source, tmp_path
     cli.main(["benchmark", *flags, "--output", str(tmp_path)])
     assert calls[0]["credential_source"] == source
     assert calls[0]["api_key"] == (None if source == "codex" else "offline-api-key")
+
+
+def test_cli_wide_target_selection_and_backend_boundary(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(cli, "run_episode", lambda case, *args, **kwargs: calls.append(case) or fake_result())
+    cli.main(["benchmark", "--backend", "libero", "--agent", "llm_cloud", "--chatgpt-plan",
+              "--llm-control", "tcp_target_servo_v3", "--output", str(tmp_path)])
+    assert calls[0].llm_control == "tcp_target_servo_v3"
+    calls[0].validate()
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["demo", "--backend", "mujoco", "--llm-control", "tcp_target_servo_v3"])
+    assert exc.value.code == 2

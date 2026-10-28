@@ -1,5 +1,33 @@
-// Human jog controls only. Frame conversion stays on the server.
+// Control settings and human jog controls. Frame conversion stays on the server.
 export const radians = degrees => degrees * Math.PI / 180;
+const controlModes = ['tcp_target_servo_v2', 'tcp_target_servo_v3', 'osc_step'];
+export function syncControlMode(control, note, backend, requestedMode = control.value) {
+  const available = backend === 'libero';
+  const option = [...control.options].find(item => item.value === 'tcp_target_servo_v3');
+  if (option && option.disabled !== !available) option.disabled = !available;
+  const mode = controlModes.includes(requestedMode) && (available || requestedMode !== 'tcp_target_servo_v3')
+    ? requestedMode : 'tcp_target_servo_v2';
+  if (control.value !== mode) control.value = mode;
+  const description = mode === 'tcp_target_servo_v3'
+    ? 'LIBERO v3：规划目标向量上限 2.5 m / 180°；位姿移动最多跟踪 200 个原生控制步（10 秒），到达或环境终止时提前停止。夹爪命令仍最多 20 步（1 秒）。2.5 m 是异常输入保护，不代表可达空间或建议步长。原生控制仍为 20 Hz，每步尺度 5 cm / 0.5 rad，物理步长 2 ms。'
+    : mode === 'osc_step'
+      ? '原生单步：每次移动仅执行一个控制步，随后重新观察；接受命令不代表到达目标。'
+      : '目标跟踪 v2：本地持续追踪，最长 1 秒后重新观察；保留已有演示的控制设置，反馈报告实际误差。';
+  if (note.textContent !== description) note.textContent = description;
+  return mode;
+}
+
+export function actionLimitsDescription(state) {
+  const limits = state?.observation?.action_limits || {};
+  if (!Number.isFinite(limits.translation_max_m) || !Number.isFinite(limits.rotation_max_rad)) return '正在读取后端动作范围…';
+  const mode = state?.environment?.llm_control;
+  const target = mode === 'tcp_target_servo_v2' || mode === 'tcp_target_servo_v3';
+  const label = target ? '规划目标向量上限' : '单步向量上限';
+  const native = state?.backend === 'libero' && target
+    ? '；原生控制：20 Hz，每步尺度 50 mm / 0.5 rad' : '';
+  return `${label}：平移 ${(limits.translation_max_m * 1000).toFixed(0)} mm · 旋转 ${(limits.rotation_max_rad * 180 / Math.PI).toFixed(1)}°${native}`;
+}
+
 const vector = (value, label) => {
   if (!Array.isArray(value) || value.length !== 3 || !value.every(Number.isFinite)) {
     throw new Error(`${label}必须包含三个有限数值`);
@@ -18,7 +46,7 @@ export function buildPoseCommand(position, rotation, reference, duration, state)
   for (const [v, key, label] of [[p, 'translation_max_m', '平移'], [r, 'rotation_max_rad', '旋转']]) {
     const limit = limits[key];
     if (!Number.isFinite(limit) || limit <= 0) throw new Error(`后端未声明${label}上限`);
-    if (Math.hypot(...v) > limit + 1e-9) throw new Error(`${label}向量超过后端单步上限，请减小增量`);
+    if (Math.hypot(...v) > limit + 1e-9) throw new Error(`${label}向量超过后端声明的上限，请减小增量`);
   }
   const command = {kind: 'move', delta_position: p, delta_rotation: r, reference_frame: reference};
   if (capability.adjustable_target_duration) {
@@ -96,9 +124,7 @@ export function createManualControls({getState, perform, showError}) {
     if (!modern && $('manual-reference').value !== 'fixed') $('manual-reference').value = 'fixed';
     setDisabled($('manual-zero'), disabled);
     updateFrame(state);
-    const limits = state?.observation?.action_limits || {};
-    setText($('manual-limits'), Number.isFinite(limits.translation_max_m) && Number.isFinite(limits.rotation_max_rad)
-      ? `单步向量上限：平移 ${(limits.translation_max_m * 1000).toFixed(0)} mm · 旋转 ${(limits.rotation_max_rad * 180 / Math.PI).toFixed(1)}°` : '正在读取后端动作范围…');
+    setText($('manual-limits'), actionLimitsDescription(state));
     const feedback = state?.last_feedback || {};
     const names = {ready: '等待操作', accepted: '指令已接受', executing: '正在跟踪',
       reached: '已到达', completed: '执行完成', timed_out: '跟踪超时', interrupted: '已停止', rejected: '指令被拒绝'};

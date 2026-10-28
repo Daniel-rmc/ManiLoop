@@ -11,6 +11,7 @@ import numpy as np
 from maniloop.core.actions import Action
 from maniloop.controllers.target import PoseTarget
 from .transport import Worker, SUITES
+from .control import LLM_CONTROL_MODES, TARGET_MODES, command_limits, target_settings, wide_target_description
 
 
 class LiberoEnvironment:
@@ -70,7 +71,7 @@ class LiberoEnvironment:
         self.terminated = False
         self._queue.clear()
         self._target = None
-        self._grip = 0.0 if self.llm_control == "tcp_target_servo_v2" else -1.0
+        self._grip = 0.0 if self.llm_control in TARGET_MODES else -1.0
         self.feedback = {
             "status": "ready",
             "message": "Official LIBERO initialization loaded",
@@ -101,19 +102,22 @@ class LiberoEnvironment:
         self._clear_episode()
 
     def set_llm_control(self, mode):
-        if mode not in ("osc_step", "tcp_target_servo_v2") or self.busy:
+        if mode not in LLM_CONTROL_MODES or self.busy:
             raise ValueError("Unknown control mode or action still executing")
         self.llm_control = mode
         if self.simulation_time == 0:
             # Official warmup uses zero gripper action; preserve it in target mode.
-            self._grip = 0.0 if mode == "tcp_target_servo_v2" else -1.0
+            self._grip = 0.0 if mode in TARGET_MODES else -1.0
 
     def describe(self):
         result = copy.deepcopy(self._description)
         result["llm_control"] = self.llm_control
-        if self.llm_control == "tcp_target_servo_v2":
-            result["target_controller"] = PoseTarget.description()
-            result["llm_action_adapter"] = "Fixed TCP target; proprioceptive OSC feedback up to 20 control steps; no object state"
+        if self.llm_control in TARGET_MODES:
+            settings = target_settings(self.llm_control)
+            result["target_controller"] = PoseTarget.description(settings)
+            result["llm_action_adapter"] = f"Fixed TCP target; proprioceptive OSC feedback up to {settings.max_steps} control steps; no object state"
+        if self.llm_control == "tcp_target_servo_v3":
+            result["target_command_limits"] = wide_target_description()
         return result
 
     def observe(self):
@@ -143,15 +147,31 @@ class LiberoEnvironment:
             "Native osc_pose chunks contain 7 normalized values: world xyz/rotation delta, then -1 open / +1 close. "
             "Images use top-left pixel origin, camera_to_world is OpenCV camera coordinates.",
         }
-        if self.llm_control == "tcp_target_servo_v2":
-            observation["action_limits"]["target_tracking"] = PoseTarget.description()
+        if self.llm_control in TARGET_MODES:
+            settings = target_settings(self.llm_control)
+            observation["action_limits"]["target_tracking"] = PoseTarget.description(settings)
             observation["robot_description"] = (
                 "LIBERO Panda, world frame, RGB sensors only. move captures one fixed TCP pose target "
                 "from the current pose plus your delta, then uses proprioceptive feedback at 20 Hz "
-                "for up to 1 second. Rotation is Exp(world rotation vector) @ current rotation. "
+                + ("for up to 1 second. " if self.llm_control == "tcp_target_servo_v2" else "for up to 10 seconds. ")
+                + "Rotation is Exp(world rotation vector) @ current rotation. "
                 "Inspect reached/timed_out/interrupted feedback and actual displacement; accepted is not reached. "
                 "Gripper accepts only 0 closed or 1 open and holds arm pose; completed does not prove a grasp. "
                 "No object poses or success feedback are available. Camera pixels have top-left origin."
+            )
+        if self.llm_control == "tcp_target_servo_v3":
+            observation["action_limits"].update(wide_target_description())
+            observation["robot_description"] += (
+                " Your delta sets the final pose goal, not a single native control step. "
+                "The 2.5 m / pi rad limits are broad invalid-input guards, not a reachable workspace "
+                "or recommended movement size. Choose the distance from the task and visual evidence; "
+                "you need not split a distant goal into 5 cm requests. The local controller tracks "
+                "that fixed goal using bounded 0.05 m / 0.5 rad OSC residuals at 20 Hz; "
+                "these are command scales, not measured motion or speed guarantees. "
+                "Joint limits, obstacles and fixed-orientation reachability still apply. "
+                "No collision-free path planner is provided. Tracking ends early when reached "
+                "or the environment terminates; an unreachable goal may time out."
+                " Gripper-only commands retain the 20-step (1 second) tracking deadline."
             )
         self._snapshot = copy.deepcopy(observation)
         return observation, {
@@ -200,12 +220,14 @@ class LiberoEnvironment:
                     or not np.isfinite(rot).all()
                 ):
                     raise ValueError("Expected finite xyz and rotation vectors")
-                if (
-                    np.linalg.norm(pos) > 0.05 + 1e-12
-                    or np.linalg.norm(rot) > 0.5 + 1e-12
-                ):
-                    raise ValueError("Move exceeds .05 m / .5 rad per-step limits")
-                native[:3], native[3:6] = pos / 0.05, rot / 0.5
+                position_limit, rotation_limit = command_limits(self.llm_control)
+                if (np.linalg.norm(pos) > position_limit + 1e-12
+                        or np.linalg.norm(rot) > rotation_limit + 1e-12):
+                    if self.llm_control != "tcp_target_servo_v3":
+                        raise ValueError("Move exceeds .05 m / .5 rad per-step limits")
+                    raise ValueError(f"Move exceeds {position_limit:g} m / {rotation_limit:g} rad command limits")
+                if self.llm_control == "osc_step":
+                    native[:3], native[3:6] = pos / 0.05, rot / 0.5
             elif kind == "gripper":
                 opening = action.get("gripper_opening")
                 if type(opening) not in (int, float) or opening not in (0, 1):
@@ -217,13 +239,14 @@ class LiberoEnvironment:
                     "LIBERO supports move/gripper/wait or native osc_pose chunks"
                 )
             self._grip = float(native[6])
-            if self.llm_control == "tcp_target_servo_v2" and kind in ("move", "gripper"):
+            if self.llm_control in TARGET_MODES and kind in ("move", "gripper"):
                 self._target = PoseTarget(
                     self._sensors, pos if kind == "move" else np.zeros(3),
                     rot if kind == "move" else np.zeros(3), self._grip,
                     gripper=kind == "gripper",
+                    settings=target_settings(self.llm_control, gripper=kind == "gripper"),
                 )
-                self.feedback = {"status": "accepted", "message": "Tracking fixed TCP target from proprioception", "max_control_steps": 20}
+                self.feedback = {"status": "accepted", "message": "Tracking fixed TCP target from proprioception", "max_control_steps": self._target.settings.max_steps}
                 return dict(self.feedback)
             self._queue.extend(native.tolist() for _ in range(count))
             self.feedback = {

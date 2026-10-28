@@ -87,7 +87,7 @@
                 <label class="field-label">Ry · °<input id="manual-ry" class="input" type="number" step="0.1" value="0"></label>
                 <label class="field-label">Rz · °<input id="manual-rz" class="input" type="number" step="0.1" value="0"></label>
               </div>
-              <p class="key-hint">Rx/Ry/Rz 是一次旋转向量的分量，不是绝对欧拉角。按当前坐标轴解释；受后端单步向量范数与可达性限制，不会静默裁剪。</p>
+              <p class="key-hint">Rx/Ry/Rz 是一次旋转向量的分量，不是绝对欧拉角。按当前坐标轴解释；受后端声明的向量范数上限与可达性限制，不会静默裁剪。</p>
               <button id="manual-pose-submit" class="button manual-button" type="button" disabled>执行六维增量</button><button id="manual-zero" class="button subtle" type="button">清零输入</button>
             </details>
             <div class="gripper-actions"><button id="open-gripper" class="button manual-button" type="button" disabled><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6 3H2v10h4M10 3h4v10h-4M5 8h6"/></svg>打开夹爪</button><button id="close-gripper" class="button manual-button" type="button" disabled><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M7 3H4v10h3M9 3h3v10H9"/></svg>闭合夹爪</button></div>
@@ -187,7 +187,7 @@
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                 <div><label class="field-label" for="request-timeout">请求超时（秒）</label><input id="request-timeout" class="input" type="number" min="1" max="600" value="120"></div>
                 <div><label class="field-label" for="reasoning-effort">推理强度</label><select id="reasoning-effort" class="input"><option value="auto">模型默认</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="xhigh">xhigh</option></select></div>
-                <div><label class="field-label" for="llm-control">外部任务动作执行</label><select id="llm-control" class="input"><option value="tcp_target_servo_v2">目标跟踪（推荐）</option><option value="osc_step">原生单步（基线）</option></select></div>
+                <div><label class="field-label" for="llm-control">外部任务动作执行</label><select id="llm-control" class="input"><option value="tcp_target_servo_v2">目标跟踪 v2（原有演示）</option><option value="tcp_target_servo_v3" disabled>大范围目标跟踪 v3（仅 LIBERO）</option><option value="osc_step">原生单步（基线）</option></select></div>
                 <div><label class="field-label" for="llm-resolution">外部任务相机</label><select id="llm-resolution" class="input"><option value="llm_rgb512">512 × 512（LLM）</option><option value="debug_rgb128">128 × 128（基线）</option></select></div>
                 <div><label class="field-label" for="wall-budget">实验总时限（秒）</label><input id="wall-budget" class="input" type="number" min="1" value="600"></div>
                 <div><label class="field-label" for="sim-budget">仿真时限（秒）</label><input id="sim-budget" class="input" type="number" min="1" value="120"></div>
@@ -195,7 +195,7 @@
                 <div style="grid-column:1/-1"><label class="field-label" for="context-mode">视觉反馈</label><select id="context-mode" class="input"><option value="current">当前双相机 · 基线</option><option value="paired">前后双相机 · 对照上次动作</option></select><p class="key-hint">前后模式增加上次动作前的画面与本体状态，供模型比较执行变化。独立评分仅供人类查看。</p></div>
               </div>
               <label class="key-hint" style="display:block;margin-top:10px"><input id="reset-before-start" type="checkbox" checked> 开始新实验时重置场景</label>
-              <p class="key-hint">目标跟踪在本地持续执行，最长 1 秒后重新观察；反馈报告实际误差。更换相机配置会重置场景。相机与动作设置在「应用并重置场景」或开始实验时生效；VLA 使用各自训练配置。</p>
+              <p id="llm-control-note" class="key-hint" aria-live="polite">目标跟踪 v2：最长 1 秒后重新观察；反馈报告实际误差。</p><p class="key-hint">更换相机配置会重置场景。相机与动作设置在「应用并重置场景」或开始实验时生效；VLA 使用各自训练配置。</p>
               <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px"><button id="diagnose-text" type="button" class="button subtle">1 · 文本诊断</button><button id="diagnose-vision" type="button" class="button subtle">2 · 图像诊断</button><button id="diagnose-action" type="button" class="button subtle">3 · 动作格式诊断</button></div>
               <p class="key-hint">每次诊断调用一次所选模型，可能计费；使用当前场景，不执行机器人动作。可依次定位连接、图像和结构化输出问题。</p>
               <pre id="diagnostic-result" class="config-preview" style="white-space:pre-wrap" aria-live="polite">尚未诊断</pre>

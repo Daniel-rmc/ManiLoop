@@ -1,5 +1,5 @@
 import {createChatGPTPlanControls, connectionModels, defaultReasoningLabel} from "./chatgpt-plan.js";
-import {createManualControls} from './manual-control.js';
+import {createManualControls, syncControlMode} from './manual-control.js';
 import {createWorkspaceLayout} from './workspace-layout.js';
 
 const $ = id => document.getElementById(id);
@@ -306,6 +306,8 @@ function renderState(data) {
       $('robocasa-style').value = data.environment.style;
       loadRobocasaTasks(data.environment.task);
     }
+    syncControlMode($('llm-control'), $('llm-control-note'), data.backend, data.environment?.llm_control);
+    if ([...$('llm-resolution').options].some(option => option.value === data.environment?.observation_profile)) $('llm-resolution').value = data.environment.observation_profile;
     updateBackendFields();
     $('robot-select').value = data.robot;
     if (data.backend === 'mujoco') { $('layout-select').value = data.scene; $('task-select').value = data.task_id; }
@@ -508,6 +510,7 @@ ui.baseUrl.addEventListener('input', () => { fetchedModels = []; updateModelChoi
 let taskCatalogSequence = 0;
 function updateBackendFields() {
   const backend = $('backend-select').value;
+  syncControlMode($('llm-control'), $('llm-control-note'), backend);
   $('libero-options').hidden = backend !== 'libero';
   $('robosuite-options').hidden = backend !== 'robosuite';
   $('robocasa-options').hidden = backend !== 'robocasa';
@@ -569,6 +572,7 @@ $('backend-select').addEventListener('change', () => {
   if ($('backend-select').value === 'robosuite') loadRobosuiteTasks();
   if ($('backend-select').value === 'robocasa') loadRobocasaTasks();
 });
+$('llm-control').addEventListener('change', () => syncControlMode($('llm-control'), $('llm-control-note'), $('backend-select').value));
 $('libero-suite').addEventListener('change', () => loadLiberoTasks());
 $('apply-environment').addEventListener('click', async () => {
   let settings;
@@ -603,7 +607,7 @@ $('demo-preset').addEventListener('click', async () => {
     ui.maxSteps.value = '30';
     $('request-timeout').value = '120';
     $('reasoning-effort').value = 'low';
-    $('llm-control').value = 'tcp_target_servo_v2';
+    syncControlMode($('llm-control'), $('llm-control-note'), 'libero', 'tcp_target_servo_v2');
     $('llm-resolution').value = 'llm_rgb512';
     $('wall-budget').value = '3600';
     $('sim-budget').value = '120';

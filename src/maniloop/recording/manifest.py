@@ -95,9 +95,12 @@ def describe_run(runner):
     if runner.policy_kind == "llm_cloud":
         effective = getattr(runner.policy, "request_options", None)
         policy["request_options"] = effective if isinstance(effective, dict) else {"source": "unavailable_adapter"}
-        if sim.backend == "libero" and sim.describe().get("llm_control") == "tcp_target_servo_v2":
-            policy["action_interface"] = "tcp_target_servo_v2"
-            policy["target_controller"] = sim.describe()["target_controller"]
+        if sim.backend == "libero" and sim.describe().get("llm_control") in ("tcp_target_servo_v2", "tcp_target_servo_v3"):
+            info = sim.describe()
+            policy["action_interface"] = info["llm_control"]
+            policy["target_controller"] = info["target_controller"]
+            if info["llm_control"] == "tcp_target_servo_v3":
+                policy["target_command_limits"] = info["target_command_limits"]
     if runner.policy_kind == "jev":
         policy.update(action_interface="jev_primitives_v1", representation="text_proprioception_v1",
                       endpoint="https://api.typesafe.ai/v1/systemone",

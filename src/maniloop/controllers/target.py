@@ -19,8 +19,8 @@ class TargetSettings:
 class PoseTarget:
     """Capture the target once; produce bounded deltas relative to current sensors."""
 
-    def __init__(self, sensors, position_delta, rotation_delta, grip, *, gripper=False):
-        self.settings = TargetSettings()
+    def __init__(self, sensors, position_delta, rotation_delta, grip, *, gripper=False, settings=None):
+        self.settings = settings if settings is not None else TargetSettings()
         self.start = np.array(sensors["tcp_position"], dtype=float)
         self.previous_position = self.start.copy()
         self.previous_rotation = np.array(sensors["tcp_rotation_matrix"], dtype=float)
@@ -78,5 +78,5 @@ class PoseTarget:
                 "control_steps": self.steps, "gripper_opening": opening, "gripper_speed_s": gripper_speed}
 
     @staticmethod
-    def description():
-        return asdict(TargetSettings())
+    def description(settings=None):
+        return asdict(settings if settings is not None else TargetSettings())

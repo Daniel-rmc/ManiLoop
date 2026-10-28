@@ -351,3 +351,115 @@ def test_manual_motion_after_diagnostic_resumes_physics(env, tmp_path):
         assert len(env.worker.actions) == 1 and env.simulation_time == .05
     finally:
         runner.close()
+
+
+def test_wide_target_accepts_distant_goal_without_enlarging_native_commands(env):
+    import numpy as np
+    from maniloop.core.observations import guard_sensor_tree
+    env.set_llm_control("tcp_target_servo_v3")
+    packet, _ = env.observe()
+    guard_sensor_tree(packet)
+    assert packet["action_limits"]["translation_max_m"] == 2.5
+    assert packet["action_limits"]["rotation_max_rad"] == pytest.approx(np.pi)
+    delta, rotation = np.array([.3, .4, 0]), np.array([0, 0, np.pi])
+    assert env.execute(dict(kind="move", delta_position=delta, delta_rotation=rotation))["max_control_steps"] == 200
+    fixed = env._target.position.copy()
+    env.step()
+    native = np.array(env.worker.actions[-1])
+    assert np.linalg.norm(native[:3]) == pytest.approx(1)
+    assert np.linalg.norm(native[3:6]) == pytest.approx(1)
+    assert max(abs(native)) <= 1
+    assert native[:3] == pytest.approx([.6, .8, 0])
+    env._sensors["tcp_position"] = [0.1, 0.2, 1.0]
+    env._target.sample(env._sensors)
+    np.testing.assert_array_equal(env._target.position, fixed)
+    env.step(199)
+    assert not env.busy and env.feedback["status"] == "timed_out"
+    assert env.feedback["control_steps"] == 200
+
+
+@pytest.mark.parametrize("delta,rotation", [([2, 2, 0], [0, 0, 0]),
+    ([0, 0, 0], [2, 2, 2]), ([float("inf"), 0, 0], [0, 0, 0])])
+def test_wide_target_guard_uses_vector_norm_and_finite_values(env, delta, rotation):
+    env.set_llm_control("tcp_target_servo_v3")
+    assert env.execute(dict(kind="move", delta_position=delta, delta_rotation=rotation))["status"] == "rejected"
+    assert not env.busy and not env.worker.actions
+
+
+def test_wide_target_stops_early_and_preserves_gripper_and_legacy_budgets(env):
+    env.set_llm_control("tcp_target_servo_v3")
+    env.execute(dict(kind="move", delta_position=[0, 0, 0]))
+    env.step(2)
+    assert not env.busy and env.feedback["status"] == "reached"
+    env.execute(dict(kind="gripper", gripper_opening=1))
+    env.step(20)  # fake opening stays 0.5, so opening cannot be complete
+    assert not env.busy and env.feedback["status"] == "timed_out"
+    assert env.feedback["control_steps"] == 20
+    env.execute(dict(kind="move", delta_position=[.1, 0, 0]))
+    env.worker.success = True
+    env.step(200)
+    assert env.terminated and not env.busy and env.feedback["control_steps"] == 1
+    env.reset(0)
+    env.set_llm_control("tcp_target_servo_v2")
+    assert env.describe()["target_controller"]["max_steps"] == 20
+    assert env.observe()[0]["action_limits"]["translation_max_m"] == .05
+    assert env.execute(dict(kind="move", delta_position=[.1, 0, 0]))["status"] == "rejected"
+
+
+def test_wide_target_records_distinct_comparison_group_and_execution_feedback(env, tmp_path):
+    from maniloop.recording.manifest import describe_run
+    from types import SimpleNamespace
+    from concurrent.futures import Future
+    runner = EpisodeRunner(env, output=tmp_path)
+    try:
+        runner.policy = SimpleNamespace(request_options={}, last_latency=0., last_usage={})
+        env.set_llm_control("tcp_target_servo_v2")
+        old = describe_run(runner)
+        env.set_llm_control("tcp_target_servo_v3")
+        new = describe_run(runner)
+        assert old["comparison_group"] != new["comparison_group"]
+        assert new["policy"]["action_interface"] == "tcp_target_servo_v3"
+        assert new["policy"]["target_command_limits"]["translation_max_m"] == 2.5
+        assert new["policy"]["target_controller"]["max_steps"] == 200
+        runner.single_step = True
+        runner.begin_episode("offline control fixture", 1)
+        runner.future = Future()
+        runner.future_token = runner.token
+        runner.future.set_result(dict(kind="move", delta_position=[.1, 0, 0], delta_rotation=[0, 0, 0],
+                                      observation_id=runner.pending_observation["observation_id"]))
+        runner.advance(.05)
+        assert runner.awaiting_execution and env.busy
+        for _ in range(210):
+            runner.advance(.05)
+            if runner.paused:
+                break
+        execution = [event for event in runner.events if event["type"] == "execution"]
+        assert runner.paused and len(execution) == 1
+        assert execution[0]["feedback"]["control_steps"] == 200
+        assert execution[0]["feedback"]["status"] == "timed_out"
+    finally:
+        runner.close()
+
+
+def test_wide_target_only_valid_for_libero_llm_experiments():
+    Experiment(backend="libero", agent="llm_cloud", llm_control="tcp_target_servo_v3").validate()
+    for backend, agent in [("mujoco", "llm_cloud"), ("libero", "mock_vla"), ("libero", "lerobot")]:
+        with pytest.raises(ValueError, match="LIBERO LLM"):
+            Experiment(backend=backend, agent=agent, llm_control="tcp_target_servo_v3").validate()
+
+
+@pytest.mark.parametrize("backend", ["mujoco", "robosuite", "robocasa"])
+def test_invalid_wide_target_backend_rejected_before_replacing_scene(env, tmp_path, monkeypatch, backend):
+    from maniloop.runtime import runner as runtime
+    monkeypatch.setattr(runtime, "create_environment", lambda **kwargs: pytest.fail("Invalid mode must not create a replacement"))
+    runner = EpisodeRunner(env, output=tmp_path)
+    try:
+        with pytest.raises(ValueError, match="LIBERO"):
+            runner.command("configure", {"backend": backend, "llm_control": "tcp_target_servo_v3"})
+        assert runner.sim is env and not env.worker.closed
+        env.backend = backend
+        with pytest.raises(ValueError, match="LIBERO"):
+            runner.command("start", {"task": "fixture", "llm_control": "tcp_target_servo_v3"})
+        assert runner.policy is None
+    finally:
+        runner.close()

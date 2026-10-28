@@ -52,7 +52,8 @@ def main(argv=None):
                       help="Use ManiLoop's independently authorized ChatGPT plan account; no Codex CLI or API key")
     demo.add_argument("--port", type=int, default=8765)
     for p in (demo, batch):
-        p.add_argument("--llm-control", choices=["tcp_target_servo_v2", "osc_step"], default="tcp_target_servo_v2")
+        p.add_argument("--llm-control", choices=["tcp_target_servo_v2", "tcp_target_servo_v3", "osc_step"], default="tcp_target_servo_v2",
+                       help="LIBERO v3 allows broad pose goals with 10 s tracking; v2 preserves the original short-step protocol")
         p.add_argument("--observation-profile", choices=["llm_rgb512", "debug_rgb128"], default="llm_rgb512")
     batch.add_argument("--request-timeout-seconds", type=float, default=120)
     batch.add_argument("--context-mode", choices=["current", "paired"], default="current")
@@ -78,6 +79,8 @@ def main(argv=None):
         "--no-render", action="store_true", help="Only for offline mock adapter checks"
     )
     args = parser.parse_args(argv)
+    if getattr(args, "llm_control", None) == "tcp_target_servo_v3" and args.backend != "libero":
+        parser.error("tcp_target_servo_v3 requires the LIBERO backend")
     if args.command == "chat":
         from maniloop.ui.server import serve_chat
         serve_chat(args)
