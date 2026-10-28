@@ -22,11 +22,11 @@ The framework section distinguishes four environment adapters from the selected 
 
 `assets/workspace/current-workspace-manual.png` and `current-workspace-model.png` are real screenshots of the current local application using the built-in Panda tabletop scene. They show the separate manual and model panels, retain their original aspect ratios, and open at full size. They are static presentation assets; the website does not execute their controls. The local application also has a separate scene-settings panel and a persistent stop control. The interactive `playground/` remains a viewer for a recorded LIBERO episode.
 
-The Jev description refers to text primitive selection from explicit instructions and public proprioception. It uses a separate TypeSafe API key, receives no images, and delegates unit conversion and motion execution to local code. It is not presented as visual localization or autonomous grasping, and is not added to the recorded model-result table.
+The Jev description refers to text primitive selection from explicit instructions and public proprioception. It uses a separate TypeSafe API key, receives no images, and delegates unit conversion and motion execution to local code. It is not presented as visual localization or autonomous grasping, and appears in the model connection guide with that input boundary.
 
 New presentation copy uses the existing `app.js` English/Chinese dictionaries and `data-i18n` attributes. `showcase.js`, the three recorded skill videos, their JSON manifests, and the playground remain independent of this presentation update.
 
-## Episode and model results
+## Recorded episodes
 
 The homepage plays a muted MP4 preview with synchronized, saved model action notes. Play/pause, previous/next decision and the time slider let visitors inspect the requested command and the **preceding** action's feedback. The preview uses simulation time; model waiting time is omitted. It is recorded output, not live inference. Reduced-motion preferences start with a still poster, and a failed autoplay attempt keeps a manual play control. Off-screen video pauses; a visitor's explicit pause is preserved.
 
@@ -46,7 +46,13 @@ All media paths are relative to the site root. English action notes preserve the
 
 A success label requires agreement between the run summary and the verified independent LIBERO evaluator. The complete video also requires the initial frame plus every native control step, a complete terminal record and matching frame rate and simulation time. Changing the website language does not restart video playback.
 
-`assets/model-comparison.json` contains one recorded example per model, with controller and observation settings, budgets, policy calls and available inference counts. These examples do not estimate success rates. Action scheduling and measurement boundaries differ, so the table is not a speed ranking. See [Results and configurations](https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md).
+## Model connection guide
+
+The `#models` section contains six static, bilingual configuration cards: GPT via Codex, compatible vision APIs (hosted or self-hosted), SmolVLA, ACT, Diffusion Policy and Jev. Each explains connection requirements, policy inputs, operating scope and a documentation entry point. The section presents no performance table, model outcome ranking, inference counts or timings.
+
+Codex uses an official CLI login and a model ID currently available to that account. Vision APIs must support Responses, image input and JSON Schema structured output. The three local LeRobot presets use a separate `.venv-vla` with CPU / MPS / CUDA as available and remain LIBERO-specific; SmolVLA consumes language while the listed ACT and Diffusion checkpoints do not. Jev uses separate TypeSafe authentication and receives text plus public proprioception, without images.
+
+`assets/model-comparison.json` remains an unchanged historical artifact. The homepage no longer fetches or renders it; the original videos, episode manifests and result evidence are retained. Model-support copy is authored in the existing English/Chinese dictionaries rather than loaded from experiment output. Configuration details remain in [VLA](https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/VLA.md), [Jev](https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/JEV.md) and the [GPT guide](https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/GPT6_DEMO.md).
 
 Published camera images and videos come from simulator rendering. ManiLoop source is MIT licensed; LIBERO, robosuite and their assets retain their respective licenses.
 
@@ -70,7 +76,7 @@ Use a normal fast-forward push. `.nojekyll` keeps this a static site. A reviewed
 
 首页短片按仿真时间静音循环，同步展示模型保存的动作说明、请求动作和上一步执行反馈；未展示模型等待时间。可暂停、前后切换决策或拖动进度，不是实时推理。系统选择减少动态效果时，默认展示静止画面；自动播放失败时可手动播放。任务卡来自 `assets/showcase.json`，只接收官方独立评分已经验证成功的回合。所有卡片明确说明是单次回合最终结果。
 
-模型结果为单次示例，不代表基准成功率。配置、动作块、预算与计时口径不同，不能由步数或耗时进行速度排名。完整运行条件见[实际结果](https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md)，本地安装见[中文使用说明](https://github.com/Daniel-rmc/ManiLoop/blob/main/README.zh-CN.md)。
+“03 / 模型接入”以六张双语卡片介绍 GPT/Codex、兼容视觉 API（含自托管）、SmolVLA、ACT、Diffusion Policy 与 Jev 的连接、必要配置、输入和适用范围，不展示模型结果对比、调用数、耗时或胜负。三种本地预设使用独立 `.venv-vla`，按硬件选择 CPU / MPS / CUDA，仅适用于 LIBERO；SmolVLA 读取语言，ACT / DP 不读取语言。Jev 使用独立 TypeSafe Key，只接收文字与公开本体状态。原始 `model-comparison.json` 与视频证据保持不变，首页不再请求或渲染该 JSON。本地安装见[中文使用说明](https://github.com/Daniel-rmc/ManiLoop/blob/main/README.zh-CN.md)。
 
 当前本地工作台截图使用内置 Panda 桌面场景，展示手动控制与模型运行分区，按原始比例显示，可点击查看大图。它们不是网页内嵌仿真；`playground/` 仍用于检查已录制的 LIBERO 回合。新后端的任务目录与接入检查不等于模型成功，既有 LeRobot 预设仍限 LIBERO。Jev 是独立 TypeSafe 认证的文本原语模式，不输入图像，不声称具备视觉定位或自主抓取能力。
 
