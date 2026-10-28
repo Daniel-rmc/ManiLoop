@@ -404,8 +404,6 @@ class ChatGPTPlanPolicy(GPTPolicy):
                     raise PolicyError("ChatGPT stream ended without one completed response.")
                 saw_done = True
                 return
-            if completed is not None or saw_done:
-                raise PolicyError("ChatGPT returned events after its terminal response.")
             try:
                 event = json.loads(payload, parse_constant=_reject_constant, object_pairs_hook=_unique_object)
             except (ValueError, TypeError):
@@ -415,6 +413,12 @@ class ChatGPTPlanPolicy(GPTPolicy):
             if safe_kind is None:
                 raise PolicyError("ChatGPT returned an invalid stream event type.")
             kind = safe_kind
+            # Observed direct-route heartbeat. It conveys no model output and
+            # does not extend the request deadline, including after completion.
+            if kind == "keepalive":
+                return
+            if completed is not None or saw_done:
+                raise PolicyError("ChatGPT returned events after its terminal response.")
             if kind in {"response.output_item.added", "response.output_item.done"}:
                 item = event.get("item")
                 if not isinstance(item, dict) or item.get("type") not in {"message", "reasoning"}:

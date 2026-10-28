@@ -534,3 +534,56 @@ def test_normal_event_types_are_deduplicated_bounded_and_contain_no_payload():
     assert observed[0] == "response.output_text.delta"
     assert p.last_request_manifest["event_type_list_truncated"] is True
     assert "private" not in json.dumps(p.last_request_manifest)
+
+
+
+@pytest.mark.parametrize("events", [
+    [{"type": "keepalive"}, done()],
+    [{"type": "response.created"}, {"type": "keepalive"}, {"type": "response.output_text.delta", "delta": "preview"}, {"type": "keepalive"}, done()],
+    [done(), {"type": "keepalive"}],
+    [done(), {"type": "keepalive"}, "[DONE]", {"type": "keepalive"}],
+])
+def test_observed_keepalive_is_ignored_before_during_and_after_terminal(events):
+    p = policy()
+    with setup_transport(lambda _: httpx.Response(200, content=sse(*events).encode())):
+        assert decide(p) == ACTION
+    assert p.last_request_manifest["observed_event_types"].count("keepalive") == 1
+    assert p.last_response_id == "resp-offline"
+
+
+@pytest.mark.parametrize("events", [
+    [{"type": "keepalive"}],
+    [{"type": "keepalive"}, {"type": "response.output_text.delta", "delta": json.dumps(ACTION)}, {"type": "keepalive"}],
+    [{"type": "keepalive"}, done(), {"type": "keepalive"}, done()],
+    [{"type": "keepalive"}, {"type": "response.function_call_arguments.delta", "delta": "{}"}, done()],
+    [{"type": "keepalive"}, {"type": "ping"}, done()],
+    [done(), "[DONE]", {"type": "keepalive"}, "[DONE]"],
+])
+def test_keepalive_does_not_validate_partial_tools_duplicate_terminal_or_unknown(events):
+    p = policy()
+    with setup_transport(lambda _: httpx.Response(200, content=sse(*events).encode())):
+        with pytest.raises(PolicyError):
+            decide(p)
+    assert p.last_response_id is None
+    assert "keepalive" in p.last_request_manifest["observed_event_types"]
+
+
+def test_keepalive_does_not_extend_overall_deadline():
+    p = policy(timeout_seconds=0.03)
+    class HeartbeatStream(httpx.SyncByteStream):
+        def __iter__(self):
+            for _ in range(100):
+                yield sse({"type": "keepalive"}).encode()
+                time.sleep(0.005)
+            yield sse(done()).encode()
+    try:
+        with setup_transport(lambda _: httpx.Response(200, stream=HeartbeatStream())):
+            started = time.monotonic()
+            with pytest.raises(PolicyError) as exc:
+                decide(p)
+            assert exc.value.category == "timeout"
+            assert time.monotonic() - started < 0.3
+        assert "keepalive" in p.last_request_manifest["observed_event_types"]
+        assert p.last_response_id is None
+    finally:
+        p._worker.join(1)
