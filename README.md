@@ -2,13 +2,13 @@
 
 **[English](README.md)** · [简体中文](README.zh-CN.md)
 
-**Run robot manipulation experiments locally, and inspect the full visual control loop.** ManiLoop connects GPT or learned policies to MuJoCo tasks through a browser workspace and CLI: choose a task, connect a model, execute actions, and review what actually happened.
+**Closed-loop robot policy evaluation across simulation benchmarks.** Designed to support fair, reproducible comparisons across policies and task environments, ManiLoop brings built-in MuJoCo scenes, LIBERO, robosuite, and RoboCasa into one local browser workspace and CLI. Start with manual control, then use GPT, a compatible vision API, a supported local LeRobot checkpoint, or Jev text primitives.
 
 **[Get started ↓](#step-1--open-the-local-workspace)** · [Connect a model](#step-3--connect-your-model) · [Observed results](docs/RESULTS.md#english) · [Project website](https://daniel-rmc.github.io/ManiLoop/?lang=en)
 
-![The running local ManiLoop application: dual simulation cameras, task selection, and Codex model configuration](docs/images/workspace-local.png)
+![The current local ManiLoop manual workspace showing the built-in Panda pick-and-place scene](docs/images/current-workspace-manual.png)
 
-*The actual local application, shown in its current Chinese interface. This is the working simulator UI, not the website’s recorded replay.*
+*The current local application in its Chinese interface, previewing the built-in Panda pick-and-place scene. These controls operate the simulator; the project website separately offers recorded episode playback.*
 
 [Watch GPT place a bowl, turn a stove knob, and move cream cheese into a basket](https://daniel-rmc.github.io/ManiLoop/?lang=en#skills): play verified episodes, pause at each action, and read the model's recorded action notes alongside the controller feedback. Full videos and execution conditions are included.
 
@@ -16,23 +16,28 @@ These three recorded GPT successes took **5.5–11.1 minutes of episode wall tim
 
 ## What you can run
 
-The workspace brings **camera observations, model actions, controller feedback, and independent evaluation** together. Use manual controls before connecting a model, single-step GPT decisions, pause and resume, compare before/after observations, run CLI experiment matrices, and export complete LIBERO episodes.
+The workspace brings **camera observations, actions, controller feedback, and independent evaluation** together. Use manual controls, single-step model decisions, pause and resume, compare before/after observations, and run CLI experiment matrices. Complete control-step video capture is available for LIBERO in controlled timing; other backends provide decision logs and review frames.
 
-| Environment / task | Available operations |
+| Backend | Robot and available tasks | Integration scope |
+| --- | --- | --- |
+| Built-in MuJoCo | ARX X5 / Franka Panda; `pick_place` and `push`; `tabletop_a` / `tabletop_b` | Contact-based tabletop manipulation, manual and model control, independent task evaluation |
+| [LIBERO](docs/LIBERO.md) | Official Panda; five task suites | Official initial states, OSC controller, and success rules; selected real model episodes are published below |
+| [robosuite](docs/ROBOSUITE.md) | Panda; `Lift`, `Stack`, `PickPlaceCan`, `Door`, `NutAssemblySquare` | Five integrated tasks with camera, stepping, reset, and evaluation checks; world-frame OSC adaptation |
+| [RoboCasa](docs/ROBOCASA.md) | PandaOmron; `OpenDrawer`, `CloseDrawer`, `OpenCabinet`, `CoffeeSetupMug` | Four kitchen tasks; arm and gripper control, zero base velocity and torso delta; no navigation |
+
+LIBERO's catalogs contain **10 spatial, 10 object, 10 goal, 90 `libero_90`, and 10 `libero_10` tasks**, covering object placement, drawers, stove control, stacking, and longer operations. These are catalog sizes, not counts of tasks completed by a model. RoboCasa's four-task interface checks use layout 11 / style 14 / seed 0 on macOS / Apple Silicon; other scene combinations and arm reachability need separate checks. Changing the instruction text does not change an upstream evaluator.
+
+Vision policies receive images and robot sensor state; **Jev receives explicit text and proprioception only**. Object ground truth, simulator contacts, rewards, and success signals are excluded from every policy input. Independent evaluation can inspect simulator state and stop an episode; `done`, controller `reached`, and completion of a command sequence are distinct from task success.
+
+The local workspace has three panels:
+
+| Panel | What you do |
 | --- | --- |
-| Built-in `pick_place` | Lift the red cube, place it inside the target region, release, and settle |
-| Built-in `push` | Push the cube along the table into the target region without lifting it |
-| `libero_spatial` · 10 tasks | Select and move a bowl based on its spatial relationship to other objects |
-| `libero_object` · 10 tasks | Pick different objects and place them in a basket |
-| `libero_goal` · 10 tasks | Goal variants including drawer opening, object placement, plate pushing, and stove control |
-| `libero_90` · 90 tasks | Kitchen, living-room, and study tasks, including drawers, microwaves, and stacking |
-| `libero_10` · 10 tasks | Longer tasks combining multiple objects or manipulation operations |
+| Manual control | Translate and rotate the TCP in fixed or tool axes, open or close the gripper, and submit a combined six-dimensional increment. Inspect position and orientation errors. |
+| Model execution | Enter instructions, choose a connection, run diagnostics, and use single-step, continuous execution, or pause/resume. |
+| Scene settings | Choose a backend, task, robot, and scene parameters; apply the selection to rebuild the environment. |
 
-The built-in tasks support **ARX X5 and Franka Panda**, each with `tabletop_a` and `tabletop_b` layouts. LIBERO uses its official Panda, initial states, OSC controller, and success rules. These are available task catalogs; they do not mean every task has been completed by every model. Changing the instruction text does not change a task’s evaluator.
-
-Policies receive images and robot sensor state. **Object ground truth, simulator contacts, rewards, and success signals are excluded from policy input.** Independent evaluation can inspect simulator state and stop an episode; a model’s `done` declaration is not the success criterion.
-
-[See real manual debugging: arm and gripper controls, sensor readings, execution feedback, and independent evaluation](docs/images/workspace-feedback.png). This screenshot shows feedback from a manual jog, not a successful task.
+Stop remains visible across panels. Switching panels or between picture-in-picture and side-by-side cameras does not start inference or advance physics. Manual control requires the current task, action, and request to have finished. The manual target-tracking budget is separate from the model budget; TCP rotations are not individual-joint commands. See [workspace usage](docs/WORKSPACE.md) and [six-dimensional manual control](docs/MANUAL_CONTROL.md).
 
 ## Step 1 · Open the local workspace
 
@@ -59,35 +64,65 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m maniloop demo
 ```
 
-Open [http://127.0.0.1:8765](http://127.0.0.1:8765). Select a robot, layout, and task; apply the configuration, try manual arm and gripper controls, then reset. **No API key is needed for this step.** The server listens on localhost; keep its terminal open and press `Ctrl+C` to stop it. Use `--port 8766` if needed.
+Open [http://127.0.0.1:8765](http://127.0.0.1:8765). The workspace starts in Manual control. Use Scene settings to select a robot, layout, and task, apply the configuration, then return to manual arm and gripper controls. **No API key is needed for this step.** The server listens on localhost; keep its terminal open and press `Ctrl+C` to stop it. Use `--port 8766` if needed.
 
-Continue from the repository root after stopping the server. **Windows:** replace subsequent `python` commands with `.\.venv\Scripts\python.exe`; join multiline Bash examples into one line, removing trailing `\`. After installing `uv`, add `--uv .\.venv\Scripts\uv.exe` when running either setup script. No activation script or execution-policy change is required.
+Continue from the repository root after stopping the server. **Windows:** replace subsequent `python` commands with `.\.venv\Scripts\python.exe`; join multiline Bash examples into one line, removing trailing `\`. After installing `uv`, add `--uv .\.venv\Scripts\uv.exe` when running a setup script. No activation script or execution-policy change is required.
 
 For headless Ubuntu/Debian, install `libosmesa6` and set `MUJOCO_GL=osmesa` before starting Python. EGL is another option with compatible drivers. These Linux settings do not apply to macOS.
 
 <a id="run-gpt-on-libero"></a>
 
-## Step 2 · Add official LIBERO tasks
+## Step 2 · Choose a simulation backend
+
+The built-in scenes are ready after Step 1. Choose the optional backend you need from the sections below and run its commands from the repository root. Stop a running demo before following another launch example. Workers use separate interpreters; continue launching the workspace with the main environment's `python`.
 
 ```bash
 python -m pip install uv
+```
+
+### LIBERO
+
+```bash
 python scripts/setup_libero.py
 python -m maniloop list --backend libero --libero-suite libero_goal
 python -m maniloop smoke --backend libero
 python -m maniloop demo --backend libero --port 8767
 ```
 
-Open [http://127.0.0.1:8767](http://127.0.0.1:8767). Select a suite, task ID, and initialization ID in the environment panel. IDs start at zero; `list` prints the available task names. The default is `libero_spatial` task 0, init 0: move the black bowl between the plate and ramekin onto the plate.
+Open [http://127.0.0.1:8767](http://127.0.0.1:8767). Select a suite, task ID, and initialization ID in Scene settings. IDs start at zero; `list` prints the available task names. The default is `libero_spatial` task 0, init 0: move the black bowl between the plate and ramekin onto the plate. Installation needs network access and several GB of disk space, but no demonstration dataset or policy weights. See [LIBERO setup](docs/LIBERO.md).
 
-The installer needs network access and several GB of disk space, but no demonstration dataset or policy weights. It downloads the pinned official source, assets, and a managed interpreter while keeping dependencies separate:
+### robosuite
+
+```bash
+python scripts/setup_robosuite.py
+python -m maniloop list --backend robosuite
+python -m maniloop demo --backend robosuite --task Lift --port 8870
+```
+
+Open [http://127.0.0.1:8870](http://127.0.0.1:8870). The five Panda tasks use robosuite 1.5.2 / MuJoCo 3.3.7 in their own runtime. This adapter explicitly configures world-frame OSC and records that choice. Camera, manual control, and model interfaces are integrated; no model success rate is established for these tasks. See [control semantics and checks](docs/ROBOSUITE.md).
+
+### RoboCasa
+
+```bash
+python scripts/setup_robocasa.py --download-assets
+python -m maniloop list --backend robocasa
+python -m maniloop demo --backend robocasa --task OpenDrawer \
+  --robocasa-layout 11 --robocasa-style 14 --port 8872
+```
+
+Open [http://127.0.0.1:8872](http://127.0.0.1:8872). The installer pins RoboCasa and its compatible robosuite source separately from the standalone robosuite backend. Its five required asset groups occupy about 11.1 GB unpacked, plus source/runtime space. PandaOmron's arm and gripper are controlled while the base receives zero velocity and the torso receives zero delta; this is not a navigation interface. Default-scene interface verification does not establish autonomous task success or arm-only solvability in every scene. See [RoboCasa setup and limitations](docs/ROBOCASA.md).
+
+### Keep runtimes separate
 
 | Environment | Purpose |
 | --- | --- |
 | `.venv` · Python 3.12 | Main application, UI, model connections, bundled MuJoCo scenes |
 | `.venv-libero` · Python 3.10 | LIBERO simulation and its pinned dependencies |
+| `.venv-robosuite` · Python 3.11 | Standalone robosuite simulation |
+| `.venv-robocasa` · Python 3.11 | RoboCasa simulation and its compatible upstream dependencies |
 | `.venv-vla` · Python 3.12 | Optional LeRobot inference and learned policies |
 
-Keep these environments separate. See [LIBERO setup and task selection](docs/LIBERO.md).
+Do not combine these dependencies into the main environment. The RoboCasa worker is a simulation installation, not the upstream training environment. Optional assets, environments, and model weights are downloaded locally and are not bundled in this repository.
 
 ## Step 3 · Connect your model
 
@@ -98,12 +133,13 @@ Choose one route below. Stop the existing server before running a different laun
 | GPT through Codex | Official Codex CLI login; select the Codex source | Uses models available to that CLI/account; ManiLoop does not extract login tokens |
 | Hosted or self-hosted vision model | Enter the service base URL, model ID, and API key, or import provider TOML | Robot control requires **Responses API + image input + JSON Schema output** |
 | Local LeRobot checkpoints | Select a supported model loaded by the isolated inference worker | Three reviewed LIBERO checkpoint presets; not arbitrary model-folder import |
+| Jev text primitives | Enter a separate TypeSafe key in the model panel | Explicit text and robot proprioception; bounded arm/gripper commands, without images or object localization |
 
 <details><summary>See model controls in the actual local application</summary>
 
-![Task and model configuration in the running local ManiLoop application](docs/images/workspace-models.png)
+![The model execution panel in the current local ManiLoop application](docs/images/current-workspace-model.png)
 
-*Current local UI; model and task settings here configure real execution.*
+*The current Model execution panel in its Chinese interface, with the built-in Panda scene loaded and no model request started. Its connections and instructions configure real execution; this is separate from the website's saved-data playground.*
 </details>
 
 ### GPT / compatible model APIs
@@ -115,7 +151,7 @@ codex login
 python -m maniloop demo --backend libero --codex-login --port 8767
 ```
 
-Choose the Codex source and load the GPT demo preset. Start with the text/image/action-format diagnostics or a single action. `MANILOOP_CODEX_BIN` selects the executable if several CLI versions are installed. See [GPT controls](docs/GPT6_DEMO.md).
+Choose the Codex source and load the GPT demo preset. This preset selects LIBERO; to work in another backend, keep that scene selected and configure the model directly. Start with the text/image/action-format diagnostics or a single action. `MANILOOP_CODEX_BIN` selects the executable if several CLI versions are installed. See [GPT controls](docs/GPT6_DEMO.md).
 
 For an API connection, select the manual or imported-config source, enter your model ID and the provider’s base URL, then supply its key. Examples: [OpenAI configuration](examples/openai.example.toml), [custom provider configuration](examples/custom.example.toml). A model you host locally can use this route **if its server implements the required Responses protocol**; a local base URL can be `http://127.0.0.1:8000/v1`. A Chat Completions-only server is not compatible with robot control; the separate [text chat page](docs/API_CHAT.md) supports both protocols. Selecting a model ID does not guarantee it supports vision or structured actions. Requests consume the selected account quota or provider billing; opening the page does not start inference.
 
@@ -126,7 +162,7 @@ python scripts/setup_vla.py --models smolvla-libero act-libero diffusion-libero
 python -m maniloop demo --backend libero --port 8767
 ```
 
-Select the local LeRobot source and a downloaded model. Omit `--models` to install only SmolVLA. Inference runs offline on CPU, Apple MPS, or CUDA; the checkpoint’s saved preprocessing and action queue are retained.
+Select the local LeRobot source and a downloaded model. Omit `--models` to install only SmolVLA. These presets remain **LIBERO-only**, including when other backends are installed. Inference runs offline on CPU, Apple MPS, or CUDA; the checkpoint’s saved preprocessing and action queue are retained.
 
 Or run a local checkpoint from the CLI; replace `smolvla-libero` with `act-libero` or `diffusion-libero` to select another installed preset:
 
@@ -145,6 +181,20 @@ python -m maniloop benchmark --backend libero --agent lerobot \
 
 To use these presets **already stored on another local disk**, set `MANILOOP_MODELS_ROOT` to their parent directory. It must contain the preset-named folders, such as `smolvla-libero/`, plus `smolvlm-tokenizer/` for SmolVLA. `MANILOOP_VLA_PYTHON` can point to a compatible inference environment. These options relocate supported snapshots; they do not import arbitrary Hugging Face repositories or custom weights. Details and fixed revisions: [local model guide](docs/VLA.md).
 
+### Jev: explicit text commands
+
+In Model execution, select **Jev · 文本原语控制** and enter a TypeSafe API key. The key is separate from OpenAI connections and stays in server memory, not files or browser storage. Saving it does not call the model; the connection diagnostic and command execution use the TypeSafe API. No Jev weights or TypeSafe SDK installation is needed.
+
+Use one action per line, for example:
+
+```text
+Move up along world Z by 10 mm.
+Rotate about the tool Z axis by 5 degrees.
+Open the gripper.
+```
+
+Jev selects a bounded primitive from text and robot proprioception; local code handles units, frames, and execution. It receives no camera images and cannot locate an object for autonomous grasping. Controlled timing is required. A sequence supports up to 20 lines and stops on ambiguous commands, low candidate probability, API errors, or failed control. Its existing simulation checks use mocked Jev responses; real service behavior requires a separate diagnostic or command run. See [Jev setup and verification scope](docs/JEV.md).
+
 ### Integrating your own checkpoint or policy
 
 A new checkpoint needs its own model registration, correct preprocessing and action mapping, and source metadata. Do not replace a preset’s files and treat the result as that preset. For a custom inference implementation, implement [`Agent`](src/maniloop/agents/base.py): `reset()` and `decide(task, observation, images, history, geometry_results)`, returning an action dictionary or [`ActionChunk`](src/maniloop/core/actions.py). Connect it to `EpisodeRunner`, and add a CLI/UI choice if needed; there is no automatic arbitrary-checkpoint loader.
@@ -153,7 +203,7 @@ A new simulation backend implements [`Environment`](src/maniloop/backends/base.p
 
 ## Step 4 · Record a run and inspect its result
 
-Run a new GPT-6 attempt from official initialization, with all LIBERO control steps recorded:
+For ordinary model runs, inspect the decision log, controller feedback, before/after frames, and independent result. Complete control-step recording and video export currently require **LIBERO with controlled timing**. The following runs a new GPT-6 attempt from official initialization and records every control step:
 
 ```bash
 python -m maniloop benchmark \
@@ -191,7 +241,7 @@ Each row is **one selected run** on `libero_spatial` task 0 / init 0 / seed 0, n
 
 ## Guides, checks, and scope
 
-[LIBERO tasks](docs/LIBERO.md) · [GPT controls](docs/GPT6_DEMO.md) · [Local checkpoints](docs/VLA.md) · [API text chat](docs/API_CHAT.md) · [Recording](docs/EPISODE_RECORDING.md) · [Architecture](docs/ARCHITECTURE.md)
+[Workspace](docs/WORKSPACE.md) · [Manual control](docs/MANUAL_CONTROL.md) · [LIBERO](docs/LIBERO.md) · [robosuite](docs/ROBOSUITE.md) · [RoboCasa](docs/ROBOCASA.md) · [GPT controls](docs/GPT6_DEMO.md) · [Jev](docs/JEV.md) · [Local checkpoints](docs/VLA.md) · [API text chat](docs/API_CHAT.md) · [Recording](docs/EPISODE_RECORDING.md) · [Architecture](docs/ARCHITECTURE.md)
 
 ```bash
 python -m pip install -r requirements-dev.txt
@@ -199,59 +249,10 @@ python -m pytest -q
 python -m maniloop smoke
 ```
 
-These checks do not make model requests. Offline tests cover macOS, Linux, and Windows; rendering has been verified on macOS and Linux OSMesa. Windows rendering and LIBERO execution have not been validated. Rendering needs a graphics backend. ManiLoop is simulation software: the ARX gripper is approximate, and real-robot control or safety has not been validated. Official LIBERO assets alone do not establish paper-level benchmark comparability.
+These checks do not make model requests. Offline tests cover macOS, Linux, and Windows; main-application rendering has been verified on macOS and Linux OSMesa. Optional backends have their own opt-in integration checks in the linked guides; ordinary pytest does not validate an uninstalled backend. Rendering and LIBERO execution on Windows have not been validated. Rendering needs a graphics backend. ManiLoop is simulation software: the ARX gripper is approximate, and real-robot control or safety has not been validated. Environment integration, controller checks, and real model task outcomes are reported separately.
 
 <a id="许可证与贡献"></a>
 
 ## License
 
-ManiLoop is [MIT licensed](LICENSE). ARX X5 assets retain MIT; Panda assets retain Apache-2.0. LIBERO, LeRobot, and downloaded checkpoints retain their own licenses. See [third-party notices](THIRD_PARTY_NOTICES.md).
-
-## Optional robosuite tasks
-
-Add Panda Lift, Stack, PickPlaceCan, Door, and NutAssemblySquare in an isolated
-robosuite runtime, without changing LIBERO. Use the existing workspace for manual
-control, model connections, and decision review. See [setup and limitations](docs/ROBOSUITE.md).
-
-```bash
-python scripts/setup_robosuite.py
-python -m maniloop demo --backend robosuite --task Lift --port 8870
-```
-
-These are integrated environments, not model-success claims. Existing LIBERO-trained
-local checkpoint presets remain LIBERO-only; RoboCasa is not included in this backend.
-
-## Optional RoboCasa kitchen tasks
-
-Four kitchen tasks are available through a separate PandaOmron backend: `OpenDrawer`,
-`CloseDrawer`, `OpenCabinet`, and `CoffeeSetupMug`. The first integration controls the
-arm and gripper; base velocity and torso delta inputs are held at zero.
-
-```bash
-python scripts/setup_robocasa.py --download-assets
-python -m maniloop demo --backend robocasa --task OpenDrawer --port 8872
-```
-
-Use the same workspace for camera observations, manual controls, model connections,
-and decision review. The installer pins both source projects and isolates their dependencies.
-The five required asset groups occupy about 11.1 GB unpacked, excluding source/runtime files.
-Default layout 11 / style 14 / seed 0 has real interface checks for all four tasks;
-this is not a model success result or a guarantee of arm-only task solvability in every scene.
-See [RoboCasa setup, action semantics, and limitations](docs/ROBOCASA.md).
-
-
-### Operator workspace
-
-The workspace separates manual control, model execution, and scene settings. Stop stays available while switching panels; camera layouts do not advance physics. See [workspace usage](docs/WORKSPACE.md) and [six-dimensional manual control](docs/MANUAL_CONTROL.md).
-
-### Jev text commands
-
-Choose **Jev · 文本原语控制** in the model panel to map explicit, one-line commands
-to bounded arm or gripper primitives. Enter a separate TypeSafe API key in the workspace;
-it is kept in server memory and is not shared with OpenAI connections. Saving the key
-does not call the model; connection diagnostics and execution use the TypeSafe API.
-
-Jev receives text and robot proprioception, without camera images or object state.
-This mode supports commands such as moving 10 mm or rotating the tool 5 degrees;
-it does not autonomously locate or grasp objects. Completing the command sequence
-is distinct from task success. See [Jev setup, examples, and verification](docs/JEV.md).
+ManiLoop is [MIT licensed](LICENSE). ARX X5 assets retain MIT; Panda assets retain Apache-2.0. LIBERO, robosuite, RoboCasa, LeRobot, and downloaded assets and checkpoints retain their own licenses. See [third-party notices](THIRD_PARTY_NOTICES.md) and [contributing](CONTRIBUTING.md).

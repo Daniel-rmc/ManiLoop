@@ -2,13 +2,13 @@
 
 [English](README.md) · **[简体中文](README.zh-CN.md)**
 
-**在本地运行机器人操作实验，看清完整的视觉控制过程。** ManiLoop 通过浏览器工作台与命令行，将 GPT 或学习策略接入 MuJoCo 任务：选择任务、连接模型、执行动作，再核对实际发生了什么。
+**面向跨策略、跨基准的机器人闭环评测。** ManiLoop 以公平、可复现的比较为目标，将内置 MuJoCo 场景、LIBERO、robosuite 和 RoboCasa 接入同一个本地浏览器工作台与命令行。从手动控制开始，再选择 GPT、兼容的视觉模型 API、受支持的本地 LeRobot 检查点，或 Jev 文本原语。
 
 **[开始使用 ↓](#第一步--打开本地工作台)** · [连接模型](#第三步--连接模型) · [实测结果](docs/RESULTS.md#简体中文) · [项目网站](https://daniel-rmc.github.io/ManiLoop/?lang=zh)
 
-![实际运行的 ManiLoop 本地程序：仿真双相机、任务选择与 Codex 模型配置](docs/images/workspace-local.png)
+![当前 ManiLoop 手动工作区中的内置 Panda 抓放场景](docs/images/current-workspace-manual.png)
 
-*本机实际运行的工作台，展示当前中文界面。这是可操作的仿真程序，不是网站上的录制回放。*
+*当前本地程序的中文界面，预览内置 Panda 抓放场景。这里的控件用于操作仿真；项目网站另提供已录制 episode 的回放。*
 
 [观看 GPT 放碗、转动炉具旋钮、将奶油奶酪放入篮子](https://daniel-rmc.github.io/ManiLoop/?lang=zh#skills)：播放经过核验的回合，逐步暂停，对照模型当时的动作说明与控制器反馈，并查看完整录像和执行条件。
 
@@ -16,23 +16,28 @@
 
 ## 可以运行哪些任务
 
-工作台将**相机观测、模型动作、控制器反馈与独立评分**放在一起。你可以先手动调试，再连接模型；逐步执行 GPT 决策、暂停和继续、对照执行前后观测，通过命令行批量运行实验，并导出完整 LIBERO episode。
+工作台将**相机观测、动作、控制器反馈与独立评分**放在一起。你可以手动调试、逐步执行模型决策、暂停和继续、对照执行前后观测，并通过命令行批量运行实验。完整逐控制步录像目前支持受控时序下的 LIBERO；其他后端提供决策日志与回看画面。
 
-| 环境／任务 | 可执行的操作 |
+| 后端 | 机器人与可用任务 | 接入范围 |
+| --- | --- | --- |
+| 内置 MuJoCo | ARX X5／Franka Panda；`pick_place` 抓放、`push` 推物；`tabletop_a`／`tabletop_b` 布局 | 基于接触物理的桌面操作、手动与模型控制、独立任务评分 |
+| [LIBERO](docs/LIBERO.md) | 官方 Panda；五个任务套件 | 官方初始状态、OSC 控制器与成功规则；下文展示选定的真实模型回合 |
+| [robosuite](docs/ROBOSUITE.md) | Panda；`Lift`、`Stack`、`PickPlaceCan`、`Door`、`NutAssemblySquare` | 五项任务已接入相机、步进、重置与评分检查；采用世界系 OSC 适配 |
+| [RoboCasa](docs/ROBOCASA.md) | PandaOmron；`OpenDrawer`、`CloseDrawer`、`OpenCabinet`、`CoffeeSetupMug` | 四项厨房任务；控制机械臂与夹爪，底座速度和躯干增量为零；不含导航 |
+
+LIBERO 目录包括 **spatial 10 项、object 10 项、goal 10 项、`libero_90` 90 项、`libero_10` 10 项**，覆盖物体放置、抽屉、炉具、堆叠和较长操作。这里是目录规模，不是模型已经完成的任务数量。RoboCasa 四任务的接口检查范围为 macOS／Apple Silicon、布局 11／风格 14／seed 0；其他场景组合及机械臂可达性需另行检查。修改文字指令不会改变上游评分器。
+
+视觉策略接收图像与机器人传感状态；**Jev 只接收显式文字与本体状态**。物体真值、仿真接触、奖励和任务成功信号均不进入策略输入。独立评估可以读取仿真状态并终止 episode；模型声明 `done`、控制器返回 `reached`、指令序列结束，与任务成功分别记录。
+
+本地工作台分为三个面板：
+
+| 面板 | 可以做什么 |
 | --- | --- |
-| 内置 `pick_place` | 抬起红色方块，放入目标区域，松爪后等待稳定 |
-| 内置 `push` | 沿桌面将方块推入目标区域，不抬起方块 |
-| `libero_spatial` · 10 个任务 | 根据物体间的空间关系选择并移动碗 |
-| `libero_object` · 10 个任务 | 抓取不同物体并放入篮子 |
-| `libero_goal` · 10 个任务 | 开抽屉、放置物体、推盘子、操作炉具等目标变化 |
-| `libero_90` · 90 个任务 | 厨房、客厅与书房操作，包括抽屉、微波炉和堆叠 |
-| `libero_10` · 10 个任务 | 涉及多个物体或多项操作的较长任务 |
+| 手动控制 | 沿固定轴或 TCP 自身轴平移、旋转，开合夹爪，提交六维组合增量，查看位置与姿态误差。 |
+| 模型运行 | 输入指令、选择连接、运行诊断，使用单步、连续执行、暂停与继续。 |
+| 场景设置 | 选择后端、任务、机器人和场景参数，点击应用后重建环境。 |
 
-内置任务支持 **ARX X5 和 Franka Panda**，均可选择 `tabletop_a`、`tabletop_b` 两种布局。LIBERO 使用官方 Panda、初始状态、OSC 控制器与成功规则。表中列出的是可用任务目录，不代表每个模型都已完成全部任务。修改文字指令不会改变任务的评分规则。
-
-策略只接收图像和机器人传感状态。**物体真值、仿真接触、奖励和任务成功信号不进入策略输入。** 独立评估可以读取仿真状态并终止 episode；模型自己声明 `done` 不等于任务成功。
-
-[查看真实手动调试界面：点动与夹爪控制、本体观测、执行反馈和独立评分](docs/images/workspace-feedback.png)。该图记录手动点动后的反馈，不是任务成功截图。
+“停止执行”跨面板保持可见。切换面板或画中画／双相机并排布局，不会启动推理或推进物理。当前任务、动作和请求结束后，才能提交手动控制。手动目标跟踪预算独立于模型预算；TCP 旋转不是单关节点动。详见[工作台使用说明](docs/WORKSPACE.md)和[六维手动控制](docs/MANUAL_CONTROL.md)。
 
 ## 第一步 · 打开本地工作台
 
@@ -59,7 +64,7 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m maniloop demo
 ```
 
-打开 [http://127.0.0.1:8765](http://127.0.0.1:8765)。选择机器人、布局和任务，应用配置，试用手动移动与夹爪控件，再重置场景。**这一步不需要 API Key。** 服务只监听本机地址；使用时保持终端运行，按 `Ctrl+C` 关闭。如需换端口，启动时加 `--port 8766`。
+打开 [http://127.0.0.1:8765](http://127.0.0.1:8765)。工作台默认显示“手动控制”；可到“场景设置”选择机器人、布局和任务，应用后返回手动面板试用机械臂与夹爪。**这一步不需要 API Key。** 服务只监听本机地址；使用时保持终端运行，按 `Ctrl+C` 关闭。如需换端口，启动时加 `--port 8766`。
 
 继续以下步骤前，先停止服务，并保持在仓库根目录操作。**Windows 用户**将后续 `python` 命令替换为 `.\.venv\Scripts\python.exe`；多行 Bash 示例合并为一行，并去掉行尾的 `\`。安装 `uv` 后，运行任一安装脚本时加 `--uv .\.venv\Scripts\uv.exe`。无需执行激活脚本或修改执行策略。
 
@@ -67,27 +72,57 @@ py -3.12 -m venv .venv
 
 <a id="在-libero-中运行-gpt"></a>
 
-## 第二步 · 添加官方 LIBERO 任务
+## 第二步 · 选择仿真后端
+
+完成第一步即可使用内置场景。选择下方需要的可选后端，从仓库根目录运行对应命令；改用另一条启动示例前先停止现有 demo。各后端通过独立 Python worker 运行；启动工作台仍使用主环境的 `python`。
 
 ```bash
 python -m pip install uv
+```
+
+### LIBERO
+
+```bash
 python scripts/setup_libero.py
 python -m maniloop list --backend libero --libero-suite libero_goal
 python -m maniloop smoke --backend libero
 python -m maniloop demo --backend libero --port 8767
 ```
 
-打开 [http://127.0.0.1:8767](http://127.0.0.1:8767)。在环境面板选择任务套件、任务 ID 与初始化 ID。ID 从零开始，`list` 会列出任务名称。默认是 `libero_spatial` 任务 0、初始化 0：将盘子与小碗之间的黑碗放到盘子上。
+打开 [http://127.0.0.1:8767](http://127.0.0.1:8767)。在“场景设置”选择任务套件、任务 ID 与初始化 ID。ID 从零开始，`list` 会列出任务名称。默认是 `libero_spatial` 任务 0、初始化 0：将盘子与小碗之间的黑碗放到盘子上。安装需要网络与数 GB 磁盘空间，无需示范数据集或策略权重。详见 [LIBERO 安装说明](docs/LIBERO.md)。
 
-安装器需要网络与数 GB 磁盘空间，无需示范数据集或策略权重。它下载固定版本的官方源码、资源与由项目管理的 Python，并将依赖分开：
+### robosuite
+
+```bash
+python scripts/setup_robosuite.py
+python -m maniloop list --backend robosuite
+python -m maniloop demo --backend robosuite --task Lift --port 8870
+```
+
+打开 [http://127.0.0.1:8870](http://127.0.0.1:8870)。五项 Panda 任务在独立环境使用 robosuite 1.5.2／MuJoCo 3.3.7。适配器明确采用世界系 OSC，并记录这一配置。相机、手动控制和模型接口已接入；这些任务尚无模型成功率结论。详见[控制语义与检查范围](docs/ROBOSUITE.md)。
+
+### RoboCasa
+
+```bash
+python scripts/setup_robocasa.py --download-assets
+python -m maniloop list --backend robocasa
+python -m maniloop demo --backend robocasa --task OpenDrawer \
+  --robocasa-layout 11 --robocasa-style 14 --port 8872
+```
+
+打开 [http://127.0.0.1:8872](http://127.0.0.1:8872)。安装器固定 RoboCasa 及其配套 robosuite 源码，与独立 robosuite 后端分开。五组必需资产解压约 11.1 GB，另需源码和运行环境空间。控制 PandaOmron 机械臂和夹爪时，底座接收零速度、躯干接收零增量；本接口不提供导航。默认场景接口检查不代表自主任务成功，也不保证所有场景都能仅靠机械臂完成。详见 [RoboCasa 安装与限制](docs/ROBOCASA.md)。
+
+### 保持运行环境独立
 
 | 环境 | 职责 |
 | --- | --- |
 | `.venv` · Python 3.12 | 主程序、网页、模型连接与内置 MuJoCo 场景 |
 | `.venv-libero` · Python 3.10 | LIBERO 仿真及固定依赖 |
+| `.venv-robosuite` · Python 3.11 | 独立 robosuite 仿真 |
+| `.venv-robocasa` · Python 3.11 | RoboCasa 仿真及兼容的上游依赖 |
 | `.venv-vla` · Python 3.12 | 可选的 LeRobot 与学习策略推理 |
 
-三个环境保持隔离。详见 [LIBERO 安装与任务选择](docs/LIBERO.md)。
+不要将这些依赖合并安装到主环境。RoboCasa worker 是仿真专用安装，不是上游完整训练环境。可选资产、运行环境与模型权重在本地下载，不随仓库分发。
 
 ## 第三步 · 连接模型
 
@@ -98,12 +133,13 @@ python -m maniloop demo --backend libero --port 8767
 | 通过 Codex 使用 GPT | 在官方 Codex CLI 登录，选择 Codex 来源 | 使用该 CLI／账户可用的模型；ManiLoop 不提取登录 token |
 | 云端或自托管视觉模型 | 填写服务基础地址、模型 ID、API Key，或导入供应商 TOML | 机器人控制需要 **Responses API、图像输入和 JSON Schema 输出** |
 | 本地 LeRobot 检查点 | 选择由独立推理进程加载的支持模型 | 当前提供三个已核对的 LIBERO 检查点预设，不是任意模型文件夹导入 |
+| Jev 文本原语 | 在模型面板填写独立的 TypeSafe 密钥 | 显式文字与机器人本体状态；有限的机械臂／夹爪指令，无图像与物体定位 |
 
 <details><summary>查看实际本地程序中的模型配置</summary>
 
-![实际运行的 ManiLoop 本地程序中的任务与模型配置](docs/images/workspace-models.png)
+![当前 ManiLoop 本地程序中的模型运行面板](docs/images/current-workspace-model.png)
 
-*当前本地界面；这里的模型和任务设置用于真实执行。*
+*当前中文“模型运行”面板，载入的是内置 Panda 场景，尚未发起模型请求。这里的连接和指令用于真实执行，与网站使用已保存数据的体验工作台分开。*
 </details>
 
 ### GPT 与兼容模型 API
@@ -115,7 +151,7 @@ codex login
 python -m maniloop demo --backend libero --codex-login --port 8767
 ```
 
-选择 Codex 来源并加载 GPT 演示预设，从文字、图像、动作格式诊断或单个动作开始。安装了多个 CLI 版本时，可用 `MANILOOP_CODEX_BIN` 选择所需程序。详见 [GPT 操作说明](docs/GPT6_DEMO.md)。
+选择 Codex 来源并加载 GPT 演示预设。该预设会选择 LIBERO；在其他后端使用模型时，保留所选场景并直接配置连接。从文字、图像、动作格式诊断或单个动作开始。安装了多个 CLI 版本时，可用 `MANILOOP_CODEX_BIN` 选择所需程序。详见 [GPT 操作说明](docs/GPT6_DEMO.md)。
 
 通过 API 连接时，选择手动填写或导入配置来源，填写模型 ID、供应商基础地址与密钥。可参考 [OpenAI 配置](examples/openai.example.toml)和[自定义供应商配置](examples/custom.example.toml)。自己部署的本地模型也可走这条路径，**前提是服务端实现所需的 Responses 协议**，例如使用本地地址 `http://127.0.0.1:8000/v1`。仅支持 Chat Completions 的服务不能用于机器人控制；独立的[文字聊天页](docs/API_CHAT.md)支持这两种协议。填写模型 ID 不代表模型一定支持视觉与结构化动作。模型请求使用所选账户额度或供应商计费；打开网页不会自动推理。
 
@@ -126,7 +162,7 @@ python scripts/setup_vla.py --models smolvla-libero act-libero diffusion-libero
 python -m maniloop demo --backend libero --port 8767
 ```
 
-在页面选择本地 LeRobot 来源与已下载模型。省略 `--models` 则只安装 SmolVLA。推理可离线运行于 CPU、Apple MPS 或 CUDA，保留检查点保存的预处理与动作队列。
+在页面选择本地 LeRobot 来源与已下载模型。省略 `--models` 则只安装 SmolVLA。即使安装了其他后端，这些预设仍**仅用于 LIBERO**。推理可离线运行于 CPU、Apple MPS 或 CUDA，保留检查点保存的预处理与动作队列。
 
 也可直接通过命令行调用本地检查点；将 `smolvla-libero` 替换为 `act-libero` 或 `diffusion-libero` 即可选择其他已安装的预设：
 
@@ -145,6 +181,20 @@ python -m maniloop benchmark --backend libero --agent lerobot \
 
 如果这些预设**已经存放在另一块本地磁盘**，将 `MANILOOP_MODELS_ROOT` 设为它们的父目录。目录内须包含与预设同名的文件夹，如 `smolvla-libero/`，SmolVLA 还需要 `smolvlm-tokenizer/`。`MANILOOP_VLA_PYTHON` 可指向兼容的推理环境。这些设置用于更换受支持快照的存放位置，不会导入任意 Hugging Face 仓库或自定义权重。目录要求与固定版本见[本地模型指南](docs/VLA.md)。
 
+### Jev：显式文本指令
+
+在“模型运行”中选择 **Jev · 文本原语控制**，输入 TypeSafe API Key。该密钥与 OpenAI 连接分开，只保存在服务内存，不写入文件或浏览器存储。保存密钥不调用模型；连接诊断和指令执行会使用 TypeSafe API。无需安装 Jev 权重或 TypeSafe SDK。
+
+每行输入一个动作，例如：
+
+```text
+Move up along world Z by 10 mm.
+Rotate about the tool Z axis by 5 degrees.
+Open the gripper.
+```
+
+Jev 根据文字与机器人本体状态选择有限原语，单位、坐标系和执行由本地代码处理。它不接收相机图像，不能自主定位物体进行抓取。该模式要求受控时序；每组最多 20 行，遇到含糊指令、低候选概率、API 错误或控制失败会停止。现有仿真检查使用模拟 Jev 响应；真实服务能力需单独运行诊断或指令验证。详见 [Jev 设置与验证范围](docs/JEV.md)。
+
 ### 接入自己的检查点或策略
 
 新的检查点需要单独注册模型，配置正确的预处理、动作映射与来源信息。不要直接替换预设文件后仍将它标作原预设。若要使用自己的推理实现，可实现 [`Agent`](src/maniloop/agents/base.py) 的 `reset()` 与 `decide(task, observation, images, history, geometry_results)`，返回动作字典或 [`ActionChunk`](src/maniloop/core/actions.py)，再接入 `EpisodeRunner`，按需增加 CLI／UI 选项；当前没有自动加载任意检查点的通用入口。
@@ -153,7 +203,7 @@ python -m maniloop benchmark --backend libero --agent lerobot \
 
 ## 第四步 · 录制完整尝试，检查结果
 
-以下命令从官方初始化运行一次新的 GPT-6 尝试，并录制每个 LIBERO 控制步：
+普通模型运行可查看决策日志、控制反馈、前后帧和独立结果。完整逐控制步录制与视频导出目前要求 **LIBERO 和受控时序**。以下命令从官方初始化运行一次新的 GPT-6 尝试，并录制每个控制步：
 
 ```bash
 python -m maniloop benchmark \
@@ -191,7 +241,7 @@ python -m maniloop.recording.video runs/gpt-demo/EPISODE_ID/recording
 
 ## 使用指南、检查与适用范围
 
-[LIBERO 任务](docs/LIBERO.md) · [GPT 操作](docs/GPT6_DEMO.md) · [本地检查点](docs/VLA.md) · [API 文字聊天](docs/API_CHAT.md) · [录制](docs/EPISODE_RECORDING.md) · [架构](docs/ARCHITECTURE.md)
+[工作台](docs/WORKSPACE.md) · [手动控制](docs/MANUAL_CONTROL.md) · [LIBERO](docs/LIBERO.md) · [robosuite](docs/ROBOSUITE.md) · [RoboCasa](docs/ROBOCASA.md) · [GPT 操作](docs/GPT6_DEMO.md) · [Jev](docs/JEV.md) · [本地检查点](docs/VLA.md) · [API 文字聊天](docs/API_CHAT.md) · [录制](docs/EPISODE_RECORDING.md) · [架构](docs/ARCHITECTURE.md)
 
 ```bash
 python -m pip install -r requirements-dev.txt
@@ -199,53 +249,10 @@ python -m pytest -q
 python -m maniloop smoke
 ```
 
-这些检查不发送模型请求。离线测试覆盖 macOS、Linux 和 Windows；渲染已在 macOS 与 Linux OSMesa 上验证，Windows 渲染和 LIBERO 运行尚未验证。渲染需要图形后端。ManiLoop 用于仿真：ARX 夹爪采用近似模型，软件未作为真机控制或安全系统验收。使用官方 LIBERO 资源，不等于具有论文级基准可比性。
+这些检查不发送模型请求。离线测试覆盖 macOS、Linux 和 Windows；主程序渲染已在 macOS 与 Linux OSMesa 上验证。可选后端的真实集成检查需按各自指南显式启用；普通 pytest 不会验证尚未安装的后端。Windows 上的渲染与 LIBERO 运行尚未验证。渲染需要图形后端。ManiLoop 用于仿真：ARX 夹爪采用近似模型，软件未作为真机控制或安全系统验收。环境接入、控制器检查与真实模型任务结果分别记录。
 
 <a id="许可证与贡献"></a>
 
 ## 许可证
 
-ManiLoop 采用 [MIT 许可证](LICENSE)。ARX X5 资产保留 MIT，Panda 资产保留 Apache-2.0。LIBERO、LeRobot 和下载的检查点分别保留自己的许可证。详见[第三方声明](THIRD_PARTY_NOTICES.md)。
-
-## 可选 robosuite 操作任务
-
-使用独立环境接入 Panda 的 Lift、Stack、PickPlaceCan、Door、NutAssemblySquare，
-不改变已有 LIBERO。复用当前工作台的手动控制、模型入口与决策回看。
-安装、控制协议和限制见 [robosuite 指南](docs/ROBOSUITE.md)。
-
-```bash
-python scripts/setup_robosuite.py
-python -m maniloop demo --backend robosuite --task Lift --port 8870
-```
-
-任务已接入不代表模型已完成任务。现有 LIBERO 权重仍只用于 LIBERO；此后端尚不包含 RoboCasa。
-
-## 可选 RoboCasa 厨房任务
-
-新增 `OpenDrawer`、`CloseDrawer`、`OpenCabinet`、`CoffeeSetupMug` 四项厨房任务，
-使用独立的 PandaOmron 后端。首版控制机械臂和夹爪，底座速度与躯干增量保持0，不包含导航。
-
-```bash
-python scripts/setup_robocasa.py --download-assets
-python -m maniloop demo --backend robocasa --task OpenDrawer --port 8872
-```
-
-继续使用同一个工作台查看图像、手动控制、接入模型与回看决策。安装器固定两个上游源码版本，
-将依赖隔离到新环境，不改变现有 robosuite / LIBERO。五组必需资产解压约11.1 GB，另需源码和运行环境空间。
-四任务已在默认布局11/风格14/种子0完成真实接口检查；这不代表模型成功，也不保证其他场景
-在底座保持时一定可完成。详细说明见 [RoboCasa 安装与控制指南](docs/ROBOCASA.md)。
-
-
-### 工作台分区
-
-手动控制、模型运行和场景设置分区显示，相机与动作按钮并排。切换分区保留当前表单；相机布局切换不推进物理。参见[工作台使用说明](docs/WORKSPACE.md)和[六维手动控制](docs/MANUAL_CONTROL.md)。
-
-### Jev 文本指令
-
-在模型面板选择“Jev · 文本原语控制”，将每行一个明确指令映射为有界的机械臂或夹爪动作。
-TypeSafe 专用密钥可直接在工作台填写，只保存在服务内存，与 OpenAI 连接分开。
-保存密钥不调用模型；连接诊断和执行会调用 TypeSafe API。
-
-Jev 只接收文字和机器人本体状态，不读取相机或物体状态。当前支持移动10毫米、
-绕工具轴旋转5度等原语，不提供自主视觉定位或抓放；指令序列结束也不代表任务成功。
-安装、示例和验证范围见 [Jev 使用说明](docs/JEV.md)。
+ManiLoop 采用 [MIT 许可证](LICENSE)。ARX X5 资产保留 MIT，Panda 资产保留 Apache-2.0。LIBERO、robosuite、RoboCasa、LeRobot 及下载的资产和检查点分别保留自己的许可证。详见[第三方声明](THIRD_PARTY_NOTICES.md)与[贡献指南](CONTRIBUTING.md)。
