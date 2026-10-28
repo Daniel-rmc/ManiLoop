@@ -497,3 +497,40 @@ def test_missing_mime_does_not_allow_html_json_partial_or_tools(body, framing):
     assert p.last_request_manifest["http"]["parsed_format"] == "unverified"
     assert p.last_request_manifest["body_diagnostic"]["framing"] == framing
     assert "private" not in json.dumps(p.last_request_manifest)
+
+
+def test_unknown_stream_event_type_is_recorded_and_rejected_without_payload():
+    p = policy()
+    body = sse({"type": "response.created"}, {"type": "rate_limits.updated", "message": "private secret@example.invalid"}, done())
+    with setup_transport(lambda _: httpx.Response(200, content=body.encode())):
+        with pytest.raises(PolicyError, match="unsupported stream event: rate_limits.updated"):
+            decide(p)
+    assert p.last_request_manifest["observed_event_types"] == ["response.created", "rate_limits.updated"]
+    assert "private" not in json.dumps(p.last_request_manifest)
+    assert p.last_response_id is None
+
+
+@pytest.mark.parametrize("kind", ["private secret@example.invalid", "X" * 200, None, {"private": "secret"}])
+def test_invalid_event_types_are_hashed_not_echoed(kind):
+    import hashlib
+    p = policy()
+    with setup_transport(lambda _: httpx.Response(200, content=sse({"type": kind}, done()).encode())):
+        with pytest.raises(PolicyError) as exc:
+            decide(p)
+    assert p.last_request_manifest["observed_event_types"] == ["invalid"]
+    assert p.last_request_manifest["invalid_event_type_sha256"] == [hashlib.sha256(json.dumps(kind, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()]
+    assert "private" not in str(exc.value) and "private" not in json.dumps(p.last_request_manifest)
+
+
+def test_normal_event_types_are_deduplicated_bounded_and_contain_no_payload():
+    p = policy()
+    events = [{"type": "response.output_text.delta", "delta": "private-text"}] * 3
+    events += [{"type": f"response.test_{i}", "message": "private-message"} for i in range(70)]
+    events += [done()]
+    with setup_transport(lambda _: httpx.Response(200, content=sse(*events).encode())):
+        decide(p)
+    observed = p.last_request_manifest["observed_event_types"]
+    assert len(observed) == 64 and len(set(observed)) == 64
+    assert observed[0] == "response.output_text.delta"
+    assert p.last_request_manifest["event_type_list_truncated"] is True
+    assert "private" not in json.dumps(p.last_request_manifest)

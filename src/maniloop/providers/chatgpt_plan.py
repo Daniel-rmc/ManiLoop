@@ -45,6 +45,7 @@ _SAFE_ERROR_PARAMS = frozenset({"model", "input", "tools", "tool_choice", "servi
 _DIAGNOSTIC_TOP_FIELDS = frozenset({"id", "object", "status", "model", "output", "usage", "error",
                                   "detail", "type", "code", "message", "incomplete_details"})
 _RESPONSE_STATUSES = frozenset({"completed", "failed", "incomplete", "in_progress", "queued", "cancelled"})
+_EVENT_TYPE_PATTERN = re.compile(r"[a-z][a-z0-9_.-]{0,79}")
 _MIME_PATTERN = re.compile(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+/[!#$%&'*+.^_`|~0-9A-Za-z-]+")
 
 
@@ -409,9 +410,11 @@ class ChatGPTPlanPolicy(GPTPolicy):
                 event = json.loads(payload, parse_constant=_reject_constant, object_pairs_hook=_unique_object)
             except (ValueError, TypeError):
                 raise PolicyError("ChatGPT returned invalid stream data.") from None
-            if not isinstance(event, dict) or not isinstance(event.get("type"), str):
-                raise PolicyError("ChatGPT returned invalid stream data.")
-            kind = event["type"]
+            kind = event.get("type") if isinstance(event, dict) else None
+            safe_kind = self._record_event_type(kind)
+            if safe_kind is None:
+                raise PolicyError("ChatGPT returned an invalid stream event type.")
+            kind = safe_kind
             if kind in {"response.output_item.added", "response.output_item.done"}:
                 item = event.get("item")
                 if not isinstance(item, dict) or item.get("type") not in {"message", "reasoning"}:
@@ -427,7 +430,7 @@ class ChatGPTPlanPolicy(GPTPolicy):
                 if not isinstance(completed, dict):
                     raise PolicyError("ChatGPT returned an invalid terminal response.")
             elif not kind.startswith("response."):
-                raise PolicyError("ChatGPT returned an unsupported stream event.")
+                raise PolicyError(f"ChatGPT returned an unsupported stream event: {kind}.")
 
         for line in self._stream_lines(response, evidence):
             self._check_interrupted()
@@ -444,6 +447,24 @@ class ChatGPTPlanPolicy(GPTPolicy):
         if completed is None:
             raise PolicyError("ChatGPT stream disconnected before response.completed; no action was executed.")
         return completed
+
+    def _record_event_type(self, kind):
+        safe_kind = kind if type(kind) is str and _EVENT_TYPE_PATTERN.fullmatch(kind) else None
+        observed = self.last_request_manifest.setdefault("observed_event_types", [])
+        label = safe_kind if safe_kind is not None else "invalid"
+        if label not in observed:
+            if len(observed) < 64:
+                observed.append(label)
+            else:
+                self.last_request_manifest["event_type_list_truncated"] = True
+        if safe_kind is None:
+            # Unknown/arbitrary text stays out of manifests and exception messages.
+            digest = hashlib.sha256(json.dumps(kind, ensure_ascii=False, sort_keys=True,
+                                               separators=(",", ":")).encode()).hexdigest()
+            invalid = self.last_request_manifest.setdefault("invalid_event_type_sha256", [])
+            if digest not in invalid and len(invalid) < 8:
+                invalid.append(digest)
+        return safe_kind
 
     def _stream_lines(self, response, evidence):
         # Bound raw bytes before buffering lines, including streams without newlines.
