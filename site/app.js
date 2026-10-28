@@ -99,20 +99,8 @@
     "result_default": "Task completion is determined by the independent simulator evaluator.",
     "single_episode_note": "One episode does not establish a benchmark success rate.",
     "results_link": "Read the results",
-    "models_eyebrow": "03 / MODEL EXAMPLES",
-    "models_title": "What each model actually did.",
-    "comparison_scope": "Recorded examples on an official LIBERO task. Each row describes one run, with its own controller and inference setup.",
-    "comparison_aria": "Model example results; scroll horizontally to see all columns",
-    "comparison_caption": "Actual model runs with independently scored task results",
-    "col_model": "Model",
-    "col_result": "Official result",
-    "col_policy": "Policy calls",
-    "col_inference": "Inference calls",
-    "col_steps": "Control steps",
-    "col_setup": "Configuration and scope",
-    "comparison_loading": "Loading recorded model examples",
-    "comparison_caveat": "These are individual examples, not success-rate estimates. Budgets, action chunks and control methods differ; step counts and timings do not form a speed ranking.",
-    "comparison_results": "Check configurations and results",
+    "models_eyebrow": "03 / MODEL CONNECTIONS",
+    "models_title": "Supported models and configurations.",
     "start_eyebrow": "04 / GET STARTED",
     "start_title": "Run the loop on your machine.",
     "start_intro": "Start with the local workspace and manual control, then choose an optional backend and policy. Simulation runtimes and VLA inference stay isolated.",
@@ -204,10 +192,6 @@
     "copy_done": "Commands copied to the clipboard.",
     "copy_manually": "Copy manually",
     "copy_fallback": "Commands selected. Use your system copy shortcut.",
-    "comparison_unavailable": "Model examples could not be loaded. Read the result report below.",
-    "comparison_sim_time": "Simulation: {seconds} s",
-    "comparison_wall_time": "Wall time: {seconds} s",
-    "comparison_wall_time_unknown": "Wall time: not recorded",
     "environments_title": "Four environments. Explicit boundaries.",
     "environments_intro": "Choose the scene in the local workspace. Optional backends keep separate runtimes, controllers and independent task evaluators.",
     "env_builtin": "Built-in MuJoCo",
@@ -240,7 +224,44 @@
     "env_builtin_tag": "01 / TABLETOP",
     "env_libero_tag": "02 / BENCHMARK",
     "env_robosuite_tag": "03 / MANIPULATION",
-    "env_robocasa_tag": "04 / KITCHEN"
+    "env_robocasa_tag": "04 / KITCHEN",
+    "support_intro": "Connect an account-backed GPT model, a compatible vision API, a fixed local LeRobot preset, or Jev text primitives. Each route has its own authentication, observations and operating scope.",
+    "support_config_label": "Connection & configuration",
+    "support_input_label": "Policy inputs",
+    "support_scope_label": "Operating scope",
+    "support_guide": "Configuration guide",
+    "support_codex_tag": "ACCOUNT / CODEX CLI",
+    "support_codex_title": "GPT via Codex",
+    "support_codex_config": "Use a recent official Codex CLI, sign in with your ChatGPT account, and choose a model ID available to that account. ManiLoop delegates authentication to the CLI.",
+    "support_codex_input": "Task instruction, camera RGB, robot proprioception and permitted action feedback.",
+    "support_codex_scope": "Structured TCP actions in an installed simulation backend. Run text, image and action-format diagnostics for the selected model before controlling the robot.",
+    "support_api_tag": "HOSTED / SELF-HOSTED",
+    "support_api_title": "Compatible vision API",
+    "support_api_config": "Set the service base URL, model ID and API key. The endpoint must support Responses, image input and JSON Schema structured output.",
+    "support_api_input": "Task instruction, camera RGB, robot proprioception and permitted action feedback through the Responses adapter.",
+    "support_api_scope": "Hosted or self-hosted vision services implementing that protocol. Select an available model and verify all three capabilities in the local diagnostics.",
+    "support_smol_tag": "LOCAL / LANGUAGE-CONDITIONED",
+    "support_smol_title": "SmolVLA",
+    "support_smol_config": "Install or reuse the smolvla-libero preset and its pinned checkpoint in the separate .venv-vla inference environment.",
+    "support_smol_input": "Language instruction, two 256 × 256 RGB views and the 8D robot proprioceptive state.",
+    "support_smol_scope": "LIBERO Panda tasks with the preset observation processor and action protocol. Use the scene’s original English task instruction.",
+    "support_act_tag": "LOCAL / VISUAL IMITATION",
+    "support_act_title": "ACT",
+    "support_act_config": "Install or reuse the act-libero preset and its pinned community checkpoint in .venv-vla.",
+    "support_act_input": "Two 256 × 256 RGB views and the 8D robot proprioceptive state. This checkpoint does not consume language.",
+    "support_act_scope": "LIBERO only, with the checkpoint’s saved preprocessing and action chunks. Editing the text instruction does not change its task conditioning.",
+    "support_dp_tag": "LOCAL / VISUAL DIFFUSION",
+    "support_dp_title": "Diffusion Policy",
+    "support_dp_config": "Install or reuse the diffusion-libero preset and its pinned community checkpoint in .venv-vla.",
+    "support_dp_input": "Two 256 × 256 RGB views and the 8D robot proprioceptive state, updated each control step. This checkpoint does not consume language.",
+    "support_dp_scope": "LIBERO only, preserving the checkpoint’s observation history, action chunks and sampling configuration.",
+    "support_jev_tag": "TYPESAFE / TEXT PRIMITIVES",
+    "support_jev_title": "Jev",
+    "support_jev_config": "Provide a separate TypeSafe API key in the local workspace or TYPESAFE_API_KEY. No Jev weights or TypeSafe SDK installation is required.",
+    "support_jev_input": "Explicit text instructions and public robot proprioception. Images are not sent to Jev.",
+    "support_jev_scope": "Selects one bounded motion primitive per instruction in controlled timing. Local code handles units, coordinates and execution; this mode does not locate objects visually.",
+    "support_local_title": "Local preset requirements",
+    "support_local_note": "SmolVLA, ACT and Diffusion Policy share the isolated .venv-vla runtime and support CPU, Apple MPS or NVIDIA CUDA as available. Install the LIBERO backend separately. The adapter accepts these three catalog presets, not arbitrary checkpoint imports."
   },
   "zh": {
     "skip": "跳至正文",
@@ -339,20 +360,8 @@
     "result_default": "任务是否完成由仿真器独立评分判定。",
     "single_episode_note": "单次演示不代表基准成功率。",
     "results_link": "查看实际结果",
-    "models_eyebrow": "03 / 模型示例",
-    "models_title": "各模型实际完成了什么。",
-    "comparison_scope": "官方 LIBERO 任务的单次运行示例。每行记录一轮运行及其控制器和推理配置。",
-    "comparison_aria": "模型运行结果，可横向滚动查看所有列",
-    "comparison_caption": "各模型实际运行及独立任务结果",
-    "col_model": "模型",
-    "col_result": "官方结果",
-    "col_policy": "策略调用数",
-    "col_inference": "推理调用数",
-    "col_steps": "控制步数",
-    "col_setup": "配置与适用范围",
-    "comparison_loading": "正在载入模型运行示例",
-    "comparison_caveat": "这些是单次示例，不能估计成功率。预算、动作块和控制方式不同，不能据步数或耗时进行速度排名。",
-    "comparison_results": "核对模型配置与结果",
+    "models_eyebrow": "03 / 模型接入",
+    "models_title": "支持的模型、配置与适用范围",
     "start_eyebrow": "04 / 开始使用",
     "start_title": "在你的电脑上运行闭环。",
     "start_intro": "先启动本地工作台和手动控制，再选择可选后端与策略。各仿真运行环境与 VLA 推理保持隔离。",
@@ -444,10 +453,6 @@
     "copy_done": "命令已复制到剪贴板。",
     "copy_manually": "请手动复制",
     "copy_fallback": "命令已选中，请使用系统复制快捷键。",
-    "comparison_unavailable": "模型示例暂时无法载入，请阅读下方结果文档。",
-    "comparison_sim_time": "仿真时间：{seconds} 秒",
-    "comparison_wall_time": "墙钟时间：{seconds} 秒",
-    "comparison_wall_time_unknown": "墙钟时间：未记录",
     "environments_title": "四类环境，明确各自的范围。",
     "environments_intro": "在本地工作台选择场景。可选后端分别维护运行环境、控制器与独立任务评分。",
     "env_builtin": "内置 MuJoCo",
@@ -480,7 +485,44 @@
     "env_builtin_tag": "01 / 桌面",
     "env_libero_tag": "02 / 基准任务",
     "env_robosuite_tag": "03 / 操作任务",
-    "env_robocasa_tag": "04 / 厨房"
+    "env_robocasa_tag": "04 / 厨房",
+    "support_intro": "接入账号支持的 GPT 模型、兼容视觉 API、固定的本地 LeRobot 预设，或 Jev 文本原语。每条路径分别配置认证、观测与适用范围。",
+    "support_config_label": "连接与配置",
+    "support_input_label": "策略输入",
+    "support_scope_label": "适用范围",
+    "support_guide": "配置说明",
+    "support_codex_tag": "账号 / CODEX CLI",
+    "support_codex_title": "GPT / Codex 登录",
+    "support_codex_config": "使用近期官方 Codex CLI 登录 ChatGPT 账号，选择该账号当前支持的 model ID。认证由 CLI 处理。",
+    "support_codex_input": "任务指令、相机 RGB、机器人本体状态与允许的动作反馈。",
+    "support_codex_scope": "通过结构化 TCP 动作连接已安装的仿真后端。先对所选模型完成文字、图像与动作格式诊断，再执行控制。",
+    "support_api_tag": "托管 / 自托管服务",
+    "support_api_title": "兼容视觉 API",
+    "support_api_config": "填写服务基础地址、model ID 和 API Key。接口须同时支持 Responses、图像输入和 JSON Schema 结构化输出。",
+    "support_api_input": "通过 Responses 适配器提供任务指令、相机 RGB、机器人本体状态与允许的动作反馈。",
+    "support_api_scope": "适用于实现上述协议的托管或自托管视觉服务。选择服务可用模型，并通过本地诊断核对三项能力。",
+    "support_smol_tag": "本地 / 语言条件策略",
+    "support_smol_title": "SmolVLA",
+    "support_smol_config": "在独立 .venv-vla 推理环境中安装或复用 smolvla-libero 预设及其固定检查点。",
+    "support_smol_input": "语言指令、两路 256 × 256 RGB 图像与 8 维机器人本体状态。",
+    "support_smol_scope": "用于采用预设观测处理器与动作协议的 LIBERO Panda 任务。使用场景原有的英文任务指令。",
+    "support_act_tag": "本地 / 视觉模仿策略",
+    "support_act_title": "ACT",
+    "support_act_config": "在 .venv-vla 中安装或复用 act-libero 预设及其固定的社区检查点。",
+    "support_act_input": "两路 256 × 256 RGB 图像与 8 维机器人本体状态。该检查点不读取语言。",
+    "support_act_scope": "仅适用于 LIBERO，沿用检查点保存的预处理和动作块。修改文本指令不会改变它的任务条件。",
+    "support_dp_tag": "本地 / 视觉扩散策略",
+    "support_dp_title": "Diffusion Policy",
+    "support_dp_config": "在 .venv-vla 中安装或复用 diffusion-libero 预设及其固定的社区检查点。",
+    "support_dp_input": "每个控制步更新的两路 256 × 256 RGB 图像与 8 维机器人本体状态。该检查点不读取语言。",
+    "support_dp_scope": "仅适用于 LIBERO，保留检查点的观测历史、动作块和采样配置。",
+    "support_jev_tag": "TYPESAFE / 文本原语",
+    "support_jev_title": "Jev",
+    "support_jev_config": "在本地工作台或 TYPESAFE_API_KEY 中提供独立的 TypeSafe API Key，无需下载 Jev 权重或安装 TypeSafe SDK。",
+    "support_jev_input": "明确的文字指令与公开机器人本体状态，不向 Jev 发送图像。",
+    "support_jev_scope": "在受控时序下为每条指令选择一个有界动作原语。单位、坐标与执行由本地代码处理；此模式不进行视觉物体定位。",
+    "support_local_title": "本地预设要求",
+    "support_local_note": "SmolVLA、ACT 与 Diffusion Policy 使用隔离的 .venv-vla 运行环境，按硬件选择 CPU、Apple MPS 或 NVIDIA CUDA；LIBERO 后端另行安装。当前适配器接受模型目录中的这三个预设，不提供任意检查点导入。"
   }
 };
   const byId = (id) => document.getElementById(id);
@@ -492,9 +534,7 @@
   const videoPath = /^assets\/episodes\/[a-zA-Z0-9_/-]+\.mp4$/;
   let language = initialLanguage();
   let recording = null;
-  let comparison = null;
   let recordingFailed = false;
-  let comparisonFailed = false;
   let videoFailed = false;
   let frames = [];
   let index = 0;
@@ -546,8 +586,6 @@
     updatePlaybackLabels();
     if (recording) { renderRecordingMetadata(recording); renderFrame(index); }
     if (recordingFailed) renderRecordingError();
-    if (comparison) renderComparison(comparison);
-    if (comparisonFailed) renderComparisonError();
     document.dispatchEvent(new CustomEvent("maniloop:language", { detail: { language } }));
     if (persist) {
       try { localStorage.setItem("maniloop-language", language); } catch { /* Switching still works without storage. */ }
@@ -722,55 +760,6 @@
     } catch { recordingFailed = true; renderRecordingError(); }
   }
 
-  function cell(row, text, className) {
-    const element = document.createElement("td");
-    if (className) element.className = className;
-    element.textContent = text;
-    row.appendChild(element);
-    return element;
-  }
-
-  function renderComparison(data) {
-    byId("comparison-scope").textContent = localized(data.scope);
-    byId("comparison-caveat").textContent = localized(data.caveat);
-    const body = byId("comparison-rows"); body.replaceChildren();
-    for (const item of data.rows) {
-      const row = document.createElement("tr");
-      cell(row, item.model, "comparison-model");
-      const result = cell(row, localized(item.status), "comparison-result");
-      result.dataset.result = item.success === true ? "success" : item.success === false ? "failure" : "unknown";
-      cell(row, metric(item.decisions), "comparison-number");
-      cell(row, metric(item.inference_calls), "comparison-number");
-      cell(row, metric(item.control_steps), "comparison-number");
-      const details = cell(row, "", "comparison-details");
-      for (const [text, className] of [[localized(item.conditions), "comparison-conditions"], [localized(item.notes), "comparison-notes"]]) {
-        const paragraph = document.createElement("p"); paragraph.className = className; paragraph.textContent = text; details.appendChild(paragraph);
-      }
-      const timings = document.createElement("p"); timings.className = "comparison-timings";
-      timings.textContent = t("comparison_sim_time", { seconds: metric(item.simulation_seconds, 2) }) + " · " + (nonnegativeNumber(item.wall_seconds) ? t("comparison_wall_time", { seconds: metric(item.wall_seconds, 2) }) : t("comparison_wall_time_unknown"));
-      details.appendChild(timings); body.appendChild(row);
-    }
-  }
-
-  function renderComparisonError() {
-    const body = byId("comparison-rows"); body.replaceChildren();
-    const row = document.createElement("tr"); const text = cell(row, t("comparison_unavailable")); text.colSpan = 6; body.appendChild(row);
-  }
-
-  async function loadComparison() {
-    try {
-      const response = await fetch("assets/model-comparison.json?v=bilingual-workspace-1", { credentials: "omit" });
-      if (!response.ok) throw new Error("Comparison unavailable");
-      const data = await response.json();
-      if (!Array.isArray(data.rows) || !data.rows.length || data.rows.length > 30 ||
-          !localizedText(data.scope) || !localizedText(data.caveat) || !data.rows.every((row) =>
-            row && typeof row.model === "string" && localizedText(row.status) && localizedText(row.conditions) && localizedText(row.notes))) {
-        throw new Error("Invalid comparison");
-      }
-      comparison = data; renderComparison(data);
-    } catch { comparisonFailed = true; renderComparisonError(); }
-  }
-
   previous.addEventListener("click", () => selectFrame(index - 1));
   next.addEventListener("click", () => selectFrame(index + 1));
   playButton.addEventListener("click", () => setPlaying(timer === null && frames.length > 1));
@@ -801,5 +790,4 @@
   }
   setLanguage(language, ["en", "zh"].includes(new URLSearchParams(window.location.search).get("lang")));
   loadRecording();
-  loadComparison();
 })();
