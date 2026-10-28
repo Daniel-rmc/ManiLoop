@@ -2,7 +2,7 @@
 
 [English](https://github.com/Daniel-rmc/ManiLoop/blob/main/README.md) · [中文](https://github.com/Daniel-rmc/ManiLoop/blob/main/README.zh-CN.md) · [Project website](https://daniel-rmc.github.io/ManiLoop/)
 
-The site introduces the implemented simulation framework, shows a complete GPT-controlled LIBERO episode, compares recorded model examples, and provides setup instructions. The [interactive workspace](https://daniel-rmc.github.io/ManiLoop/playground/?lang=en) lets visitors inspect the actual recorded observations, actions and feedback. Live simulation and inference run in the local application.
+The site introduces the implemented simulation framework across the built-in MuJoCo, LIBERO, robosuite and RoboCasa backends. It presents the modular local workspace, six-dimensional manual TCP control and GPT, local VLA and Jev policy connections, alongside complete recorded LIBERO episodes and setup instructions. The [interactive workspace](https://daniel-rmc.github.io/ManiLoop/playground/?lang=en) lets visitors inspect the actual recorded observations, actions and feedback. Live simulation and inference run in the local application.
 
 English and Chinese are available throughout the site. `?lang=en` or `?lang=zh` selects a language explicitly; otherwise the saved preference is used, followed by the browser language. The language control updates the URL and saves the choice under `maniloop-language`. The workspace uses the same preference. There are no external fonts, analytics, credentials or model requests on this site.
 
@@ -15,6 +15,16 @@ python3 -m http.server 8080 --bind 127.0.0.1 --directory site
 ```
 
 Open <http://127.0.0.1:8080/>. The static assets use relative paths and also work under `/ManiLoop/`; no package installation or build step is required.
+
+## Current local workspace and backend overview
+
+The framework section distinguishes four environment adapters from the selected LIBERO episode results. Task availability and integration checks are not model success claims. Existing LeRobot presets remain LIBERO-specific. robosuite and RoboCasa provide decision-level observations and replay, but not complete control-step video export.
+
+`assets/workspace/current-workspace-manual.png` and `current-workspace-model.png` are real screenshots of the current local application using the built-in Panda tabletop scene. They show the separate manual and model panels, retain their original aspect ratios, and open at full size. They are static presentation assets; the website does not execute their controls. The local application also has a separate scene-settings panel and a persistent stop control. The interactive `playground/` remains a viewer for a recorded LIBERO episode.
+
+The Jev description refers to text primitive selection from explicit instructions and public proprioception. It uses a separate TypeSafe API key, receives no images, and delegates unit conversion and motion execution to local code. It is not presented as visual localization or autonomous grasping, and is not added to the recorded model-result table.
+
+New presentation copy uses the existing `app.js` English/Chinese dictionaries and `data-i18n` attributes. `showcase.js`, the three recorded skill videos, their JSON manifests, and the playground remain independent of this presentation update.
 
 ## Episode and model results
 
@@ -42,21 +52,26 @@ Published camera images and videos come from simulator rendering. ManiLoop sourc
 
 ## Publish
 
-Source files live in `main:site/`; GitHub Pages serves the root of `gh-pages`. After committing a reviewed site update:
+Source files live in `main:site/`; GitHub Pages serves the root of `gh-pages`. Make site changes on a feature branch and open a pull request for review before merging into `main`.
+
+After the reviewed pull request is merged, publish `site/` from an up-to-date `main` checkout using the repository's authorized Pages publishing process. The existing branch publication command is:
 
 ```bash
-git push origin main
 git subtree push --prefix site origin gh-pages
 ```
 
-Use a normal fast-forward push. `.nojekyll` keeps this a static site.
+Use a normal fast-forward push. `.nojekyll` keeps this a static site. A reviewed site-only update can also be published from its feature branch while the source pull request is pending; the source commit and Pages commit should be recorded in the pull request.
 
 ## 中文说明
 
-官网展示已实现的框架功能、完整 GPT 仿真操作录像、各模型的实际运行示例与安装方法。[交互工作台](https://daniel-rmc.github.io/ManiLoop/playground/?lang=zh)可逐步查看真实运行的观察、动作与反馈；实时仿真和模型推理在本地应用中运行。
+官网展示内置 MuJoCo、LIBERO、robosuite、RoboCasa 四类后端、模块化本地工作台、六维手动位姿控制，以及 GPT、本地 VLA 与 Jev 文本原语入口；保留完整 GPT 仿真操作录像、实际运行示例和安装方法。[交互工作台](https://daniel-rmc.github.io/ManiLoop/playground/?lang=zh)可逐步查看真实运行的观察、动作与反馈；实时仿真和模型推理在本地应用中运行。
 
 全站支持英文与中文。URL 参数 `lang` 优先，其次为已保存的语言偏好，最后采用浏览器语言。切换语言会同步入口链接与偏好，不会重播正在播放的视频。页面不收集密钥，也不发起模型请求。
 
 首页短片按仿真时间静音循环，同步展示模型保存的动作说明、请求动作和上一步执行反馈；未展示模型等待时间。可暂停、前后切换决策或拖动进度，不是实时推理。系统选择减少动态效果时，默认展示静止画面；自动播放失败时可手动播放。任务卡来自 `assets/showcase.json`，只接收官方独立评分已经验证成功的回合。所有卡片明确说明是单次回合最终结果。
 
 模型结果为单次示例，不代表基准成功率。配置、动作块、预算与计时口径不同，不能由步数或耗时进行速度排名。完整运行条件见[实际结果](https://github.com/Daniel-rmc/ManiLoop/blob/main/docs/RESULTS.md)，本地安装见[中文使用说明](https://github.com/Daniel-rmc/ManiLoop/blob/main/README.zh-CN.md)。
+
+当前本地工作台截图使用内置 Panda 桌面场景，展示手动控制与模型运行分区，按原始比例显示，可点击查看大图。它们不是网页内嵌仿真；`playground/` 仍用于检查已录制的 LIBERO 回合。新后端的任务目录与接入检查不等于模型成功，既有 LeRobot 预设仍限 LIBERO。Jev 是独立 TypeSafe 认证的文本原语模式，不输入图像，不声称具备视觉定位或自主抓取能力。
+
+主页变更在功能分支完成，通过 PR 合入受保护的 `main`，然后再按授权的 Pages 发布流程同步 `site/`；不直接向 `main` 推送。
